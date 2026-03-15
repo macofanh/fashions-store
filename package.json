@@ -1,5 +1,5 @@
 {
-  "name": "clothes-store",
+  "name": "fashions-store",
   "version": "0.0.0",
   "private": true,
   "type": "module",
@@ -11,6 +11,8 @@
     "type-check": "vue-tsc --build"
   },
   "dependencies": {
+    "@tailwindcss/vite": "^4.2.1",
+    "tailwindcss": "^4.2.1",
     "vue": "^3.5.29"
   },
   "devDependencies": {

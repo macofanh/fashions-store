@@ -1,13 +1,9 @@
-<template>
-  <div>
-    <h1 class="text-red-500">Đây là môn TTCS</h1>
-  </div>
-</template>
-
-<script setup>
-
+<script setup lang="ts">
+import { RouterView } from 'vue-router'
 </script>
 
-<style lang="scss" scoped>
+<template>
+  <RouterView />
+</template>
 
-</style>
+<style scoped></style>

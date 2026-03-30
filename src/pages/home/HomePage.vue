@@ -1,9 +1,9 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import axiosClient from '@/api/axiosClient'
-import { useAuth } from '../auth/useAuth'
+import { authHandler } from '../auth/authHandler'
 
-const { logout } = useAuth()
+const { logout } = authHandler()
 const responseData = ref<string>('')
 const errorMessage = ref<string>('')
 const isLoading = ref<boolean>(false)
@@ -11,11 +11,10 @@ const isLoading = ref<boolean>(false)
 const isAuthenticated = ref(false)
 const userInfo = ref<any>(null)
 
-// Kiểm tra trạng thái đăng nhập khi trang được load
 onMounted(() => {
     const token = localStorage.getItem('access_token')
     const userStr = localStorage.getItem('user_info')
-    
+
     if (token && userStr) {
         isAuthenticated.value = true
         userInfo.value = JSON.parse(userStr)
@@ -54,12 +53,20 @@ const handleLogout = () => {
         <div class="auth-test-section">
             <h3>Xác thực (Test):</h3>
             <div v-if="isAuthenticated" class="user-status success">
-                <p>Chào mừng, <strong>{{ userInfo?.full_name }}</strong> ({{ userInfo?.role }})</p>
-                <button @click="handleLogout" class="btn-logout">ĐĂNG XUẤT</button>
+                <p>
+                    Chào mừng, <strong>{{ userInfo?.full_name }}</strong> ({{
+                        userInfo?.role
+                    }})
+                </p>
+                <button @click="handleLogout" class="btn-logout">
+                    ĐĂNG XUẤT
+                </button>
             </div>
             <div v-else class="user-status error">
                 <p>Bạn chưa đăng nhập.</p>
-                <router-link to="/auth/login" class="btn-login">ĐĂNG NHẬP NGAY</router-link>
+                <router-link to="/auth/login" class="btn-login"
+                    >ĐĂNG NHẬP NGAY</router-link
+                >
             </div>
         </div>
 
@@ -81,7 +88,10 @@ const handleLogout = () => {
             <div v-if="errorMessage" class="result error">
                 <h3>❌ Kết nối THẤT BẠI:</h3>
                 <p>{{ errorMessage }}</p>
-                <small>Hãy F12 mở tab Console/Network để xem chi tiết lỗi nhé.</small>
+                <small
+                    >Hãy F12 mở tab Console/Network để xem chi tiết lỗi
+                    nhé.</small
+                >
             </div>
         </div>
     </div>
@@ -108,7 +118,7 @@ const handleLogout = () => {
 }
 .btn-login {
     padding: 8px 16px;
-    background-color: #2196F3;
+    background-color: #2196f3;
     color: white;
     text-decoration: none;
     border-radius: 4px;

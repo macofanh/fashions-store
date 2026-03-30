@@ -1,22 +1,47 @@
-// import { computed } from 'vue'
-// import { useAuth } from '@/pages/auth/useAuth'
+// src/api/usePermission.ts (hoặc đường dẫn tương ứng của bạn)
+import { computed } from 'vue'
+import type { User } from '@/pages/auth/authTypes' // Import Interface User chuẩn
 
-// export type UserRole = 'customer' | 'staff' | 'admin'
+export type UserRole = 'customer' | 'staff' | 'admin'
 
-// export function usePermission() {
-//     const authStore = useAuth()
+export function usePermission() {
+    // Hàm nội bộ để lấy và parse thông tin user từ localStorage một cách an toàn
+    const getCurrentUser = (): User | null => {
+        const userInfoStr = localStorage.getItem('user_info')
+        if (!userInfoStr) return null
 
-//     // Kiểm tra role dựa vào object user trả về từ BE
-//     const isAdmin = computed(() => authStore.user?.role === 'admin')
-//     const isStaff = computed(() => authStore.user?.role === 'staff')
-//     const isCustomer = computed(() => authStore.user?.role === 'customer')
-//     const isLoggedIn = computed(() => !!authStore.user)
+        try {
+            return JSON.parse(userInfoStr) as User
+        } catch (error) {
+            console.error('Lỗi đọc dữ liệu user từ localStorage', error)
+            return null
+        }
+    }
 
-//     // Trả về true nếu user có ít nhất một trong các role được chỉ định 
-//     const hasRole = (...roles: UserRole[]): boolean => {
-//         if (!authStore.user) return false
-//         return roles.includes(authStore.user.role as UserRole)
-//     }
+    // Lấy user hiện tại
+    const currentUser = getCurrentUser()
 
-//     return { isAdmin, isStaff, isCustomer, isLoggedIn, hasRole }
-// }
+    // Sử dụng computed để kiểm tra quyền (giúp linh hoạt nếu sau này bạn dùng thêm State Management như Pinia)
+    const isAdmin = computed(() => currentUser?.role === 'admin')
+    const isStaff = computed(() => currentUser?.role === 'staff')
+    const isCustomer = computed(() => currentUser?.role === 'customer')
+    const isLoggedIn = computed(() => !!currentUser)
+
+    /** * Trả về true nếu user có ít nhất một trong các role được chỉ định
+     * Cách dùng: hasRole('admin', 'staff')
+     */
+    const hasRole = (...roles: UserRole[]): boolean => {
+        if (!currentUser || !currentUser.role) return false
+        return roles.includes(currentUser.role as UserRole)
+    }
+
+    // Export thêm currentUser ra ngoài để giao diện có thể hiển thị tên, avatar (vd: Xin chào, {currentUser.full_name})
+    return {
+        currentUser,
+        isAdmin,
+        isStaff,
+        isCustomer,
+        isLoggedIn,
+        hasRole,
+    }
+}

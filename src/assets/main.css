@@ -1,38 +1,40 @@
-@import "tailwindcss";
+@import 'tailwindcss';
 
 @theme {
-  --color-primary: #16439c;
-  --color-background-light: #ffffff;
-  --color-background-dark: #111621;
-  --color-fashion-black: #0e121b;
-  --color-fashion-gray: #f8f9fb;
-  --color-neutral-border: #e8ebf3;
+    --color-primary: #16439c;
+    --color-background-light: #ffffff;
+    --color-background-dark: #111621;
+    --color-fashion-black: #0e121b;
+    --color-fashion-gray: #f8f9fb;
+    --color-neutral-border: #e8ebf3;
 
-  --font-display: "Inter", sans-serif;
-  --font-serif: "Playfair Display", serif;
+    --font-display: 'Inter', sans-serif;
+    --font-serif: 'IBM Plex Serif', serif;
 
-  --radius-default: 0px;
-  --radius-lg: 0px;
-  --radius-xl: 0px;
+    --radius-default: 0px;
+    --radius-lg: 0px;
+    --radius-xl: 0px;
 }
 
 @layer base {
-  body {
-    @apply font-display bg-background-light text-fashion-black;
-  }
-  h1, h2, h3 {
-    @apply font-serif;
-  }
-  ::-webkit-scrollbar {
-    width: 6px;
-  }
-  ::-webkit-scrollbar-track {
-    background: #f1f1f1;
-  }
-  ::-webkit-scrollbar-thumb {
-    background: #ccc;
-  }
-  ::-webkit-scrollbar-thumb:hover {
-    background: #555;
-  }
+    body {
+        @apply font-display bg-background-light text-fashion-black;
+    }
+    h1,
+    h2,
+    h3 {
+        @apply font-serif;
+    }
+    ::-webkit-scrollbar {
+        width: 6px;
+    }
+    ::-webkit-scrollbar-track {
+        background: #f1f1f1;
+    }
+    ::-webkit-scrollbar-thumb {
+        background: #ccc;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+        background: #555;
+    }
 }

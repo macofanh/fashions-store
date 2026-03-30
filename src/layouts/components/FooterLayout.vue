@@ -1,5 +1,5 @@
 <script setup></script>
 <template>
-    <div>Chan trang</div>
+    <div>Dau la noi de lam footer</div>
 </template>
 <style lang="scss" scoped></style>

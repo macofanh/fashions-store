@@ -27,15 +27,60 @@ const routes: Array<RouteRecordRaw> = [
     {
         name: 'root',
         path: '/',
+        // DefaultLayout đã chứa sẵn Header và Footer bên trong nó rồi
         component: () => import('@/layouts/DefaultLayout.vue'),
         redirect: { name: 'home' },
         children: [
             {
                 name: 'home',
                 path: '',
+                // HomePage chứa nội dung chính ở giữa
                 component: () => import('@/pages/home/HomePage.vue'),
             },
-            // Sau này bạn sẽ thêm /products, /cart ở đây...
+
+            // ==========================================
+            // CÁC TRANG TƯƠNG LAI (Mở comment khi nào code xong)
+            // ==========================================
+
+            // --- Sản phẩm ---
+            // {
+            //     name: 'products',
+            //     path: 'products',
+            //     component: () => import('@/pages/products/ProductListPage.vue'),
+            // },
+            // {
+            //     name: 'product-detail',
+            //     path: 'product/:slug',
+            //     component: () => import('@/pages/products/ProductDetailPage.vue'),
+            // },
+
+            // --- Giỏ hàng & Thanh toán ---
+            // {
+            //     name: 'cart',
+            //     path: 'cart',
+            //     component: () => import('@/pages/cart/CartPage.vue'),
+            //     // meta: { requiresAuth: true } // Mở ra nếu bắt buộc đăng nhập mới được xem giỏ
+            // },
+            // {
+            //     name: 'checkout',
+            //     path: 'checkout',
+            //     component: () => import('@/pages/checkout/CheckoutPage.vue'),
+            //     meta: { requiresAuth: true }, // Thanh toán chắc chắn phải đăng nhập
+            // },
+
+            // --- Thông tin cá nhân ---
+            // {
+            //     name: 'profile',
+            //     path: 'profile',
+            //     component: () => import('@/pages/profile/ProfilePage.vue'),
+            //     meta: { requiresAuth: true },
+            // },
+            // {
+            //     name: 'order-history',
+            //     path: 'orders',
+            //     component: () => import('@/pages/profile/OrderHistoryPage.vue'),
+            //     meta: { requiresAuth: true },
+            // },
         ],
     },
 
@@ -60,6 +105,10 @@ const routes: Array<RouteRecordRaw> = [
 
 const router = createRouter({
     history: createWebHistory(import.meta.env.BASE_URL),
+    // Thêm scrollBehavior để chuyển trang web tự cuộn lên mượt mà
+    scrollBehavior() {
+        return { top: 0, behavior: 'smooth' }
+    },
     routes,
 })
 

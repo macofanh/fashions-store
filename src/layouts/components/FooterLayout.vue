@@ -56,17 +56,10 @@
         </div>
     </footer>
 </template>
-<<<<<<< Updated upstream
-=======
-
 <style scoped>
 @reference "../../assets/main.css";
 
 .footer-link {
-    @apply text-xs text-zinc-500 hover:text-zinc-900 transition-colors font-light;
-}
-.serif-text {
-    font-family: 'Playfair Display', serif;
+    @apply text-xs text-zinc-500 hover:text-fashion-black transition-colors font-light;
 }
 </style>
->>>>>>> Stashed changes

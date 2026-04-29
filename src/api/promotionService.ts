@@ -5,6 +5,7 @@ export interface Voucher {
     voucher_id: number
     code: string
     name: string
+    subtitle?: string
     discount_type: 'PERCENT' | 'FIXED_AMOUNT' | 'FREE_SHIP'
     discount_value: number
     max_discount?: number
@@ -14,6 +15,9 @@ export interface Voucher {
     start_date: string
     end_date: string
     is_active: boolean
+    bg_color?: string
+    banner_image?: string
+    sort_order: number
 }
 
 export interface UserVoucher {

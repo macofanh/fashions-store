@@ -37,70 +37,82 @@ const routes: Array<RouteRecordRaw> = [
                 // HomePage chứa nội dung chính ở giữa
                 component: () => import('@/pages/home/HomePage.vue'),
             },
-
-            // ==========================================
-            // CÁC TRANG TƯƠNG LAI (Mở comment khi nào code xong)
-            // ==========================================
-
-            // --- Sản phẩm ---
-            // {
-            //     name: 'products',
-            //     path: 'products',
-            //     component: () => import('@/pages/products/ProductListPage.vue'),
-            // },
-            // {
-            //     name: 'product-detail',
-            //     path: 'product/:slug',
-            //     component: () => import('@/pages/products/ProductDetailPage.vue'),
-            // },
-
-            // --- Giỏ hàng & Thanh toán ---
-            // {
-            //     name: 'cart',
-            //     path: 'cart',
-            //     component: () => import('@/pages/cart/CartPage.vue'),
-            //     // meta: { requiresAuth: true } // Mở ra nếu bắt buộc đăng nhập mới được xem giỏ
-            // },
-            // {
-            //     name: 'checkout',
-            //     path: 'checkout',
-            //     component: () => import('@/pages/checkout/CheckoutPage.vue'),
-            //     meta: { requiresAuth: true }, // Thanh toán chắc chắn phải đăng nhập
-            // },
-
-            // --- Thông tin cá nhân ---
-            // {
-            //     name: 'profile',
-            //     path: 'profile',
-            //     component: () => import('@/pages/profile/ProfilePage.vue'),
-            //     meta: { requiresAuth: true },
-            // },
-            // {
-            //     name: 'order-history',
-            //     path: 'orders',
-            //     component: () => import('@/pages/profile/OrderHistoryPage.vue'),
-            //     meta: { requiresAuth: true },
-            // },
+            {
+                name: 'products',
+                path: 'products',
+                component: () => import('@/pages/products/ProductList.vue'),
+            },
+            {
+                name: 'product-detail',
+                path: 'products/:slug',
+                component: () => import('@/pages/products/ProductDetail.vue'),
+            },
+            {
+                name: 'cart',
+                path: 'cart',
+                component: () => import('@/pages/cart/CartPage.vue'),
+                meta: { requiresAuth: true }
+            },
+            {
+                name: 'checkout',
+                path: 'checkout',
+                component: () => import('@/pages/cart/CheckoutPage.vue'),
+                meta: { requiresAuth: true }
+            },
+            {
+                name: 'profile',
+                path: 'profile',
+                component: () => import('@/pages/auth/ProfilePage.vue'),
+                meta: { requiresAuth: true }
+            },
+            {
+                name: 'vouchers',
+                path: 'vouchers',
+                component: () => import('@/pages/promotions/VoucherCenter.vue'),
+            },
         ],
     },
 
     // 3. ADMIN - QUẢN TRỊ VIÊN
-    // {
-    //     name: 'admin',
-    //     path: '/admin',
-    //     component: () => import('@/pages/admin/layouts/AdminLayout.vue'),
-    //     redirect: { name: 'admin-overview' },
-    //     // Chỉ admin và staff (nhân viên) mới được vào khu vực này
-    //     meta: { requiresAuth: true, roles: ['admin', 'staff'] },
-    //     children: [
-    //         {
-    //             name: 'admin-overview',
-    //             path: 'overview',
-    //             component: () =>
-    //                 import('@/pages/admin/overview/OverviewAdmin.vue'),
-    //         },
-    //     ],
-    // },
+    {
+        name: 'admin',
+        path: '/admin',
+        component: () => import('@/layouts/AdminLayout.vue'),
+        redirect: { name: 'admin-overview' },
+        meta: { requiresAuth: true, roles: ['admin', 'staff'] },
+        children: [
+            {
+                name: 'admin-overview',
+                path: 'overview',
+                component: () => import('@/pages/admin/overview/OverviewAdmin.vue'),
+            },
+            {
+                name: 'admin-products',
+                path: 'products',
+                component: () => import('@/pages/admin/products/ProductManagement.vue'),
+            },
+            {
+                name: 'admin-orders',
+                path: 'orders',
+                component: () => import('@/pages/admin/orders/OrderManagement.vue'),
+            },
+            {
+                name: 'admin-inventory',
+                path: 'inventory',
+                component: () => import('@/pages/admin/inventory/InventoryManagement.vue'),
+            },
+            {
+                name: 'admin-users',
+                path: 'users',
+                component: () => import('@/pages/admin/users/UserManagement.vue'),
+            },
+            {
+                name: 'admin-vouchers',
+                path: 'vouchers',
+                component: () => import('@/pages/admin/promotions/VoucherManagement.vue'),
+            },
+        ],
+    },
 ]
 
 const router = createRouter({

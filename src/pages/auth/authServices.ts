@@ -19,6 +19,12 @@ class AuthService {
             phone: data.phone?.trim() === '' ? undefined : data.phone,
         })
     }
+
+    public loginWithGoogle(idToken: string) {
+        return axiosClient.post<AuthResponse>(apiEndpoints.auth.google, {
+            id_token: idToken,
+        })
+    }
 }
 
 export const authService = new AuthService()

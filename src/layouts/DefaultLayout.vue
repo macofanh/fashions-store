@@ -1,22 +1,18 @@
 <script setup lang="ts">
 import { RouterView } from 'vue-router'
-import HeaderLayout from './components/HeaderLayout.vue'
+import Navbar from './components/Navbar.vue'
 import FooterLayout from './components/FooterLayout.vue'
 </script>
 
 <template>
-    <div class="container-xxl bg-white p-0">
-        <HeaderLayout />
-
-        <main>
+    <div class="flex flex-col min-h-screen font-body text-[#0e191b] bg-white antialiased">
+        <Navbar />
+        
+        <main class="flex-grow">
             <RouterView />
         </main>
 
         <FooterLayout />
-
-        <a href="#" class="btn btn-lg btn-primary btn-lg-square back-to-top">
-            <i class="bi bi-arrow-up"></i>
-        </a>
     </div>
 </template>
 

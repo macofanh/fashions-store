@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, reactive, computed, onMounted } from 'vue'
-import axiosClient from '@/api/axiosClient'
+import axiosClient from '@/lib/axiosClient'
 import { useAuthStore } from '@/stores/useAuthStore'
 
 const authStore = useAuthStore()

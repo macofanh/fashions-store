@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
-import { productService, type Product } from '@/api/productService'
-import { promotionService, type Voucher } from '@/api/promotionService'
+import { productService, type Product } from '@/pages/products/productService'
+import { promotionService, type Voucher } from '@/pages/promotions/promotionService'
 import { useAuthStore } from '@/stores/useAuthStore'
 import ProductCard from '@/components/ProductCard.vue'
 
@@ -123,13 +123,13 @@ onMounted(() => {
                 <div class="flex gap-4 animate-fade-in" style="animation-delay: 0.5s;">
                     <router-link 
                         to="/products" 
-                        class="bg-white text-zinc-900 px-10 py-4 text-[10px] font-bold tracking-[0.3em] uppercase hover:bg-zinc-900 hover:text-white transition-all duration-500"
+                        class="btn-radius bg-white text-zinc-900 px-10 py-4 text-[10px] font-bold tracking-[0.3em] uppercase hover:bg-zinc-900 hover:text-white transition-all duration-500"
                     >
                         Mua sắm nam
                     </router-link>
                     <router-link 
                         to="/products" 
-                        class="bg-transparent border border-white text-white px-10 py-4 text-[10px] font-bold tracking-[0.3em] uppercase hover:bg-white hover:text-zinc-900 transition-all duration-500"
+                        class="btn-radius bg-transparent border border-white text-white px-10 py-4 text-[10px] font-bold tracking-[0.3em] uppercase hover:bg-white hover:text-zinc-900 transition-all duration-500"
                     >
                         Mua sắm nữ
                     </router-link>
@@ -200,7 +200,7 @@ onMounted(() => {
                                     @click="handleClaim(voucher)"
                                     :disabled="claimingId === voucher.voucher_id"
                                     :class="[
-                                        'shrink-0 px-4 py-2.5 text-[9px] font-black uppercase tracking-widest transition-all',
+                                        'btn-radius shrink-0 px-4 py-2.5 text-[9px] font-black uppercase tracking-widest transition-all',
                                         claimedIds.has(voucher.voucher_id)
                                             ? 'bg-white/20 text-white/60 cursor-default'
                                             : 'bg-white text-zinc-900 hover:bg-zinc-100 active:scale-95'

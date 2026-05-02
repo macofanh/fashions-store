@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
-import axiosClient from '@/api/axiosClient'
+import axiosClient from '@/lib/axiosClient'
 
 const orders = ref<any[]>([])
 const isLoading = ref(true)

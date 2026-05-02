@@ -1,4 +1,4 @@
-// src/api/axiosClient.ts
+// src/lib/axiosClient.ts
 import axios from 'axios'
 import router from '@/router'
 
@@ -16,17 +16,13 @@ axiosClient.interceptors.request.use((config) => {
     return config
 })
 
-// Biến để tránh gọi refresh token nhiều lần cùng lúc
 let isRefreshing = false
 let failedQueue: any[] = []
 
 const processQueue = (error: any, token: string | null = null) => {
     failedQueue.forEach((prom) => {
-        if (error) {
-            prom.reject(error)
-        } else {
-            prom.resolve(token)
-        }
+        if (error) prom.reject(error)
+        else prom.resolve(token)
     })
     failedQueue = []
 }
@@ -37,7 +33,6 @@ axiosClient.interceptors.response.use(
     async (error) => {
         const originalRequest = error.config
 
-        // Nếu lỗi 401 và chưa từng thử retry
         if (error.response?.status === 401 && !originalRequest._retry) {
             if (isRefreshing) {
                 return new Promise((resolve, reject) => {
@@ -60,16 +55,14 @@ axiosClient.interceptors.response.use(
             }
 
             try {
-                const response = await axios.post(`${axiosClient.defaults.baseURL}/api/v1/auth/refresh`, {
-                    refresh_token: refreshToken
-                })
-                
+                const response = await axios.post(
+                    `${axiosClient.defaults.baseURL}/api/v1/auth/refresh`,
+                    { refresh_token: refreshToken }
+                )
                 const { access_token } = response.data
                 localStorage.setItem('access_token', access_token)
-                
                 axiosClient.defaults.headers.common['Authorization'] = `Bearer ${access_token}`
                 processQueue(null, access_token)
-                
                 return axiosClient(originalRequest)
             } catch (refreshError) {
                 processQueue(refreshError, null)

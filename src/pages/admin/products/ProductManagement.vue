@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import { ref, onMounted, computed } from 'vue'
-import { productService, type Product } from '@/api/productService'
-import { getImageUrl } from '@/api/urlHelper'
-import axiosClient from '@/api/axiosClient'
+import { productService, type Product } from '@/pages/products/productService'
+import { getImageUrl } from '@/lib/urlHelper'
+import axiosClient from '@/lib/axiosClient'
 
 const products = ref<Product[]>([])
 const isLoading = ref(true)

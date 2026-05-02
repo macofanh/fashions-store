@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, onMounted, computed } from 'vue'
-import axiosClient from '@/api/axiosClient'
+import axiosClient from '@/lib/axiosClient'
 
 interface StatItem {
     name: string

@@ -1,5 +1,5 @@
-import axiosClient from '@/api/axiosClient'
-import { apiEndpoints } from '@/api/endPoints'
+import axiosClient from '@/lib/axiosClient'
+import { apiEndpoints } from '@/lib/endPoints'
 
 export interface Voucher {
     voucher_id: number

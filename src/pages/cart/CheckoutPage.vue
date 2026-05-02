@@ -1,10 +1,10 @@
 <script setup lang="ts">
 import { ref, onMounted, computed, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { cartService } from '@/api/cartService'
-import { orderService, type OrderCreateData } from '@/api/orderService'
-import { promotionService, type UserVoucher } from '@/api/promotionService'
-import { getImageUrl } from '@/api/urlHelper'
+import { cartService } from '@/pages/cart/cartService'
+import { orderService, type OrderCreateData } from '@/pages/cart/orderService'
+import { promotionService, type UserVoucher } from '@/pages/promotions/promotionService'
+import { getImageUrl } from '@/lib/urlHelper'
 import axios from 'axios'
 
 const route = useRoute()

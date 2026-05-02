@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
-import { promotionService, type Voucher } from '@/api/promotionService'
+import { promotionService, type Voucher } from '@/pages/promotions/promotionService'
 
 const vouchers = ref<Voucher[]>([])
 const isLoading = ref(true)
@@ -178,6 +178,10 @@ const formatPrice = (price: number) => {
                             <label class="text-[9px] uppercase tracking-widest font-bold text-zinc-400">Tên chương trình</label>
                             <input v-model="currentVoucher.name" type="text" required class="w-full border-b border-zinc-200 py-2 focus:border-zinc-900 outline-none text-sm" />
                         </div>
+                        <div class="space-y-2 col-span-2">
+                            <label class="text-[9px] uppercase tracking-widest font-bold text-zinc-400">Tiêu đề phụ (subtitle)</label>
+                            <input v-model="currentVoucher.subtitle" type="text" class="w-full border-b border-zinc-200 py-2 focus:border-zinc-900 outline-none text-sm" placeholder="Ví dụ: Ưu đãi mùa hè đặc biệt" />
+                        </div>
                         <div class="space-y-2">
                             <label class="text-[9px] uppercase tracking-widest font-bold text-zinc-400">Loại giảm giá</label>
                             <select v-model="currentVoucher.discount_type" class="w-full border-b border-zinc-200 py-2 focus:border-zinc-900 outline-none text-sm bg-transparent">
@@ -205,6 +209,41 @@ const formatPrice = (price: number) => {
                         <div class="space-y-2">
                             <label class="text-[9px] uppercase tracking-widest font-bold text-zinc-400">Ngày kết thúc</label>
                             <input v-model="currentVoucher.end_date" type="date" required class="w-full border-b border-zinc-200 py-2 focus:border-zinc-900 outline-none text-sm" />
+                        </div>
+
+                        <!-- Banner fields -->
+                        <div class="col-span-2 pt-4 border-t border-zinc-100">
+                            <p class="text-[9px] uppercase tracking-widest font-bold text-zinc-400 mb-4">Tùy chỉnh Banner</p>
+                            <div class="grid grid-cols-2 gap-6">
+                                <div class="space-y-2">
+                                    <label class="text-[9px] uppercase tracking-widest font-bold text-zinc-400">Màu nền (hex)</label>
+                                    <div class="flex gap-3 items-center">
+                                        <input
+                                            v-model="currentVoucher.bg_color"
+                                            type="color"
+                                            class="w-10 h-10 border border-zinc-200 cursor-pointer p-0.5"
+                                        />
+                                        <input
+                                            v-model="currentVoucher.bg_color"
+                                            type="text"
+                                            class="flex-grow border-b border-zinc-200 py-2 focus:border-zinc-900 outline-none text-sm"
+                                            placeholder="#17b0cf"
+                                        />
+                                    </div>
+                                </div>
+                                <div class="space-y-2">
+                                    <label class="text-[9px] uppercase tracking-widest font-bold text-zinc-400">Thứ tự ưu tiên (sort_order)</label>
+                                    <input v-model="currentVoucher.sort_order" type="number" min="0" class="w-full border-b border-zinc-200 py-2 focus:border-zinc-900 outline-none text-sm" placeholder="0" />
+                                </div>
+                                <div class="space-y-2 col-span-2">
+                                    <label class="text-[9px] uppercase tracking-widest font-bold text-zinc-400">URL ảnh banner</label>
+                                    <input v-model="currentVoucher.banner_image" type="text" class="w-full border-b border-zinc-200 py-2 focus:border-zinc-900 outline-none text-sm" placeholder="https://..." />
+                                    <!-- Preview -->
+                                    <div v-if="currentVoucher.banner_image" class="mt-2 h-20 overflow-hidden border border-zinc-100">
+                                        <img :src="currentVoucher.banner_image" class="w-full h-full object-cover" alt="Banner preview" />
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                     </div>
 

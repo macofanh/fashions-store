@@ -1,4 +1,5 @@
 import { defineStore } from 'pinia'
+import { ref, computed } from 'vue'
 
 export interface UserInfo {
     user_id: number
@@ -8,32 +9,33 @@ export interface UserInfo {
     is_active: boolean
 }
 
-export const useAuthStore = defineStore('auth', {
-    state: () => ({
-        user: JSON.parse(localStorage.getItem('user_info') || 'null') as UserInfo | null,
-        token: localStorage.getItem('access_token') || null,
-    }),
+export const useAuthStore = defineStore('auth', () => {
+    const user = ref<UserInfo | null>(
+        JSON.parse(localStorage.getItem('user_info') || 'null')
+    )
+    const token = ref<string | null>(localStorage.getItem('access_token'))
 
-    getters: {
-        isAuthenticated: (state) => !!state.token,
-        isAdmin: (state) => state.user?.role?.toLowerCase() === 'admin',
-        userName: (state) => state.user?.full_name || 'User',
-    },
+    const isAuthenticated = computed(() => !!token.value)
+    const isAdmin = computed(() => user.value?.role?.toLowerCase() === 'admin')
+    const isStaff = computed(() =>
+        ['admin', 'staff'].includes(user.value?.role?.toLowerCase() ?? '')
+    )
+    const userName = computed(() => user.value?.full_name || 'User')
 
-    actions: {
-        setAuth(user: UserInfo, token: string) {
-            this.user = user
-            this.token = token
-            localStorage.setItem('user_info', JSON.stringify(user))
-            localStorage.setItem('access_token', token)
-        },
-
-        logout() {
-            this.user = null
-            this.token = null
-            localStorage.removeItem('user_info')
-            localStorage.removeItem('access_token')
-            localStorage.removeItem('refresh_token')
-        }
+    function setAuth(userInfo: UserInfo, accessToken: string) {
+        user.value = userInfo
+        token.value = accessToken
+        localStorage.setItem('user_info', JSON.stringify(userInfo))
+        localStorage.setItem('access_token', accessToken)
     }
+
+    function logout() {
+        user.value = null
+        token.value = null
+        localStorage.removeItem('user_info')
+        localStorage.removeItem('access_token')
+        localStorage.removeItem('refresh_token')
+    }
+
+    return { user, token, isAuthenticated, isAdmin, isStaff, userName, setAuth, logout }
 })

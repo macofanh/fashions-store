@@ -1,5 +1,5 @@
-import axiosClient from '@/api/axiosClient'
-import { apiEndpoints } from '@/api/endPoints'
+import axiosClient from '@/lib/axiosClient'
+import { apiEndpoints } from '@/lib/endPoints'
 
 export interface Product {
     product_id: number
@@ -13,11 +13,12 @@ export interface Product {
     is_active: boolean
     avg_rating: number
     total_sold: number
+    created_at?: string
     deleted_at?: string | null
-    images: { 
+    images: {
         image_id: number
         image_url: string
-        is_primary: boolean 
+        is_primary: boolean
     }[]
     variants?: any[]
 }
@@ -49,7 +50,7 @@ class ProductService {
 
     public addReview(productId: number, data: FormData) {
         return axiosClient.post(apiEndpoints.products.reviews(productId), data, {
-            headers: { 'Content-Type': 'multipart/form-data' }
+            headers: { 'Content-Type': 'multipart/form-data' },
         })
     }
 }

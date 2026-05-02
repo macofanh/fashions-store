@@ -40,5 +40,5 @@ export const apiEndpoints = {
         voucherDetail: (id: number) => `${basePrefix}/promotions/vouchers/${id}`,
         claim: (id: number) => `${basePrefix}/promotions/vouchers/${id}/claim`,
         myVouchers: `${basePrefix}/promotions/my-vouchers`,
-    }
+    },
 } as const

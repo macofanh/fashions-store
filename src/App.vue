@@ -1,9 +1,9 @@
 <script setup lang="ts">
 import { RouterView } from 'vue-router'
+import ToastNotification from '@/components/ToastNotification.vue'
 </script>
 
 <template>
-  <RouterView />
+    <RouterView />
+    <ToastNotification />
 </template>
-
-<style scoped></style>

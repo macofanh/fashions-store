@@ -2,10 +2,11 @@
 import { RouterView } from 'vue-router'
 import HeaderLayout from './components/HeaderLayout.vue'
 import FooterLayout from './components/FooterLayout.vue'
+import ChatAIWidget from '@/components/chat-ai/ChatAIWidget.vue'
 </script>
 
 <template>
-    <div class="flex flex-col min-h-screen font-display text-fashion-black bg-white antialiased">
+    <div class="flex flex-col min-h-screen font-display text-fashion-black bg-background-light antialiased">
         <HeaderLayout />
 
         <main class="flex-grow">
@@ -13,5 +14,8 @@ import FooterLayout from './components/FooterLayout.vue'
         </main>
 
         <FooterLayout />
+
+        <!-- Chat AI Widget — góc phải dưới -->
+        <ChatAIWidget />
     </div>
 </template>

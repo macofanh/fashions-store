@@ -51,7 +51,7 @@ const routes: Array<RouteRecordRaw> = [
                 name: 'cart',
                 path: 'cart',
                 component: () => import('@/pages/cart/CartPage.vue'),
-                meta: { requiresAuth: true }
+                // Không yêu cầu auth — guest có thể xem giỏ hàng
             },
             {
                 name: 'checkout',
@@ -62,7 +62,7 @@ const routes: Array<RouteRecordRaw> = [
             {
                 name: 'profile',
                 path: 'profile',
-                component: () => import('@/pages/auth/ProfilePage.vue'),
+                component: () => import('@/pages/profile/ProfilePage.vue'),
                 meta: { requiresAuth: true }
             },
             {

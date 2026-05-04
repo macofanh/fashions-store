@@ -5,18 +5,15 @@ import { useAuthStore } from '@/stores/useAuthStore'
 
 const authStore = useAuthStore()
 
-// ── State ─────────────────────────────────────────────────────────
 const users = ref<any[]>([])
 const isLoading = ref(true)
 const searchQuery = ref('')
 
-// Drawer
 const isDrawerOpen = ref(false)
 const activeTab = ref<'info' | 'points'>('info')
 const isSaving = ref(false)
 const saveError = ref('')
 
-// Form sửa user
 const editForm = reactive({
     user_id: 0,
     full_name: '',
@@ -29,13 +26,11 @@ const editForm = reactive({
     account_type: '',
 })
 
-// Form điều chỉnh điểm
 const pointsForm = reactive({ points_delta: 0, reason: '' })
 const isAdjustingPoints = ref(false)
 const pointsError = ref('')
 const pointsSuccess = ref('')
 
-// ── Computed ──────────────────────────────────────────────────────
 const filteredUsers = computed(() => {
     const q = searchQuery.value.toLowerCase().trim()
     if (!q) return users.value
@@ -48,7 +43,6 @@ const filteredUsers = computed(() => {
 
 const isCurrentUser = computed(() => editForm.user_id === authStore.user?.user_id)
 
-// ── Methods ───────────────────────────────────────────────────────
 const fetchUsers = async () => {
     isLoading.value = true
     try {
@@ -136,279 +130,298 @@ const formatDate = (dateStr: string) => {
 }
 
 const roleLabel: Record<string, string> = { admin: 'Admin', staff: 'Staff', customer: 'Khách hàng' }
-const roleBadgeClass: Record<string, string> = {
-    admin:    'bg-zinc-900 text-white',
-    staff:    'bg-blue-100 text-blue-700',
-    customer: 'bg-zinc-100 text-zinc-600',
-}
 
 onMounted(fetchUsers)
 </script>
 
 <template>
-    <div class="space-y-8">
+    <div class="space-y-6">
         <!-- Header -->
-        <header class="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div>
-                <h1 class="text-3xl serif-text italic text-zinc-900">Quản lý Người dùng</h1>
-                <p class="text-xs text-zinc-400 uppercase tracking-widest mt-2 font-bold">
-                    Phân quyền và quản lý tài khoản thành viên
+                <h1 class="text-2xl font-bold text-gray-900">Quản lý Người dùng</h1>
+                <p class="text-sm text-gray-500 mt-1">
+                    {{ isLoading ? 'Đang tải...' : `${filteredUsers.length} / ${users.length} tài khoản` }}
                 </p>
             </div>
-            <div class="relative w-full sm:w-72">
-                <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400 text-[18px] pointer-events-none">search</span>
+            <div class="relative w-full sm:w-80">
+                <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-[20px] pointer-events-none">search</span>
                 <input
                     v-model="searchQuery"
                     type="text"
-                    placeholder="Tìm tên, email, SĐT..."
-                    class="w-full pl-9 pr-4 py-2.5 border border-zinc-200 text-sm outline-none focus:border-zinc-900 transition-colors bg-zinc-50 focus:bg-white"
+                    placeholder="Tìm tên, email, số điện thoại..."
+                    class="w-full pl-10 pr-4 py-2.5 rounded-xl border border-gray-200 text-sm outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100 transition-all bg-white"
                 />
             </div>
-        </header>
+        </div>
 
-        <!-- Table -->
-        <div class="bg-white border border-zinc-100 shadow-sm overflow-hidden">
+        <!-- Loading -->
+        <div v-if="isLoading" class="flex justify-center py-20">
+            <div class="animate-spin h-8 w-8 border-4 border-indigo-500 border-t-transparent rounded-full"></div>
+        </div>
+
+        <!-- Empty -->
+        <div v-else-if="filteredUsers.length === 0" class="text-center py-20 bg-white rounded-2xl border border-gray-100">
+            <span class="material-symbols-outlined text-5xl text-gray-200 block mb-3">person_search</span>
+            <p class="text-gray-400 text-sm">{{ searchQuery ? 'Không tìm thấy người dùng nào.' : 'Chưa có người dùng nào.' }}</p>
+        </div>
+
+        <!-- User Table -->
+        <div v-else class="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
             <table class="w-full text-left border-collapse">
-                <thead class="bg-zinc-50 border-b border-zinc-100">
+                <thead class="bg-gray-50 border-b border-gray-100">
                     <tr>
-                        <th class="px-6 py-4 text-[10px] uppercase tracking-widest font-bold text-zinc-400">ID</th>
-                        <th class="px-6 py-4 text-[10px] uppercase tracking-widest font-bold text-zinc-400">Người dùng</th>
-                        <th class="px-6 py-4 text-[10px] uppercase tracking-widest font-bold text-zinc-400 hidden md:table-cell">Email</th>
-                        <th class="px-6 py-4 text-[10px] uppercase tracking-widest font-bold text-zinc-400">Vai trò</th>
-                        <th class="px-6 py-4 text-[10px] uppercase tracking-widest font-bold text-zinc-400 hidden lg:table-cell">Điểm</th>
-                        <th class="px-6 py-4 text-[10px] uppercase tracking-widest font-bold text-zinc-400 hidden lg:table-cell">Trạng thái</th>
-                        <th class="px-6 py-4 text-[10px] uppercase tracking-widest font-bold text-zinc-400 hidden xl:table-cell">Ngày tham gia</th>
-                        <th class="px-6 py-4 text-[10px] uppercase tracking-widest font-bold text-zinc-400 text-right">Thao tác</th>
+                        <th class="px-5 py-3.5 text-xs font-semibold text-gray-400">Người dùng</th>
+                        <th class="px-5 py-3.5 text-xs font-semibold text-gray-400 hidden md:table-cell">Email</th>
+                        <th class="px-5 py-3.5 text-xs font-semibold text-gray-400">Vai trò</th>
+                        <th class="px-5 py-3.5 text-xs font-semibold text-gray-400 hidden lg:table-cell">Điểm</th>
+                        <th class="px-5 py-3.5 text-xs font-semibold text-gray-400 hidden lg:table-cell">Trạng thái</th>
+                        <th class="px-5 py-3.5 text-xs font-semibold text-gray-400 hidden xl:table-cell">Ngày tham gia</th>
+                        <th class="px-5 py-3.5 text-xs font-semibold text-gray-400 text-right">Thao tác</th>
                     </tr>
                 </thead>
-                <tbody class="divide-y divide-zinc-50">
-                    <tr v-if="isLoading">
-                        <td colspan="8" class="px-6 py-20 text-center">
-                            <div class="animate-spin h-6 w-6 border-2 border-zinc-900 border-t-transparent rounded-full mx-auto"></div>
-                        </td>
-                    </tr>
-                    <tr v-else-if="filteredUsers.length === 0">
-                        <td colspan="8" class="px-6 py-20 text-center text-zinc-400 text-xs uppercase tracking-widest">
-                            {{ searchQuery ? 'Không tìm thấy người dùng nào.' : 'Chưa có người dùng nào.' }}
-                        </td>
-                    </tr>
+                <tbody class="divide-y divide-gray-50">
                     <tr
                         v-for="u in filteredUsers"
                         :key="u.user_id"
-                        class="hover:bg-zinc-50/50 transition-colors"
-                        :class="{ 'opacity-50': !u.is_active }"
+                        :class="['hover:bg-gray-50/60 transition-colors group', !u.is_active ? 'opacity-60' : '']"
                     >
-                        <td class="px-6 py-5 text-xs text-zinc-400">#{{ u.user_id }}</td>
-                        <td class="px-6 py-5">
-                            <p class="text-sm font-bold text-zinc-900">{{ u.full_name }}</p>
-                            <p class="text-[10px] text-zinc-400 mt-0.5">{{ u.phone || '—' }}</p>
+                        <!-- Avatar + tên -->
+                        <td class="px-5 py-4">
+                            <div class="flex items-center gap-3">
+                                <div :class="['w-9 h-9 rounded-full flex items-center justify-center text-white font-bold text-sm shrink-0', u.role === 'admin' ? 'bg-gradient-to-br from-violet-500 to-purple-600' : u.role === 'staff' ? 'bg-gradient-to-br from-blue-400 to-indigo-500' : 'bg-gradient-to-br from-gray-400 to-gray-500']">
+                                    {{ u.full_name?.charAt(0)?.toUpperCase() || '?' }}
+                                </div>
+                                <div>
+                                    <p class="text-sm font-semibold text-gray-900">{{ u.full_name }}</p>
+                                    <p class="text-xs text-gray-400">{{ u.phone || '—' }}</p>
+                                </div>
+                            </div>
                         </td>
-                        <td class="px-6 py-5 text-sm text-zinc-500 hidden md:table-cell">{{ u.email }}</td>
-                        <td class="px-6 py-5">
-                            <span :class="['text-[9px] font-bold px-2 py-1 tracking-widest uppercase', roleBadgeClass[u.role] || 'bg-zinc-100 text-zinc-600']">
+                        <!-- Email -->
+                        <td class="px-5 py-4 text-sm text-gray-500 hidden md:table-cell">{{ u.email }}</td>
+                        <!-- Role -->
+                        <td class="px-5 py-4">
+                            <span :class="['text-[10px] font-bold px-2.5 py-1 rounded-full uppercase tracking-wide', u.role === 'admin' ? 'bg-violet-100 text-violet-700' : u.role === 'staff' ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-500']">
                                 {{ roleLabel[u.role] || u.role }}
                             </span>
                         </td>
-                        <td class="px-6 py-5 text-xs font-medium text-zinc-700 hidden lg:table-cell">
-                            {{ u.total_points.toLocaleString('vi-VN') }} đ
+                        <!-- Điểm -->
+                        <td class="px-5 py-4 hidden lg:table-cell">
+                            <div class="flex items-center gap-1">
+                                <span class="material-symbols-outlined text-[14px] text-amber-400">star</span>
+                                <span class="text-sm font-medium text-gray-700">{{ u.total_points.toLocaleString('vi-VN') }}</span>
+                            </div>
                         </td>
-                        <td class="px-6 py-5 hidden lg:table-cell">
-                            <span :class="['text-[9px] font-bold px-2 py-1 uppercase tracking-widest', u.is_active ? 'bg-green-50 text-green-600' : 'bg-red-50 text-red-500']">
+                        <!-- Trạng thái -->
+                        <td class="px-5 py-4 hidden lg:table-cell">
+                            <span :class="['inline-flex items-center gap-1 text-[10px] font-semibold px-2.5 py-1 rounded-full', u.is_active ? 'bg-emerald-50 text-emerald-600' : 'bg-red-50 text-red-500']">
+                                <span :class="['w-1.5 h-1.5 rounded-full', u.is_active ? 'bg-emerald-500' : 'bg-red-400']"></span>
                                 {{ u.is_active ? 'Hoạt động' : 'Đã khóa' }}
                             </span>
                         </td>
-                        <td class="px-6 py-5 text-xs text-zinc-400 hidden xl:table-cell">{{ formatDate(u.created_at) }}</td>
-                        <td class="px-6 py-5 text-right">
+                        <!-- Ngày tham gia -->
+                        <td class="px-5 py-4 text-xs text-gray-400 hidden xl:table-cell">{{ formatDate(u.created_at) }}</td>
+                        <!-- Action -->
+                        <td class="px-5 py-4 text-right">
                             <button
                                 @click="openDrawer(u)"
-                                class="inline-flex items-center gap-1.5 text-[10px] uppercase tracking-widest font-bold text-zinc-900 hover:text-zinc-500 transition-colors px-3 py-1.5 border border-zinc-200 hover:border-zinc-400"
+                                class="inline-flex items-center gap-1.5 text-xs font-semibold text-indigo-600 hover:text-indigo-800 transition-colors px-3 py-1.5 rounded-lg hover:bg-indigo-50"
                             >
-                                <span class="material-symbols-outlined text-[14px]">edit</span>
+                                <span class="material-symbols-outlined text-[15px]">edit</span>
                                 Sửa
                             </button>
                         </td>
                     </tr>
                 </tbody>
             </table>
-            <div v-if="!isLoading && users.length > 0" class="px-6 py-3 border-t border-zinc-50 text-[10px] text-zinc-400 uppercase tracking-widest">
+            <!-- Footer -->
+            <div class="px-5 py-3 border-t border-gray-50 text-xs text-gray-400">
                 Hiển thị {{ filteredUsers.length }} / {{ users.length }} người dùng
             </div>
         </div>
 
-        <!-- ── DRAWER ──────────────────────────────────────────────── -->
+        <!-- DRAWER -->
         <Teleport to="body">
             <Transition name="drawer">
-                <div v-if="isDrawerOpen" class="fixed inset-0 z-50 flex justify-end">
-                    <div class="absolute inset-0 bg-black/30 backdrop-blur-sm" @click="closeDrawer"></div>
+                <div v-if="isDrawerOpen" class="fixed inset-0 z-[200] flex justify-end">
+                    <div class="absolute inset-0 bg-black/40 backdrop-blur-sm" @click="closeDrawer"></div>
 
-                    <div class="relative w-full max-w-lg bg-white shadow-2xl flex flex-col h-full">
+                    <div class="relative w-full max-w-md bg-white shadow-2xl flex flex-col h-full rounded-l-2xl overflow-hidden">
                         <!-- Header -->
-                        <div class="px-8 py-6 border-b border-zinc-100 bg-zinc-50 flex items-center justify-between shrink-0">
-                            <div>
-                                <h2 class="text-lg serif-text italic text-zinc-900">Chỉnh sửa người dùng</h2>
-                                <p class="text-[9px] uppercase tracking-widest text-zinc-400 mt-0.5">#{{ editForm.user_id }} · {{ editForm.email }}</p>
+                        <div class="px-6 py-5 border-b border-gray-100 flex items-center gap-4 shrink-0">
+                            <div :class="['w-12 h-12 rounded-full flex items-center justify-center text-white font-bold text-lg shrink-0', editForm.role === 'admin' ? 'bg-gradient-to-br from-violet-500 to-purple-600' : editForm.role === 'staff' ? 'bg-gradient-to-br from-blue-400 to-indigo-500' : 'bg-gradient-to-br from-gray-400 to-gray-500']">
+                                {{ editForm.full_name?.charAt(0)?.toUpperCase() || '?' }}
                             </div>
-                            <button @click="closeDrawer" class="w-9 h-9 flex items-center justify-center hover:bg-zinc-200 rounded-full transition-colors">
-                                <span class="material-symbols-outlined text-[20px]">close</span>
+                            <div class="flex-grow min-w-0">
+                                <h2 class="font-bold text-gray-900 truncate">{{ editForm.full_name }}</h2>
+                                <p class="text-xs text-gray-400 truncate">{{ editForm.email }}</p>
+                            </div>
+                            <button @click="closeDrawer" class="w-8 h-8 flex items-center justify-center hover:bg-gray-100 rounded-full transition-colors shrink-0">
+                                <span class="material-symbols-outlined text-[20px] text-gray-500">close</span>
                             </button>
                         </div>
 
                         <!-- Tabs -->
-                        <div class="flex border-b border-zinc-100 shrink-0">
+                        <div class="flex px-6 pt-4 gap-1 shrink-0">
                             <button
                                 @click="activeTab = 'info'"
-                                :class="['flex-1 py-3.5 text-[10px] uppercase tracking-widest font-bold transition-colors border-b-2', activeTab === 'info' ? 'text-zinc-900 border-zinc-900' : 'text-zinc-400 border-transparent hover:text-zinc-700']"
+                                :class="['flex-1 py-2.5 text-xs font-semibold rounded-lg transition-all', activeTab === 'info' ? 'bg-indigo-50 text-indigo-700' : 'text-gray-500 hover:bg-gray-50']"
                             >Thông tin</button>
                             <button
                                 @click="activeTab = 'points'"
-                                :class="['flex-1 py-3.5 text-[10px] uppercase tracking-widest font-bold transition-colors border-b-2', activeTab === 'points' ? 'text-zinc-900 border-zinc-900' : 'text-zinc-400 border-transparent hover:text-zinc-700']"
+                                :class="['flex-1 py-2.5 text-xs font-semibold rounded-lg transition-all', activeTab === 'points' ? 'bg-indigo-50 text-indigo-700' : 'text-gray-500 hover:bg-gray-50']"
                             >Điểm thưởng</button>
                         </div>
 
                         <!-- Body -->
-                        <div class="flex-grow overflow-y-auto p-8">
+                        <div class="flex-grow overflow-y-auto p-6 space-y-5">
 
                             <!-- TAB INFO -->
-                            <div v-if="activeTab === 'info'" class="space-y-6">
-                                <!-- Readonly meta -->
-                                <div class="grid grid-cols-2 gap-4 p-4 bg-zinc-50 border border-zinc-100 text-xs">
-                                    <div>
-                                        <p class="text-[9px] uppercase tracking-widest text-zinc-400 mb-1">Loại tài khoản</p>
-                                        <p class="font-bold text-zinc-700 uppercase">{{ editForm.account_type }}</p>
+                            <template v-if="activeTab === 'info'">
+                                <div class="grid grid-cols-2 gap-3">
+                                    <div class="bg-gray-50 rounded-xl p-3">
+                                        <p class="text-[10px] uppercase tracking-wider text-gray-400 mb-1">Loại tài khoản</p>
+                                        <p class="text-sm font-semibold text-gray-700 capitalize">{{ editForm.account_type }}</p>
                                     </div>
-                                    <div>
-                                        <p class="text-[9px] uppercase tracking-widest text-zinc-400 mb-1">Ngày tham gia</p>
-                                        <p class="font-bold text-zinc-700">{{ formatDate(editForm.created_at) }}</p>
+                                    <div class="bg-gray-50 rounded-xl p-3">
+                                        <p class="text-[10px] uppercase tracking-wider text-gray-400 mb-1">Ngày tham gia</p>
+                                        <p class="text-sm font-semibold text-gray-700">{{ formatDate(editForm.created_at) }}</p>
                                     </div>
                                 </div>
 
-                                <!-- Họ tên -->
-                                <div class="space-y-1.5">
-                                    <label class="text-[9px] uppercase tracking-widest font-bold text-zinc-400">Họ và tên <span class="text-red-400">*</span></label>
-                                    <input v-model="editForm.full_name" type="text" class="w-full border-b border-zinc-200 py-2.5 focus:border-zinc-900 outline-none text-sm transition-colors" placeholder="Nhập họ và tên..." />
+                                <div>
+                                    <label class="text-xs font-semibold text-gray-500 block mb-1.5">Họ và tên <span class="text-red-400">*</span></label>
+                                    <input v-model="editForm.full_name" type="text"
+                                        class="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100 transition-all"
+                                        placeholder="Nhập họ và tên..." />
                                 </div>
 
-                                <!-- SĐT -->
-                                <div class="space-y-1.5">
-                                    <label class="text-[9px] uppercase tracking-widest font-bold text-zinc-400">Số điện thoại</label>
-                                    <input v-model="editForm.phone" type="tel" class="w-full border-b border-zinc-200 py-2.5 focus:border-zinc-900 outline-none text-sm transition-colors" placeholder="Nhập số điện thoại..." />
+                                <div>
+                                    <label class="text-xs font-semibold text-gray-500 block mb-1.5">Số điện thoại</label>
+                                    <input v-model="editForm.phone" type="tel"
+                                        class="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100 transition-all"
+                                        placeholder="Nhập số điện thoại..." />
                                 </div>
 
-                                <!-- Vai trò -->
-                                <div class="space-y-2">
-                                    <label class="text-[9px] uppercase tracking-widest font-bold text-zinc-400">Vai trò</label>
+                                <div>
+                                    <label class="text-xs font-semibold text-gray-500 block mb-2">Vai trò</label>
                                     <div class="grid grid-cols-3 gap-2">
                                         <button
                                             v-for="r in ['customer', 'staff', 'admin']"
                                             :key="r"
                                             @click="editForm.role = r"
                                             :disabled="r === 'admin' && authStore.user?.role !== 'admin'"
-                                            :class="['py-2.5 text-[10px] uppercase tracking-widest font-bold border transition-all disabled:opacity-30 disabled:cursor-not-allowed', editForm.role === r ? 'bg-zinc-900 text-white border-zinc-900' : 'border-zinc-200 text-zinc-500 hover:border-zinc-900 hover:text-zinc-900']"
+                                            :class="['py-2.5 text-xs font-semibold rounded-xl border-2 transition-all disabled:opacity-30 disabled:cursor-not-allowed', editForm.role === r ? (r === 'admin' ? 'bg-violet-600 text-white border-violet-600' : r === 'staff' ? 'bg-indigo-600 text-white border-indigo-600' : 'bg-gray-700 text-white border-gray-700') : 'border-gray-200 text-gray-500 hover:border-gray-400']"
                                         >{{ roleLabel[r] }}</button>
                                     </div>
-                                    <p v-if="authStore.user?.role !== 'admin'" class="text-[9px] text-zinc-400 italic">* Chỉ Admin mới có thể cấp quyền Admin</p>
+                                    <p v-if="authStore.user?.role !== 'admin'" class="text-[10px] text-gray-400 mt-1.5 italic">* Chỉ Admin mới có thể cấp quyền Admin</p>
                                 </div>
 
-                                <!-- Trạng thái -->
-                                <div class="space-y-1.5">
-                                    <label class="text-[9px] uppercase tracking-widest font-bold text-zinc-400">Trạng thái tài khoản</label>
-                                    <div
+                                <div>
+                                    <label class="text-xs font-semibold text-gray-500 block mb-2">Trạng thái tài khoản</label>
+                                    <button
                                         @click="!isCurrentUser && (editForm.is_active = !editForm.is_active)"
-                                        :class="['flex items-center justify-between p-4 border transition-all select-none', editForm.is_active ? 'border-green-200 bg-green-50' : 'border-red-200 bg-red-50', isCurrentUser ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer hover:opacity-80']"
+                                        :disabled="isCurrentUser"
+                                        :class="['w-full flex items-center justify-between p-4 rounded-xl border-2 transition-all', editForm.is_active ? 'border-emerald-200 bg-emerald-50' : 'border-red-200 bg-red-50', isCurrentUser ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer hover:opacity-90']"
                                     >
                                         <div class="flex items-center gap-3">
-                                            <span :class="['material-symbols-outlined text-[20px]', editForm.is_active ? 'text-green-600' : 'text-red-500']">
-                                                {{ editForm.is_active ? 'check_circle' : 'block' }}
-                                            </span>
-                                            <div>
-                                                <p :class="['text-xs font-bold uppercase tracking-widest', editForm.is_active ? 'text-green-700' : 'text-red-600']">
+                                            <div :class="['w-9 h-9 rounded-full flex items-center justify-center', editForm.is_active ? 'bg-emerald-100' : 'bg-red-100']">
+                                                <span :class="['material-symbols-outlined text-[20px]', editForm.is_active ? 'text-emerald-600' : 'text-red-500']">
+                                                    {{ editForm.is_active ? 'check_circle' : 'block' }}
+                                                </span>
+                                            </div>
+                                            <div class="text-left">
+                                                <p :class="['text-sm font-semibold', editForm.is_active ? 'text-emerald-700' : 'text-red-600']">
                                                     {{ editForm.is_active ? 'Đang hoạt động' : 'Đã bị khóa' }}
                                                 </p>
-                                                <p class="text-[9px] text-zinc-400 mt-0.5">
-                                                    {{ isCurrentUser ? 'Không thể khóa tài khoản của chính mình' : 'Click để ' + (editForm.is_active ? 'khóa' : 'mở khóa') }}
+                                                <p class="text-[10px] text-gray-400">
+                                                    {{ isCurrentUser ? 'Không thể khóa tài khoản của chính mình' : 'Nhấn để ' + (editForm.is_active ? 'khóa' : 'mở khóa') }}
                                                 </p>
                                             </div>
                                         </div>
-                                        <div :class="['w-10 h-5 rounded-full transition-colors relative shrink-0', editForm.is_active ? 'bg-green-500' : 'bg-zinc-300']">
-                                            <div :class="['absolute top-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform', editForm.is_active ? 'translate-x-5' : 'translate-x-0.5']"></div>
+                                        <div :class="['w-11 h-6 rounded-full transition-colors relative shrink-0', editForm.is_active ? 'bg-emerald-500' : 'bg-gray-300']">
+                                            <div :class="['absolute top-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform', editForm.is_active ? 'translate-x-5' : 'translate-x-0.5']"></div>
                                         </div>
-                                    </div>
+                                    </button>
                                 </div>
 
-                                <div v-if="saveError" class="flex items-center gap-2 p-3 bg-red-50 border border-red-200 text-red-600 text-xs">
+                                <div v-if="saveError" class="flex items-center gap-2 p-3 bg-red-50 border border-red-200 rounded-xl text-red-600 text-xs">
                                     <span class="material-symbols-outlined text-[16px]">error</span>
                                     {{ saveError }}
                                 </div>
-                            </div>
+                            </template>
 
                             <!-- TAB POINTS -->
-                            <div v-if="activeTab === 'points'" class="space-y-6">
-                                <div class="p-6 bg-zinc-900 text-white text-center">
-                                    <p class="text-[9px] uppercase tracking-[0.3em] text-zinc-400 mb-2">Điểm thưởng hiện tại</p>
+                            <template v-if="activeTab === 'points'">
+                                <div class="bg-gradient-to-br from-amber-400 to-orange-500 rounded-2xl p-6 text-white text-center">
+                                    <span class="material-symbols-outlined text-3xl mb-2 block" style="font-variation-settings:'FILL' 1">stars</span>
                                     <p class="text-4xl font-black">{{ editForm.total_points.toLocaleString('vi-VN') }}</p>
-                                    <p class="text-[10px] text-zinc-500 mt-1 uppercase tracking-widest">điểm</p>
+                                    <p class="text-sm text-amber-100 mt-1">điểm thưởng</p>
                                 </div>
 
                                 <div class="space-y-4">
-                                    <div class="space-y-1.5">
-                                        <label class="text-[9px] uppercase tracking-widest font-bold text-zinc-400">
+                                    <div>
+                                        <label class="text-xs font-semibold text-gray-500 block mb-1.5">
                                             Số điểm điều chỉnh
-                                            <span class="text-zinc-300 normal-case tracking-normal ml-1">(dương = cộng, âm = trừ)</span>
+                                            <span class="text-gray-400 font-normal ml-1">(+ cộng / - trừ)</span>
                                         </label>
                                         <div class="flex gap-2">
                                             <button
                                                 @click="pointsForm.points_delta = -Math.abs(Number(pointsForm.points_delta))"
-                                                :class="['px-3 py-2.5 border text-[10px] font-bold transition-colors', Number(pointsForm.points_delta) < 0 ? 'bg-red-500 text-white border-red-500' : 'border-zinc-200 text-zinc-500 hover:border-red-400 hover:text-red-500']"
-                                            ><span class="material-symbols-outlined text-[16px]">remove</span></button>
+                                                :class="['px-3 py-2.5 rounded-xl border-2 text-sm font-bold transition-colors', Number(pointsForm.points_delta) < 0 ? 'bg-red-500 text-white border-red-500' : 'border-gray-200 text-gray-500 hover:border-red-300 hover:text-red-500']"
+                                            ><span class="material-symbols-outlined text-[18px]">remove</span></button>
                                             <input
                                                 v-model.number="pointsForm.points_delta"
                                                 type="number"
-                                                class="flex-grow border-b border-zinc-200 py-2.5 px-2 focus:border-zinc-900 outline-none text-sm text-center font-bold transition-colors"
+                                                class="flex-grow border-2 border-gray-200 rounded-xl px-4 py-2.5 text-sm text-center font-bold outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100 transition-all"
                                                 placeholder="0"
                                             />
                                             <button
                                                 @click="pointsForm.points_delta = Math.abs(Number(pointsForm.points_delta))"
-                                                :class="['px-3 py-2.5 border text-[10px] font-bold transition-colors', Number(pointsForm.points_delta) > 0 ? 'bg-green-500 text-white border-green-500' : 'border-zinc-200 text-zinc-500 hover:border-green-400 hover:text-green-500']"
-                                            ><span class="material-symbols-outlined text-[16px]">add</span></button>
+                                                :class="['px-3 py-2.5 rounded-xl border-2 text-sm font-bold transition-colors', Number(pointsForm.points_delta) > 0 ? 'bg-emerald-500 text-white border-emerald-500' : 'border-gray-200 text-gray-500 hover:border-emerald-300 hover:text-emerald-500']"
+                                            ><span class="material-symbols-outlined text-[18px]">add</span></button>
                                         </div>
-                                        <p v-if="pointsForm.points_delta !== 0" :class="['text-[10px] font-bold', Number(pointsForm.points_delta) > 0 ? 'text-green-600' : 'text-red-500']">
+                                        <p v-if="pointsForm.points_delta !== 0" :class="['text-xs font-semibold mt-1.5', Number(pointsForm.points_delta) > 0 ? 'text-emerald-600' : 'text-red-500']">
                                             Sau điều chỉnh: {{ (editForm.total_points + Number(pointsForm.points_delta)).toLocaleString('vi-VN') }} điểm
                                         </p>
                                     </div>
 
-                                    <div class="space-y-1.5">
-                                        <label class="text-[9px] uppercase tracking-widest font-bold text-zinc-400">Lý do <span class="text-red-400">*</span></label>
-                                        <input v-model="pointsForm.reason" type="text" class="w-full border-b border-zinc-200 py-2.5 focus:border-zinc-900 outline-none text-sm transition-colors" placeholder="VD: Bù điểm do lỗi hệ thống..." />
+                                    <div>
+                                        <label class="text-xs font-semibold text-gray-500 block mb-1.5">Lý do <span class="text-red-400">*</span></label>
+                                        <input v-model="pointsForm.reason" type="text"
+                                            class="w-full border-2 border-gray-200 rounded-xl px-4 py-2.5 text-sm outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100 transition-all"
+                                            placeholder="VD: Bù điểm do lỗi hệ thống..." />
                                     </div>
 
-                                    <div v-if="pointsError" class="flex items-center gap-2 p-3 bg-red-50 border border-red-200 text-red-600 text-xs">
+                                    <div v-if="pointsError" class="flex items-center gap-2 p-3 bg-red-50 border border-red-200 rounded-xl text-red-600 text-xs">
                                         <span class="material-symbols-outlined text-[16px]">error</span>{{ pointsError }}
                                     </div>
-                                    <div v-if="pointsSuccess" class="flex items-center gap-2 p-3 bg-green-50 border border-green-200 text-green-700 text-xs">
+                                    <div v-if="pointsSuccess" class="flex items-center gap-2 p-3 bg-emerald-50 border border-emerald-200 rounded-xl text-emerald-700 text-xs">
                                         <span class="material-symbols-outlined text-[16px]">check_circle</span>{{ pointsSuccess }}
                                     </div>
 
                                     <button
                                         @click="handleAdjustPoints"
                                         :disabled="isAdjustingPoints || !pointsForm.points_delta || !pointsForm.reason.trim()"
-                                        class="w-full bg-zinc-900 text-white py-3.5 text-[10px] uppercase tracking-widest font-bold hover:bg-zinc-700 transition-colors disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                                        class="w-full bg-indigo-600 text-white py-3 text-sm font-semibold rounded-xl hover:bg-indigo-700 transition-colors disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                                     >
                                         <span v-if="isAdjustingPoints" class="animate-spin h-4 w-4 border-2 border-white border-t-transparent rounded-full"></span>
                                         {{ isAdjustingPoints ? 'Đang xử lý...' : 'Xác nhận điều chỉnh' }}
                                     </button>
                                 </div>
-                            </div>
+                            </template>
                         </div>
 
-                        <!-- Footer (chỉ tab info) -->
-                        <div v-if="activeTab === 'info'" class="px-8 py-5 border-t border-zinc-100 bg-zinc-50 flex justify-end gap-3 shrink-0">
-                            <button @click="closeDrawer" class="px-6 py-2.5 text-[10px] uppercase tracking-widest font-bold text-zinc-400 hover:text-zinc-900 transition-colors">Hủy</button>
+                        <!-- Footer -->
+                        <div v-if="activeTab === 'info'" class="px-6 py-4 border-t border-gray-100 flex gap-3 shrink-0">
+                            <button @click="closeDrawer" class="flex-1 py-2.5 text-sm font-semibold text-gray-500 hover:text-gray-700 border border-gray-200 rounded-xl transition-colors">Hủy</button>
                             <button
                                 @click="handleSave"
                                 :disabled="isSaving || !editForm.full_name.trim()"
-                                class="bg-zinc-900 text-white px-8 py-2.5 text-[10px] uppercase tracking-widest font-bold hover:bg-zinc-700 transition-colors disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-2"
+                                class="flex-1 bg-indigo-600 text-white py-2.5 text-sm font-semibold rounded-xl hover:bg-indigo-700 transition-colors disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                             >
-                                <span v-if="isSaving" class="animate-spin h-3.5 w-3.5 border-2 border-white border-t-transparent rounded-full"></span>
+                                <span v-if="isSaving" class="animate-spin h-4 w-4 border-2 border-white border-t-transparent rounded-full"></span>
                                 {{ isSaving ? 'Đang lưu...' : 'Lưu thay đổi' }}
                             </button>
                         </div>
@@ -420,10 +433,8 @@ onMounted(fetchUsers)
 </template>
 
 <style scoped>
-.serif-text { font-family: 'Playfair Display', serif; }
-
-.drawer-enter-active, .drawer-leave-active { transition: opacity 0.3s ease; }
-.drawer-enter-active .relative, .drawer-leave-active .relative { transition: transform 0.35s cubic-bezier(0.16, 1, 0.3, 1); }
+.drawer-enter-active, .drawer-leave-active { transition: opacity 0.25s ease; }
+.drawer-enter-active .relative, .drawer-leave-active .relative { transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1); }
 .drawer-enter-from { opacity: 0; }
 .drawer-leave-to   { opacity: 0; }
 .drawer-enter-from .relative { transform: translateX(100%); }

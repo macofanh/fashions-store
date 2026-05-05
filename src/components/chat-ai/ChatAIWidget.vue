@@ -14,7 +14,7 @@ const messages = ref<Message[]>([
     {
         id: 1,
         role: 'assistant',
-        content: 'Xin chào! Tôi là trợ lý thời trang của AZURE. Tôi có thể giúp bạn tìm kiếm sản phẩm, tư vấn phong cách hoặc giải đáp thắc mắc. 👗',
+        content: 'Xin chào! Tôi là trợ lý thời trang của LUXU. Tôi có thể giúp bạn tìm kiếm sản phẩm, tư vấn phong cách hoặc giải đáp thắc mắc. 👗',
         time: now(),
     }
 ])
@@ -75,7 +75,7 @@ function scrollToBottom() {
                             <span class="material-symbols-outlined text-white text-[18px]" style="font-variation-settings:'FILL' 1">smart_toy</span>
                         </div>
                         <div>
-                            <p class="text-[11px] font-bold uppercase tracking-widest">Azure AI</p>
+                            <p class="text-[11px] font-bold uppercase tracking-widest">Luxu AI</p>
                             <div class="flex items-center gap-1.5">
                                 <span class="w-1.5 h-1.5 bg-green-400 rounded-full animate-pulse"></span>
                                 <span class="text-[9px] text-zinc-400 uppercase tracking-widest">Online</span>

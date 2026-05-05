@@ -1,153 +1,347 @@
 <script setup lang="ts">
-import { ref, onMounted, computed } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import axiosClient from '@/lib/axiosClient'
 
-interface StatItem {
-    name: string
-    value: string | number
-    icon: string
-    color: string
+// ── Types ─────────────────────────────────────────────────────────
+interface RevenuePoint { label: string; period: number; revenue: number; count: number }
+interface RevenueStats {
+    mode: string; year: number; month: number | null
+    total_revenue: number; total_orders: number; data: RevenuePoint[]
 }
 
-const orders = ref<any[]>([])
+// ── State ─────────────────────────────────────────────────────────
+const isLoading = ref(true)
+const isChartLoading = ref(false)
+
+// Summary cards
 const totalProducts = ref(0)
 const totalUsers = ref(0)
-const isLoading = ref(true)
+const recentOrders = ref<any[]>([])
+const pendingCount = ref(0)
 
-const fetchDashboardData = async () => {
-    isLoading.value = true
+// Revenue chart
+const revenueMode = ref<'year' | 'month' | 'day'>('month')
+const selectedYear = ref(new Date().getFullYear())
+const selectedMonth = ref(new Date().getMonth() + 1)
+const revenueStats = ref<RevenueStats | null>(null)
+
+const currentYear = new Date().getFullYear()
+const yearOptions = Array.from({ length: 5 }, (_, i) => currentYear - i)
+const monthOptions = Array.from({ length: 12 }, (_, i) => ({ value: i + 1, label: `Tháng ${i + 1}` }))
+
+// ── Fetch ─────────────────────────────────────────────────────────
+const fetchSummary = async () => {
     try {
-        const [ordersRes, productsRes, usersRes] = await Promise.all([
-            axiosClient.get('/api/v1/orders/my?mine_only=false'),
-            axiosClient.get('/api/v1/products'),
-            axiosClient.get('/api/v1/users')
+        const [productsRes, usersRes, ordersRes] = await Promise.all([
+            axiosClient.get('/api/v1/products', { params: { page_size: 1 } }),
+            axiosClient.get('/api/v1/users'),
+            axiosClient.get('/api/v1/orders/my', { params: { mine_only: false } }),
         ])
-        
-        orders.value = ordersRes.data
         totalProducts.value = productsRes.data.total || 0
         totalUsers.value = Array.isArray(usersRes.data) ? usersRes.data.length : 0
-    } catch (error) {
-        console.error('Lỗi lấy dữ liệu tổng quan:', error)
-    } finally {
-        isLoading.value = false
+        const orders: any[] = ordersRes.data || []
+        pendingCount.value = orders.filter(o => o.status === 'PENDING').length
+        recentOrders.value = orders.slice(0, 6)
+    } catch (e) {
+        console.error('Lỗi lấy summary:', e)
     }
 }
 
-const stats = computed(() => {
-    // Tính toán doanh thu tháng hiện tại
-    const now = new Date()
-    const currentMonth = now.getMonth()
-    const currentYear = now.getFullYear()
-    
-    const monthlyRevenue = orders.value
-        .filter(o => {
-            const date = new Date(o.created_at)
-            return date.getMonth() === currentMonth && 
-                   date.getFullYear() === currentYear &&
-                   o.status !== 'CANCELLED'
-        })
-        .reduce((sum, o) => sum + Number(o.total_amount), 0)
-
-    const pendingOrders = orders.value.filter(o => o.status === 'PENDING').length
-
-    return [
-        { 
-            name: 'Doanh thu tháng', 
-            value: formatPrice(monthlyRevenue), 
-            icon: 'payments', 
-            color: 'text-emerald-600' 
-        },
-        { 
-            name: 'Đơn hàng mới', 
-            value: pendingOrders.toString(), 
-            icon: 'shopping_bag', 
-            color: 'text-blue-600' 
-        },
-        { 
-            name: 'Sản phẩm', 
-            value: totalProducts.value.toString(), 
-            icon: 'inventory_2', 
-            color: 'text-amber-600' 
-        },
-        { 
-            name: 'Khách hàng', 
-            value: totalUsers.value.toLocaleString('vi-VN'), 
-            icon: 'group', 
-            color: 'text-purple-600' 
-        },
-    ]
-})
-
-const recentOrders = computed(() => {
-    return orders.value.slice(0, 5)
-})
-
-const formatPrice = (price: number) => {
-    return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(price)
+const fetchRevenue = async () => {
+    isChartLoading.value = true
+    try {
+        const params: any = { mode: revenueMode.value, year: selectedYear.value }
+        if (revenueMode.value === 'month' || revenueMode.value === 'day') {
+            params.month = selectedMonth.value
+        }
+        const res = await axiosClient.get('/api/v1/orders/stats/revenue', { params })
+        revenueStats.value = res.data
+    } catch (e) {
+        console.error('Lỗi lấy doanh thu:', e)
+    } finally {
+        isChartLoading.value = false
+    }
 }
 
-const formatTimeAgo = (dateStr: string) => {
-    const date = new Date(dateStr)
-    return date.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }) + ' - ' + date.toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit' })
+// ── Computed ──────────────────────────────────────────────────────
+const chartMax = computed(() => {
+    if (!revenueStats.value?.data.length) return 1
+    return Math.max(...revenueStats.value.data.map(d => d.revenue), 1)
+})
+
+const chartData = computed(() => {
+    if (!revenueStats.value) return []
+    // Với mode=year hiện 12 tháng, mode=month hiện theo ngày, mode=day hiện theo giờ
+    // Gộp lại nếu quá nhiều điểm (mode=month > 31, mode=day > 24)
+    return revenueStats.value.data
+})
+
+// Chỉ hiện nhãn một số điểm để tránh chật
+const visibleLabels = computed(() => {
+    const data = chartData.value
+    if (!data.length) return new Set<number>()
+    if (revenueMode.value === 'year') return new Set(data.map((_, i) => i))
+    if (revenueMode.value === 'month') {
+        const last = data.length > 0 ? data[data.length - 1] : null
+        return new Set(data.filter(d => [1, 5, 10, 15, 20, 25].includes(d.period) || (last && d.period === last.period)).map(d => data.indexOf(d)))
+    }
+    return new Set(data.filter(d => d.period % 4 === 0).map(d => data.indexOf(d)))
+})
+
+const modeLabel = computed(() => {
+    if (revenueMode.value === 'year') return `Năm ${selectedYear.value}`
+    if (revenueMode.value === 'month') return `Tháng ${selectedMonth.value}/${selectedYear.value}`
+    return `Hôm nay ${new Date().toLocaleDateString('vi-VN')}`
+})
+
+// ── Watchers ──────────────────────────────────────────────────────
+watch([revenueMode, selectedYear, selectedMonth], fetchRevenue)
+
+// ── Lifecycle ─────────────────────────────────────────────────────
+onMounted(async () => {
+    isLoading.value = true
+    await Promise.all([fetchSummary(), fetchRevenue()])
+    isLoading.value = false
+})
+
+// ── Helpers ───────────────────────────────────────────────────────
+const formatPrice = (price: number) =>
+    new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(price)
+
+const formatPriceShort = (price: number) => {
+    if (price >= 1_000_000_000) return (price / 1_000_000_000).toFixed(1) + 'B'
+    if (price >= 1_000_000) return (price / 1_000_000).toFixed(1) + 'M'
+    if (price >= 1_000) return (price / 1_000).toFixed(0) + 'K'
+    return price.toString()
 }
 
-onMounted(fetchDashboardData)
+const formatTime = (dateStr: string) => {
+    const d = new Date(dateStr)
+    return d.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }) +
+        ' · ' + d.toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit' })
+}
+
+const statusConfig: Record<string, { label: string; cls: string }> = {
+    PENDING:   { label: 'Chờ xử lý',  cls: 'bg-amber-50 text-amber-600' },
+    CONFIRMED: { label: 'Đã xác nhận', cls: 'bg-blue-50 text-blue-600' },
+    SHIPPING:  { label: 'Đang giao',   cls: 'bg-indigo-50 text-indigo-600' },
+    DELIVERED: { label: 'Đã giao',     cls: 'bg-green-50 text-green-600' },
+    CANCELLED: { label: 'Đã hủy',      cls: 'bg-red-50 text-red-500' },
+    REFUNDED:  { label: 'Hoàn tiền',   cls: 'bg-zinc-100 text-zinc-500' },
+}
 </script>
 
 <template>
-    <div class="space-y-10">
-        <header>
-            <h1 class="text-3xl serif-text italic text-zinc-900">Tổng quan hệ thống</h1>
-            <p class="text-xs text-zinc-400 uppercase tracking-widest mt-2 font-bold">Dữ liệu thống kê thời gian thực</p>
-        </header>
+    <div class="space-y-6">
+        <!-- Header -->
+        <div>
+            <h1 class="text-2xl font-bold text-gray-900">Tổng quan hệ thống</h1>
+            <p class="text-sm text-gray-400 mt-1">Dữ liệu thống kê thời gian thực</p>
+        </div>
 
         <div v-if="isLoading" class="py-20 flex justify-center">
-            <div class="animate-spin h-8 w-8 border-4 border-zinc-900 border-t-transparent rounded-full"></div>
+            <div class="animate-spin h-8 w-8 border-4 border-indigo-500 border-t-transparent rounded-full"></div>
         </div>
 
         <template v-else>
-            <!-- Stats Grid -->
-            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                <div v-for="stat in stats" :key="stat.name" class="bg-white p-8 border border-zinc-100 shadow-sm hover:shadow-md transition-shadow">
-                    <div class="flex justify-between items-start mb-4">
-                        <span :class="['material-symbols-outlined text-3xl', stat.color]">{{ stat.icon }}</span>
+            <!-- ── STATS CARDS ──────────────────────────────────── -->
+            <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                <!-- Doanh thu -->
+                <div class="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 hover:shadow-md transition-shadow">
+                    <div class="flex items-center justify-between mb-4">
+                        <div class="w-10 h-10 bg-emerald-50 rounded-xl flex items-center justify-center">
+                            <span class="material-symbols-outlined text-[22px] text-emerald-600">payments</span>
+                        </div>
+                        <span class="text-[10px] font-semibold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full">Tháng này</span>
                     </div>
-                    <p class="text-[10px] uppercase tracking-widest font-bold text-zinc-400 mb-1">{{ stat.name }}</p>
-                    <h3 class="text-2xl font-bold text-zinc-900">{{ stat.value }}</h3>
+                    <p class="text-xs font-semibold text-gray-400 mb-1">Doanh thu</p>
+                    <h3 class="text-xl font-bold text-gray-900 leading-tight">
+                        {{ revenueStats ? formatPriceShort(revenueStats.total_revenue) + '₫' : '—' }}
+                    </h3>
+                    <p class="text-xs text-gray-400 mt-1.5">{{ revenueStats?.total_orders || 0 }} đơn đã giao</p>
+                </div>
+
+                <!-- Đơn chờ -->
+                <div class="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 hover:shadow-md transition-shadow">
+                    <div class="flex items-center justify-between mb-4">
+                        <div class="w-10 h-10 bg-amber-50 rounded-xl flex items-center justify-center">
+                            <span class="material-symbols-outlined text-[22px] text-amber-600">shopping_bag</span>
+                        </div>
+                        <span class="text-[10px] font-semibold text-amber-600 bg-amber-50 px-2 py-0.5 rounded-full">Cần xử lý</span>
+                    </div>
+                    <p class="text-xs font-semibold text-gray-400 mb-1">Đơn chờ xác nhận</p>
+                    <h3 class="text-xl font-bold text-gray-900">{{ pendingCount }}</h3>
+                    <p class="text-xs text-gray-400 mt-1.5">Đang chờ xử lý</p>
+                </div>
+
+                <!-- Sản phẩm -->
+                <div class="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 hover:shadow-md transition-shadow">
+                    <div class="flex items-center justify-between mb-4">
+                        <div class="w-10 h-10 bg-blue-50 rounded-xl flex items-center justify-center">
+                            <span class="material-symbols-outlined text-[22px] text-blue-600">inventory_2</span>
+                        </div>
+                        <span class="text-[10px] font-semibold text-blue-600 bg-blue-50 px-2 py-0.5 rounded-full">Kho hàng</span>
+                    </div>
+                    <p class="text-xs font-semibold text-gray-400 mb-1">Sản phẩm</p>
+                    <h3 class="text-xl font-bold text-gray-900">{{ totalProducts.toLocaleString('vi-VN') }}</h3>
+                    <p class="text-xs text-gray-400 mt-1.5">Đang kinh doanh</p>
+                </div>
+
+                <!-- Khách hàng -->
+                <div class="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 hover:shadow-md transition-shadow">
+                    <div class="flex items-center justify-between mb-4">
+                        <div class="w-10 h-10 bg-violet-50 rounded-xl flex items-center justify-center">
+                            <span class="material-symbols-outlined text-[22px] text-violet-600">group</span>
+                        </div>
+                        <span class="text-[10px] font-semibold text-violet-600 bg-violet-50 px-2 py-0.5 rounded-full">Thành viên</span>
+                    </div>
+                    <p class="text-xs font-semibold text-gray-400 mb-1">Khách hàng</p>
+                    <h3 class="text-xl font-bold text-gray-900">{{ totalUsers.toLocaleString('vi-VN') }}</h3>
+                    <p class="text-xs text-gray-400 mt-1.5">Tài khoản đã đăng ký</p>
                 </div>
             </div>
 
-            <!-- Recent Activity -->
-            <div class="grid grid-cols-1 lg:grid-cols-2 gap-10">
-                <div class="bg-white border border-zinc-100 p-8 shadow-sm">
-                    <h3 class="text-[11px] uppercase tracking-[0.2em] font-bold text-zinc-900 mb-8 border-b border-zinc-50 pb-4">Biểu đồ doanh thu</h3>
-                    <div class="h-64 flex items-center justify-center bg-zinc-50 border border-dashed border-zinc-200">
-                        <p class="text-zinc-400 text-xs italic">Dữ liệu dựa trên {{ orders.length }} đơn hàng hiện có</p>
+            <!-- ── REVENUE CHART ────────────────────────────────── -->
+            <div class="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
+                <!-- Chart Header + Filters -->
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6 pb-5 border-b border-gray-50">
+                    <div>
+                        <h2 class="text-sm font-bold text-gray-900">Biểu đồ doanh thu</h2>
+                        <p class="text-xs text-gray-400 mt-0.5">{{ modeLabel }} · Chỉ tính đơn đã giao thành công</p>
+                    </div>
+
+                    <!-- Bộ lọc -->
+                    <div class="flex flex-wrap items-center gap-2">
+                        <!-- Mode tabs -->
+                        <div class="flex bg-gray-100 rounded-xl p-1 gap-1">
+                            <button
+                                v-for="m in [{ v: 'year', l: 'Năm' }, { v: 'month', l: 'Tháng' }, { v: 'day', l: 'Hôm nay' }]"
+                                :key="m.v"
+                                @click="revenueMode = m.v as any"
+                                :class="['px-3 py-1.5 text-xs font-semibold rounded-lg transition-all', revenueMode === m.v ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700']"
+                            >{{ m.l }}</button>
+                        </div>
+
+                        <!-- Năm -->
+                        <select
+                            v-model.number="selectedYear"
+                            class="border border-gray-200 rounded-xl py-1.5 px-3 text-xs font-semibold outline-none focus:border-indigo-400 bg-white"
+                        >
+                            <option v-for="y in yearOptions" :key="y" :value="y">{{ y }}</option>
+                        </select>
+
+                        <!-- Tháng -->
+                        <select
+                            v-if="revenueMode !== 'year'"
+                            v-model.number="selectedMonth"
+                            class="border border-gray-200 rounded-xl py-1.5 px-3 text-xs font-semibold outline-none focus:border-indigo-400 bg-white"
+                        >
+                            <option v-for="m in monthOptions" :key="m.value" :value="m.value">{{ m.label }}</option>
+                        </select>
                     </div>
                 </div>
-                <div class="bg-white border border-zinc-100 p-8 shadow-sm">
-                    <h3 class="text-[11px] uppercase tracking-[0.2em] font-bold text-zinc-900 mb-8 border-b border-zinc-50 pb-4">Đơn hàng vừa đặt</h3>
-                    <div class="space-y-6">
-                        <div v-for="order in recentOrders" :key="order.order_id" class="flex justify-between items-center py-2 border-b border-zinc-50 last:border-0">
-                            <div class="flex items-center gap-4">
-                                <div class="w-10 h-10 bg-zinc-100 rounded-full flex items-center justify-center text-[10px] font-bold text-zinc-900">
-                                    #{{ order.order_id }}
+
+                <!-- Tổng doanh thu -->
+                <div class="flex items-end gap-6 mb-6">
+                    <div>
+                        <p class="text-xs text-gray-400 mb-1">Tổng doanh thu</p>
+                        <p class="text-2xl font-bold text-gray-900">
+                            {{ revenueStats ? formatPrice(revenueStats.total_revenue) : '—' }}
+                        </p>
+                    </div>
+                    <div class="pb-0.5">
+                        <p class="text-xs text-gray-400 mb-1">Đơn đã giao</p>
+                        <p class="text-lg font-bold text-gray-500">{{ revenueStats?.total_orders || 0 }}</p>
+                    </div>
+                </div>
+
+                <!-- Bar Chart -->
+                <div class="relative">
+                    <div v-if="isChartLoading" class="h-48 flex items-center justify-center">
+                        <div class="animate-spin h-6 w-6 border-2 border-indigo-500 border-t-transparent rounded-full"></div>
+                    </div>
+
+                    <div v-else-if="revenueStats && revenueStats.total_revenue === 0" class="h-48 flex flex-col items-center justify-center text-gray-300">
+                        <span class="material-symbols-outlined text-4xl mb-2">bar_chart</span>
+                        <p class="text-xs text-gray-400">Chưa có doanh thu trong kỳ này</p>
+                    </div>
+
+                    <div v-else class="space-y-1">
+                        <div class="flex gap-2 items-end h-52">
+                            <!-- Y labels -->
+                            <div class="flex flex-col justify-between h-full text-right shrink-0 w-14">
+                                <span class="text-[9px] text-gray-400">{{ formatPriceShort(chartMax) }}</span>
+                                <span class="text-[9px] text-gray-400">{{ formatPriceShort(chartMax * 0.75) }}</span>
+                                <span class="text-[9px] text-gray-400">{{ formatPriceShort(chartMax * 0.5) }}</span>
+                                <span class="text-[9px] text-gray-400">{{ formatPriceShort(chartMax * 0.25) }}</span>
+                                <span class="text-[9px] text-gray-400">0</span>
+                            </div>
+
+                            <!-- Bars -->
+                            <div class="flex-grow flex items-end gap-px h-full relative">
+                                <div class="absolute inset-0 flex flex-col justify-between pointer-events-none">
+                                    <div v-for="i in 5" :key="i" class="border-t border-gray-100 w-full"></div>
                                 </div>
-                                <div>
-                                    <p class="text-xs font-bold text-zinc-900">{{ order.address_snapshot?.recipient_name || 'Khách hàng' }}</p>
-                                    <p class="text-[10px] text-zinc-400">{{ formatTimeAgo(order.created_at) }}</p>
+                                <div
+                                    v-for="(point, idx) in chartData"
+                                    :key="idx"
+                                    class="flex-1 flex flex-col items-center justify-end group relative"
+                                >
+                                    <div
+                                        :style="{ height: chartMax > 0 ? (point.revenue / chartMax * 100) + '%' : '0%' }"
+                                        :class="['w-full min-h-[2px] rounded-t-sm transition-all duration-500 relative', point.revenue > 0 ? 'bg-indigo-500 group-hover:bg-indigo-600' : 'bg-gray-100']"
+                                    >
+                                        <div v-if="point.revenue > 0" class="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 bg-gray-900 text-white text-[9px] px-2 py-1 rounded-lg whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-10">
+                                            {{ formatPrice(point.revenue) }}<br/>
+                                            <span class="text-gray-400">{{ point.count }} đơn</span>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
-                            <div class="text-right">
-                                <p class="text-xs font-bold text-zinc-900">{{ formatPrice(order.total_amount) }}</p>
-                                <p :class="['text-[8px] font-black uppercase tracking-tighter', order.status === 'PENDING' ? 'text-amber-500' : 'text-zinc-400']">
-                                    {{ order.status }}
-                                </p>
+                        </div>
+
+                        <!-- X-axis labels -->
+                        <div class="flex gap-px pl-16">
+                            <div v-for="(point, idx) in chartData" :key="idx" class="flex-1 text-center">
+                                <span
+                                    v-if="revenueMode === 'year' || (revenueMode === 'month' && [1, 5, 10, 15, 20, 25].includes(point.period)) || (revenueMode === 'day' && point.period % 6 === 0)"
+                                    class="text-[8px] text-gray-400"
+                                >{{ point.label }}</span>
                             </div>
                         </div>
-                        <div v-if="recentOrders.length === 0" class="text-center py-10 text-zinc-400 text-xs italic">
-                            Chưa có đơn hàng nào
+                    </div>
+                </div>
+            </div>
+
+            <!-- ── RECENT ORDERS ─────────────────────────────────── -->
+            <div class="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+                <div class="px-6 py-4 border-b border-gray-50">
+                    <h3 class="text-sm font-bold text-gray-900">Đơn hàng gần đây</h3>
+                </div>
+                <div class="divide-y divide-gray-50">
+                    <div
+                        v-for="order in recentOrders"
+                        :key="order.order_id"
+                        class="flex items-center justify-between px-6 py-4 hover:bg-gray-50/50 transition-colors"
+                    >
+                        <div class="flex items-center gap-3">
+                            <div class="w-9 h-9 bg-gray-100 rounded-xl flex items-center justify-center text-[10px] font-bold text-gray-600 shrink-0">
+                                #{{ order.order_id }}
+                            </div>
+                            <div>
+                                <p class="text-sm font-semibold text-gray-900">{{ order.address_snapshot?.recipient_name || 'Khách hàng' }}</p>
+                                <p class="text-xs text-gray-400 mt-0.5">{{ formatTime(order.created_at) }}</p>
+                            </div>
                         </div>
+                        <div class="flex items-center gap-4">
+                            <span :class="['text-[10px] font-semibold px-2.5 py-1 rounded-full', statusConfig[order.status]?.cls || 'bg-gray-100 text-gray-500']">
+                                {{ statusConfig[order.status]?.label || order.status }}
+                            </span>
+                            <p class="text-sm font-bold text-gray-900 text-right min-w-[90px]">{{ formatPrice(order.total_amount) }}</p>
+                        </div>
+                    </div>
+                    <div v-if="recentOrders.length === 0" class="text-center py-12 text-gray-400 text-sm">
+                        Chưa có đơn hàng nào
                     </div>
                 </div>
             </div>
@@ -156,5 +350,4 @@ onMounted(fetchDashboardData)
 </template>
 
 <style scoped>
-.serif-text { font-family: 'Playfair Display', serif; }
 </style>

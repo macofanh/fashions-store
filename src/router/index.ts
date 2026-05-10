@@ -1,4 +1,5 @@
 import { createRouter, createWebHistory, type RouteRecordRaw } from 'vue-router'
+import { useAuthStore } from '@/stores/useAuthStore'
 
 const routes: Array<RouteRecordRaw> = [
     {
@@ -15,6 +16,12 @@ const routes: Array<RouteRecordRaw> = [
                 path: 'login',
                 component: () =>
                     import('@/pages/auth/components/LoginPage.vue'),
+            },
+            {
+                name: 'google-callback',
+                path: 'google/callback',
+                component: () =>
+                    import('@/pages/auth/components/GoogleCallbackPage.vue'),
             },
             {
                 name: 'register',
@@ -128,19 +135,9 @@ const router = createRouter({
 // BẢO VỆ ROUTE (NAVIGATION GUARDS)
 // ==========================================
 router.beforeEach((to, from, next) => {
-    const isAuthenticated = !!localStorage.getItem('access_token')
-    let userRole = 'customer' // Mặc định là khách hàng (chữ thường theo BE)
-
-    // Đọc thông tin user từ localStorage
-    const userInfoStr = localStorage.getItem('user_info')
-    if (userInfoStr) {
-        try {
-            const userInfo = JSON.parse(userInfoStr)
-            userRole = userInfo.role ? userInfo.role.toLowerCase() : 'customer'
-        } catch (e) {
-            console.error('Lỗi đọc dữ liệu người dùng')
-        }
-    }
+    const authStore = useAuthStore()
+    const isAuthenticated = authStore.isAuthenticated
+    const userRole = authStore.user?.role ? authStore.user.role.toLowerCase() : 'customer'
 
     if (to.meta.requiresAuth && !isAuthenticated) {
         next({ name: 'login' })

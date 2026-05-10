@@ -5,6 +5,7 @@ import router from '@/router'
 const axiosClient = axios.create({
     baseURL: import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000',
     headers: { 'Content-Type': 'application/json' },
+    withCredentials: true,
 })
 
 // Interceptor GỬI ĐI: Tự động gắn Bearer token vào mỗi request

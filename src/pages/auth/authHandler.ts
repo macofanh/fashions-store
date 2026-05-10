@@ -34,6 +34,10 @@ export function authHandler() {
         }
     }
 
+    const startGoogleLogin = () => {
+        window.location.replace(authService.getGoogleLoginUrl())
+    }
+
     const loginWithGoogle = async (idToken: string) => {
         isLoading.value = true
         error.value = null
@@ -45,6 +49,23 @@ export function authHandler() {
             error.value =
                 err.response?.data?.detail ||
                 'Đăng nhập Google thất bại. Vui lòng thử lại.'
+            throw err
+        } finally {
+            isLoading.value = false
+        }
+    }
+
+    const completeGoogleLogin = async (code: string) => {
+        isLoading.value = true
+        error.value = null
+        try {
+            const response = await authService.completeGoogleLogin(code)
+            _handleAuthSuccess(response.data)
+            return response.data
+        } catch (err: any) {
+            error.value =
+                err.response?.data?.detail ||
+                'Xác thực Google thất bại. Vui lòng thử lại.'
             throw err
         } finally {
             isLoading.value = false
@@ -74,5 +95,14 @@ export function authHandler() {
         router.push({ name: 'login' })
     }
 
-    return { login, loginWithGoogle, register, logout, isLoading, error }
+    return {
+        login,
+        loginWithGoogle,
+        startGoogleLogin,
+        completeGoogleLogin,
+        register,
+        logout,
+        isLoading,
+        error,
+    }
 }

@@ -9,6 +9,8 @@ export interface Address {
     district: string
     ward: string
     street_address: string
+    latitude?: number | null
+    longitude?: number | null
     is_default: boolean
 }
 

@@ -6,6 +6,7 @@ import { orderService, type OrderCreateData } from '@/pages/cart/orderService'
 import { promotionService, type UserVoucher } from '@/pages/promotions/promotionService'
 import { getImageUrl } from '@/lib/urlHelper'
 import axios from 'axios'
+import GoongAddressInput from '@/components/GoongAddressInput.vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -221,8 +222,7 @@ const handleCheckout = async () => {
                             </div>
 
                             <div class="space-y-2">
-                                <label class="text-[9px] uppercase tracking-[0.2em] font-bold text-zinc-400">Địa chỉ cụ thể</label>
-                                <input v-model="form.street_address" type="text" required class="w-full border-b border-zinc-200 py-3 focus:border-zinc-900 outline-none text-sm font-light transition-colors" placeholder="Số nhà, tên đường..." />
+                                <GoongAddressInput v-model="form.street_address" @selected="() => undefined" />
                             </div>
                         </div>
                     </section>

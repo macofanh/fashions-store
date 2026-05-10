@@ -3,6 +3,7 @@ import { ref, onMounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { orderService } from '@/pages/cart/orderService'
 import { addressService, type Address } from '@/pages/profile/addressService'
+import GoongAddressInput from '@/components/GoongAddressInput.vue'
 import { useAuthStore } from '@/stores/useAuthStore'
 import { useUIStore } from '@/stores/useUIStore'
 import axios from 'axios'
@@ -371,8 +372,7 @@ const navItems: { key: Tab; icon: string; label: string }[] = [
                             </select>
                         </div>
                         <div class="space-y-1">
-                            <label class="text-[9px] uppercase font-bold text-text-muted">Địa chỉ chi tiết</label>
-                            <input v-model="addressForm.street_address" required type="text" class="input-underline" placeholder="Số nhà, tên đường..." />
+                            <GoongAddressInput v-model="addressForm.street_address" />
                         </div>
                     </div>
 

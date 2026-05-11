@@ -7,6 +7,8 @@ export const apiEndpoints = {
         login: `${basePrefix}/auth/login`,
         refresh: `${basePrefix}/auth/refresh`,
         google: `${basePrefix}/auth/google`,
+        googleLogin: `${basePrefix}/auth/google/login`,
+        googleCallback: `${basePrefix}/auth/google/callback`,
         me: `${basePrefix}/auth/me`,
     },
     products: {
@@ -34,6 +36,10 @@ export const apiEndpoints = {
         addresses: `${basePrefix}/users/me/addresses`,
         wishlist: `${basePrefix}/users/me/wishlist`,
         rewardHistory: `${basePrefix}/users/me/reward-history`,
+    },
+    addresses: {
+        goongSuggestions: `${basePrefix}/addresses/goong/suggestions`,
+        goongDetail: (placeId: string) => `${basePrefix}/addresses/goong/places/${placeId}`,
     },
     promotions: {
         vouchers: `${basePrefix}/promotions/vouchers`,

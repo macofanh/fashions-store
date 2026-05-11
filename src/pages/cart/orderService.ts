@@ -10,6 +10,8 @@ export interface OrderCreateData {
         district: string
         ward: string
         street_address: string
+        latitude?: number | null
+        longitude?: number | null
     }
     shipping_fee?: number
     voucher_id?: number

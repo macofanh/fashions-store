@@ -2,6 +2,7 @@
 import { ref, onMounted, computed, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { cartService } from '@/pages/cart/cartService'
+import { checkoutHandler } from './checkoutHandler'
 import { orderService, type OrderCreateData } from '@/pages/cart/orderService'
 import { promotionService, type UserVoucher } from '@/pages/promotions/promotionService'
 import { getImageUrl } from '@/lib/urlHelper'
@@ -47,54 +48,52 @@ onMounted(init)
                 <div class="animate-spin h-10 w-10 border-4 border-primary border-t-transparent rounded-full"></div>
             </div>
 
-<div>
-                            <div class="space-y-2">
-                                <GoongAddressInput v-model="form.street_address" @selected="() => undefined" />
-                            </div>
-                        </div>
-                    
-
-                <!-- LEFT: Form sections -->
-                <div class="flex-grow space-y-5 min-w-0">
-                    <ShippingForm
-                        :form="form"
-                        :provinces="provinces"
-                        :districts="districts"
-                        :wards="wards"
-                        :selected-province-code="selectedProvinceCode"
-                        :selected-district-code="selectedDistrictCode"
-                        @update:selected-province-code="selectedProvinceCode = $event"
-                        @update:selected-district-code="selectedDistrictCode = $event"
-                    />
-
-                    <PaymentMethod
-                        :model-value="form.payment_method"
-                        @update:model-value="form.payment_method = $event"
-                    />
-
-                    <VoucherSelector
-                        :vouchers="myVouchers"
-                        :selected="selectedVoucher"
-                        :subtotal="subtotal"
-                        :format-price="formatPrice"
-                        @toggle="toggleVoucher"
-                    />
+            <div>
+                <div class="space-y-2">
+                    <GoongAddressInput v-model="form.street_address" @selected="() => undefined" />
                 </div>
+            </div>
+                    
+            <!-- LEFT: Form sections -->
+            <div class="flex-grow space-y-5 min-w-0">
+                <ShippingForm
+                    :form="form"
+                    :provinces="provinces"
+                    :districts="districts"
+                    :wards="wards"
+                    :selected-province-code="selectedProvinceCode"
+                    :selected-district-code="selectedDistrictCode"
+                    @update:selected-province-code="selectedProvinceCode = $event"
+                    @update:selected-district-code="selectedDistrictCode = $event"
+                />
 
-                <!-- RIGHT: Order summary -->
-                <OrderSummary
-                    :items="cart?.items || []"
+                <PaymentMethod
+                    :model-value="form.payment_method"
+                    @update:model-value="form.payment_method = $event"
+                />
+
+                <VoucherSelector
+                    :vouchers="myVouchers"
+                    :selected="selectedVoucher"
                     :subtotal="subtotal"
-                    :shipping-fee="SHIPPING_FEE"
-                    :discount-amount="discountAmount"
-                    :total="total"
-                    :selected-voucher="selectedVoucher"
-                    :is-submitting="isSubmitting"
                     :format-price="formatPrice"
-                    @submit="submitOrder"
+                    @toggle="toggleVoucher"
                 />
             </div>
-        </div>
-        </div>
-    </div>
+
+            <!-- RIGHT: Order summary -->
+            <OrderSummary
+                :items="cart?.items || []"
+                :subtotal="subtotal"
+                :shipping-fee="SHIPPING_FEE"
+                :discount-amount="discountAmount"
+                :total="total"
+                :selected-voucher="selectedVoucher"
+                :is-submitting="isSubmitting"
+                :format-price="formatPrice"
+                @submit="submitOrder"
+            />
+            
+        </div> <!-- Đóng thẻ max-w-[1300px] -->
+    </div> <!-- Đóng thẻ bg-background-light -->
 </template>

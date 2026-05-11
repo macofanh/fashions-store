@@ -1,13 +1,9 @@
 <script setup lang="ts">
-<<<<<<< HEAD
-import { onMounted } from 'vue'
-=======
 import { ref, onMounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { orderService } from '@/pages/cart/orderService'
 import { addressService, type Address } from '@/pages/profile/addressService'
 import GoongAddressInput from '@/components/GoongAddressInput.vue'
->>>>>>> feature/auth
 import { useAuthStore } from '@/stores/useAuthStore'
 import { profileHandler } from './profileHandler'
 

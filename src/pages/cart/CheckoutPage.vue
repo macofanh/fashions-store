@@ -47,16 +47,12 @@ onMounted(init)
                 <div class="animate-spin h-10 w-10 border-4 border-primary border-t-transparent rounded-full"></div>
             </div>
 
-<<<<<<< HEAD
-            <!-- Content -->
-            <div v-else class="flex flex-col lg:flex-row gap-8 items-start">
-=======
+<div>
                             <div class="space-y-2">
                                 <GoongAddressInput v-model="form.street_address" @selected="() => undefined" />
                             </div>
                         </div>
-                    </section>
->>>>>>> feature/auth
+                    
 
                 <!-- LEFT: Form sections -->
                 <div class="flex-grow space-y-5 min-w-0">
@@ -98,6 +94,7 @@ onMounted(init)
                     @submit="submitOrder"
                 />
             </div>
+        </div>
         </div>
     </div>
 </template>

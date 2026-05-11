@@ -27,7 +27,7 @@ const toggleMenu = () => {
             
             <!-- Logo -->
             <router-link to="/" class="flex flex-col items-center">
-                <h1 class="text-2xl serif-text tracking-tight text-zinc-900">AZURE</h1>
+                <h1 class="text-2xl font-serif tracking-tight text-zinc-900">AZURE</h1>
                 <p class="text-[7px] uppercase tracking-[0.5em] text-zinc-400 -mt-1 font-bold">Editorial</p>
             </router-link>
 
@@ -85,7 +85,7 @@ const toggleMenu = () => {
                 <template v-if="authStore.isAuthenticated">
                     <div class="py-4">
                         <p class="text-[10px] uppercase tracking-widest text-zinc-400 font-bold mb-2">Đang đăng nhập với tư cách</p>
-                        <p class="text-lg serif-text font-bold mb-6 italic">{{ authStore.userName }}</p>
+                        <p class="text-lg font-serif font-bold mb-6 italic">{{ authStore.userName }}</p>
                         <button @click="handleLogout" class="w-full border border-red-200 text-red-500 py-4 text-[10px] uppercase tracking-widest font-bold">Đăng xuất</button>
                     </div>
                 </template>
@@ -103,23 +103,17 @@ const toggleMenu = () => {
 <style scoped>
 @reference "../../assets/main.css";
 
-.serif-text {
-    font-family: 'Playfair Display', serif;
-}
-
 .nav-link {
     @apply text-[10px] uppercase tracking-[0.2em] font-bold text-zinc-900 transition-colors hover:text-zinc-500;
 }
 
 .mobile-nav-link {
-    @apply text-xl font-bold text-zinc-900 italic;
-    font-family: 'Playfair Display', serif;
+    @apply text-xl font-serif font-bold text-zinc-900 italic;
 }
 
 .fade-enter-active, .fade-leave-active {
     transition: opacity 0.3s ease, transform 0.3s ease;
 }
-
 .fade-enter-from, .fade-leave-to {
     opacity: 0;
     transform: translateY(-10px);

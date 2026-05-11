@@ -158,7 +158,7 @@ const formatDate = (dateStr: string) => {
         <div class="max-w-[1200px] mx-auto px-6 pt-16">
             <header class="mb-16 flex flex-col md:flex-row justify-between items-end gap-8">
                 <div>
-                    <h1 class="text-5xl serif-text text-zinc-900 mb-4 italic">My Account</h1>
+                    <h1 class="text-5xl font-serif text-zinc-900 mb-4 italic">My Account</h1>
                     <p class="text-[10px] uppercase tracking-[0.4em] text-zinc-400">Quản lý tài khoản & Đơn hàng</p>
                 </div>
                 <div class="text-right">
@@ -281,7 +281,7 @@ const formatDate = (dateStr: string) => {
         <div v-if="isAddressModalOpen" class="fixed inset-0 z-[100] flex items-center justify-center p-6 bg-zinc-900/60 backdrop-blur-sm">
             <div class="bg-white w-full max-w-xl shadow-2xl p-10 space-y-8">
                 <header class="flex justify-between items-center">
-                    <h2 class="text-2xl serif-text italic">Thêm địa chỉ mới</h2>
+                    <h2 class="text-2xl font-serif italic">Thêm địa chỉ mới</h2>
                     <button @click="isAddressModalOpen = false" class="material-symbols-outlined text-zinc-400 hover:text-zinc-900">close</button>
                 </header>
 
@@ -333,5 +333,5 @@ const formatDate = (dateStr: string) => {
 </template>
 
 <style scoped>
-.serif-text { font-family: 'Playfair Display', serif; }
+/* Không còn hardcode font — dùng font-serif và font-display từ main.css */
 </style>

@@ -33,7 +33,7 @@ const handleLogout = () => {
 </script>
 
 <template>
-    <div class="flex min-h-screen bg-slate-50 font-body antialiased">
+    <div class="flex min-h-screen bg-slate-50 font-display antialiased">
 
         <!-- ── SIDEBAR ─────────────────────────────────────────── -->
         <aside
@@ -138,5 +138,5 @@ const handleLogout = () => {
 </template>
 
 <style scoped>
-.font-body { font-family: 'Inter', sans-serif; }
+/* font-display đã được khai báo global trong main.css — không cần override */
 </style>

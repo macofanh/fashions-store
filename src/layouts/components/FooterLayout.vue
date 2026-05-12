@@ -9,9 +9,9 @@ import { APP_NAME, APP_TAGLINE, APP_COPYRIGHT } from '@/lib/appConfig'
             <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-8 mb-16">
                 <!-- Brand -->
                 <div class="col-span-2 lg:col-span-2 pr-8">
-                    <router-link to="/" class="flex flex-col mb-6">
+                    <router-link to="/" class="flex items-center gap-3 mb-6">
+                        <img src="@/assets/images/luxu-logo.svg" alt="Logo" class="h-8 w-auto" />
                         <span class="text-2xl font-serif tracking-tight leading-none">{{ APP_NAME }}</span>
-                        <span class="text-[7px] uppercase tracking-[0.5em] text-text-muted mt-0.5 font-bold">{{ APP_TAGLINE }}</span>
                     </router-link>
                     <p class="text-zinc-400 text-sm leading-relaxed mb-6 max-w-sm font-light">
                         Redefining modern luxury with sustainable practices and timeless design. Join us in shaping the future of fashion.

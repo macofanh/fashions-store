@@ -9,7 +9,7 @@ import { APP_NAME } from '@/lib/appConfig'
                 "Thời trang không chỉ là thứ bạn mặc. Đó là cách bạn thể hiện bản thân với thế giới."
             </p>
             <p class="text-[10px] uppercase tracking-[0.4em] font-bold text-text-muted font-display">
-                — {{ APP_NAME }} Editorial
+                — {{ APP_NAME }}
             </p>
         </div>
     </section>

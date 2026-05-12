@@ -47,9 +47,9 @@ const handleRegister = async () => {
 
                 <!-- Header -->
                 <div class="text-center mb-10">
-                    <router-link to="/" class="inline-flex flex-col items-center mb-6">
+                    <router-link to="/" class="inline-flex items-center gap-3 mb-6">
+                        <img src="@/assets/images/luxu-logo.svg" alt="Logo" class="h-8 w-auto" />
                         <span class="text-2xl font-serif text-fashion-black tracking-tight leading-none">{{ APP_NAME }}</span>
-                        <span class="text-[8px] uppercase tracking-[0.5em] text-text-muted mt-0.5 font-bold">Editorial</span>
                     </router-link>
                     <h1 class="text-4xl font-serif italic text-fashion-black mb-2">Tạo tài khoản</h1>
                     <p class="text-text-muted text-sm font-light">Tham gia cộng đồng thời trang của chúng tôi.</p>

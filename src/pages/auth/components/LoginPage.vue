@@ -49,9 +49,9 @@ const handleGoogleLogin = () => {
 
                 <!-- Brand overlay -->
                 <div class="absolute top-10 left-10">
-                    <router-link to="/" class="flex flex-col">
+                    <router-link to="/" class="flex items-center gap-3">
+                        <img src="@/assets/images/luxu-logo.svg" alt="Logo" class="h-8 w-auto" />
                         <span class="text-2xl font-serif text-white tracking-tight leading-none">{{ APP_NAME }}</span>
-                        <span class="text-[8px] uppercase tracking-[0.5em] text-white/40 mt-0.5 font-bold">Editorial</span>
                     </router-link>
                 </div>
 
@@ -73,9 +73,9 @@ const handleGoogleLogin = () => {
                     <!-- Header -->
                     <div class="mb-10">
                         <!-- Mobile logo -->
-                        <router-link to="/" class="flex flex-col mb-8 md:hidden">
+                        <router-link to="/" class="flex items-center gap-3 mb-8 md:hidden">
+                            <img src="@/assets/images/luxu-logo.svg" alt="Logo" class="h-8 w-auto" />
                             <span class="text-2xl font-serif text-fashion-black tracking-tight leading-none">{{ APP_NAME }}</span>
-                            <span class="text-[8px] uppercase tracking-[0.5em] text-text-muted mt-0.5 font-bold">Editorial</span>
                         </router-link>
                         <h1 class="text-4xl md:text-5xl font-serif italic text-fashion-black mb-2">Chào mừng trở lại</h1>
                         <p class="text-text-muted text-sm font-light">Đăng nhập để khám phá bộ sưu tập mới nhất.</p>

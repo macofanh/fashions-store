@@ -26,6 +26,7 @@ const isLoading = ref(false)
 const isOpen = ref(false)
 const selectedDetail = ref<GoongAddressDetail | null>(null)
 const mapLoadFailed = ref(false)
+const suppressSearchOnce = ref(false)
 let debounceTimer: number | undefined
 
 const mapPreviewUrl = computed(() => selectedDetail.value?.static_map_url || '')
@@ -49,6 +50,13 @@ watch(
 
 watch(inputValue, (value) => {
     emit('update:modelValue', value)
+
+    if (suppressSearchOnce.value) {
+        suppressSearchOnce.value = false
+        suggestions.value = []
+        isOpen.value = false
+        return
+    }
 
     if (selectedDetail.value && value !== selectedDetail.value.formatted_address && value !== selectedDetail.value.name) {
         selectedDetail.value = null
@@ -78,9 +86,6 @@ watch(inputValue, (value) => {
 })
 
 const selectSuggestion = async (suggestion: GoongAddressSuggestion) => {
-    inputValue.value = suggestion.description
-    suggestions.value = []
-    isOpen.value = false
     mapLoadFailed.value = false
 
     try {
@@ -89,9 +94,17 @@ const selectSuggestion = async (suggestion: GoongAddressSuggestion) => {
         emit('selected', response.data)
 
         if (response.data.formatted_address) {
+            suppressSearchOnce.value = true
             inputValue.value = response.data.formatted_address
             emit('update:modelValue', response.data.formatted_address)
+        } else {
+            suppressSearchOnce.value = true
+            inputValue.value = suggestion.description
+            emit('update:modelValue', suggestion.description)
         }
+
+        suggestions.value = []
+        isOpen.value = false
     } catch (error) {
         console.error('Lỗi lấy chi tiết địa chỉ Goong:', error)
         selectedDetail.value = null

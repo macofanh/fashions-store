@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import GoongAddressInput from '@/components/GoongAddressInput.vue'
+
 defineProps<{
     form: {
         recipient_name: string
@@ -109,14 +111,7 @@ const emit = defineEmits<{
 
             <!-- Địa chỉ cụ thể -->
             <div class="space-y-1.5 md:col-span-2">
-                <label class="text-[10px] uppercase tracking-widest font-bold text-text-muted font-display">Địa chỉ cụ thể <span class="text-red-400">*</span></label>
-                <input
-                    v-model="form.street_address"
-                    type="text"
-                    required
-                    placeholder="Số nhà, tên đường..."
-                    class="w-full border border-border-light rounded-lg px-4 py-3 text-sm outline-none focus:border-primary transition-colors font-display"
-                />
+                <GoongAddressInput v-model="form.street_address" />
             </div>
 
             <!-- Ghi chú -->

@@ -7,7 +7,6 @@ import { orderService, type OrderCreateData } from '@/pages/cart/orderService'
 import { promotionService, type UserVoucher } from '@/pages/promotions/promotionService'
 import { getImageUrl } from '@/lib/urlHelper'
 import axios from 'axios'
-import GoongAddressInput from '@/components/GoongAddressInput.vue'
 
 import ShippingForm    from './components/ShippingForm.vue'
 import PaymentMethod   from './components/PaymentMethod.vue'
@@ -48,12 +47,6 @@ onMounted(init)
                 <div class="animate-spin h-10 w-10 border-4 border-primary border-t-transparent rounded-full"></div>
             </div>
 
-            <div>
-                <div class="space-y-2">
-                    <GoongAddressInput v-model="form.street_address" @selected="() => undefined" />
-                </div>
-            </div>
-                    
             <!-- LEFT: Form sections -->
             <div class="flex-grow space-y-5 min-w-0">
                 <ShippingForm

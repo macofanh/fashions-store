@@ -108,20 +108,40 @@ const handleBuyNow = async () => {
 }
 
 const handleSubmitReview = async (data: { rating: number; title: string; content: string; files: File[] }) => {
-    if (!currentVariant.value) return
-    const formData = new FormData()
-    formData.append('variant_id', currentVariant.value.variant_id.toString())
-    formData.append('rating',     data.rating.toString())
-    formData.append('title',      data.title)
-    formData.append('content',    data.content)
-    data.files.forEach(f => formData.append('files', f))
+    if (!product.value) return
+    if (!currentVariant.value) {
+        uiStore.warning('Vui lòng chọn màu sắc và kích thước trước khi đánh giá.')
+        return
+    }
+
     try {
-        await productService.addReview(product.value.product_id, formData)
+        await productService.addReview(product.value.product_id, {
+            variant_id: currentVariant.value.variant_id,
+            rating:     data.rating,
+            title:      data.title.trim()   || undefined,
+            content:    data.content.trim() || undefined,
+            files:      data.files,
+        })
         uiStore.success('Cảm ơn bạn đã đánh giá!')
         showModal.value = false
-        fetchProduct()
+        // Reload reviews + avg_rating song song
+        const [reviewsRes, productRes] = await Promise.all([
+            productService.getReviews(product.value.product_id),
+            productService.getProductBySlug(route.params.slug as string),
+        ])
+        reviews.value = reviewsRes.data
+        product.value = productRes.data
     } catch (e: any) {
-        uiStore.error(e.response?.data?.detail || 'Lỗi khi gửi đánh giá.')
+        const detail = e.response?.data?.detail
+        console.error('[Review error]', JSON.stringify(detail, null, 2))
+        if (Array.isArray(detail)) {
+            const msg = detail.map((d: any) => `${d.loc?.slice(-1)[0]}: ${d.msg}`).join(' | ')
+            uiStore.error(msg)
+        } else if (typeof detail === 'string') {
+            uiStore.error(detail)
+        } else {
+            uiStore.error('Lỗi khi gửi đánh giá. Vui lòng thử lại.')
+        }
     }
 }
 </script>

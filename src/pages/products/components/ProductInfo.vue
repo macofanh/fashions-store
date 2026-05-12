@@ -66,7 +66,7 @@ const formatPrice = (price: number) =>
             <!-- Brand + Name -->
             <div>
                 <p class="text-[11px] uppercase tracking-widest text-text-muted mb-1 font-display">
-                    {{ product.brand || 'LuxuStore' }}
+                    {{ 'LuxuStore' }}
                 </p>
                 <h1 class="text-xl md:text-2xl font-semibold text-fashion-black leading-snug">
                     {{ product.name }}

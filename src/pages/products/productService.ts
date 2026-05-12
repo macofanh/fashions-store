@@ -48,9 +48,34 @@ class ProductService {
         return axiosClient.get(apiEndpoints.products.reviews(productId))
     }
 
-    public addReview(productId: number, data: FormData) {
-        return axiosClient.post(apiEndpoints.products.reviews(productId), data, {
-            headers: { 'Content-Type': 'multipart/form-data' },
+    public addReview(productId: number, payload: {
+        variant_id: number
+        rating: number
+        title?: string
+        content?: string
+        files?: File[]
+    }) {
+        const hasFiles = payload.files && payload.files.length > 0
+
+        if (hasFiles) {
+            // Gửi multipart/form-data khi có ảnh
+            const formData = new FormData()
+            formData.append('variant_id', String(payload.variant_id))
+            formData.append('rating',     String(payload.rating))
+            if (payload.title)   formData.append('title',   payload.title)
+            if (payload.content) formData.append('content', payload.content)
+            payload.files!.forEach(f => formData.append('files', f))
+            return axiosClient.post(apiEndpoints.products.reviews(productId), formData, {
+                headers: { 'Content-Type': 'multipart/form-data' },
+            })
+        }
+
+        // Không có ảnh → gửi JSON body
+        return axiosClient.post(apiEndpoints.products.reviews(productId), {
+            variant_id: payload.variant_id,
+            rating:     payload.rating,
+            title:      payload.title   ?? null,
+            content:    payload.content ?? null,
         })
     }
 }

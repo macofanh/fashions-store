@@ -72,7 +72,7 @@ const isLightColor = (hex: string) => {
     <div class="bg-background-light min-h-screen pb-24">
         <!-- Hero -->
         <div class="bg-fashion-black text-white py-20 px-6 text-center">
-            <p class="text-[9px] uppercase tracking-[0.5em] text-text-muted mb-4">Azure Editorial</p>
+
             <h1 class="text-5xl md:text-6xl font-serif italic mb-4">Voucher Center</h1>
             <p class="text-[10px] uppercase tracking-[0.4em] text-zinc-400">Khám phá các ưu đãi đặc biệt dành riêng cho bạn</p>
         </div>

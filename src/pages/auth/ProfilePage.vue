@@ -2,14 +2,18 @@
 import { ref, onMounted, computed, watch } from 'vue'
 import { orderService } from '@/pages/cart/orderService'
 import { addressService, type Address } from '@/pages/profile/addressService'
+import { membershipService, getTierByPoints } from '@/pages/auth/membershipService'
+import MembershipCard from '@/pages/auth/components/MembershipCard.vue'
 import axios from 'axios'
 
-const activeTab = ref<'orders' | 'addresses'>('orders')
+const activeTab = ref<'orders' | 'membership' | 'addresses'>('orders')
 const orders = ref<any[]>([])
 const addresses = ref<Address[]>([])
 const isLoading = ref(true)
+const isMembershipLoading = ref(true)
 const isAddressModalOpen = ref(false)
 const userInfo = ref<any>(JSON.parse(localStorage.getItem('user_info') || '{}'))
+const totalPoints = ref(0)
 
 // Vietnam Address Data for Modal
 const provinces = ref<any[]>([])
@@ -45,6 +49,20 @@ const fetchAddresses = async () => {
         console.error('Lỗi lấy địa chỉ:', error)
     }
 }
+
+const fetchMembership = async () => {
+    isMembershipLoading.value = true
+    try {
+        const res = await membershipService.getRewardHistory()
+        totalPoints.value = res.data.total_points ?? 0
+    } catch (error) {
+        console.error('Lỗi lấy điểm thành viên:', error)
+    } finally {
+        isMembershipLoading.value = false
+    }
+}
+
+const currentTier = computed(() => getTierByPoints(totalPoints.value))
 
 const fetchProvinces = async () => {
     try {
@@ -107,7 +125,7 @@ const handleAddAddress = async () => {
 
 onMounted(async () => {
     isLoading.value = true
-    await Promise.all([fetchOrders(), fetchAddresses(), fetchProvinces()])
+    await Promise.all([fetchOrders(), fetchAddresses(), fetchProvinces(), fetchMembership()])
     isLoading.value = false
 })
 
@@ -161,9 +179,23 @@ const formatDate = (dateStr: string) => {
                     <h1 class="text-5xl font-serif text-zinc-900 mb-4 italic">My Account</h1>
                     <p class="text-[10px] uppercase tracking-[0.4em] text-zinc-400">Quản lý tài khoản & Đơn hàng</p>
                 </div>
-                <div class="text-right">
-                    <h3 class="text-sm font-medium text-zinc-900 mb-1">{{ userInfo.full_name }}</h3>
-                    <p class="text-xs text-zinc-400 font-light">{{ userInfo.email }}</p>
+                <div class="text-right space-y-3">
+                    <div>
+                        <h3 class="text-sm font-medium text-zinc-900 mb-1">{{ userInfo.full_name }}</h3>
+                        <p class="text-xs text-zinc-400 font-light">{{ userInfo.email }}</p>
+                    </div>
+                    <!-- Stats: đơn hàng + hạng thành viên -->
+                    <div class="flex items-center gap-6 justify-end">
+                        <div class="text-right">
+                            <p class="text-xl font-bold text-zinc-900">{{ orders.length }}</p>
+                            <p class="text-[9px] uppercase tracking-widest text-zinc-400">Đơn hàng</p>
+                        </div>
+                        <div class="w-px h-8 bg-zinc-100"></div>
+                        <div class="text-right">
+                            <p :class="['text-xl font-bold', currentTier.color]">{{ currentTier.label }}</p>
+                            <p class="text-[9px] uppercase tracking-widest text-zinc-400">Hạng thành viên</p>
+                        </div>
+                    </div>
                 </div>
             </header>
 
@@ -176,6 +208,12 @@ const formatDate = (dateStr: string) => {
                             :class="['text-left px-6 py-4 text-[10px] uppercase tracking-[0.2em] font-bold transition-all', activeTab === 'orders' ? 'bg-zinc-900 text-white shadow-lg' : 'text-zinc-400 hover:bg-zinc-50']"
                         >
                             Đơn hàng của tôi
+                        </button>
+                        <button 
+                            @click="activeTab = 'membership'"
+                            :class="['text-left px-6 py-4 text-[10px] uppercase tracking-[0.2em] font-bold transition-all', activeTab === 'membership' ? 'bg-zinc-900 text-white shadow-lg' : 'text-zinc-400 hover:bg-zinc-50']"
+                        >
+                            Hạng thành viên
                         </button>
                         <button 
                             @click="activeTab = 'addresses'"
@@ -247,6 +285,14 @@ const formatDate = (dateStr: string) => {
                             <router-link to="/products" class="inline-block border border-zinc-900 px-8 py-3 text-[10px] uppercase tracking-widest font-bold hover:bg-zinc-900 hover:text-white transition-all">
                                 Khám phá sản phẩm
                             </router-link>
+                        </div>
+                    </div>
+
+                    <!-- Tab Membership -->
+                    <div v-if="activeTab === 'membership'">
+                        <h2 class="text-[10px] uppercase tracking-[0.3em] font-bold text-zinc-900 mb-8 border-b border-zinc-100 pb-4">Hạng thành viên</h2>
+                        <div class="max-w-lg">
+                            <MembershipCard :total-points="totalPoints" :is-loading="isMembershipLoading" />
                         </div>
                     </div>
 

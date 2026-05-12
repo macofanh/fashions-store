@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import type { Product } from '@/pages/products/productService'
-import ProductCard from '@/components/ProductCard.vue'
+import ProductCard from '@/pages/products/components/ProductCard.vue'
 
 defineProps<{
     products: Product[]

@@ -81,14 +81,6 @@ const handleGoogleLogin = () => {
                         <p class="text-text-muted text-sm font-light">Đăng nhập để khám phá bộ sưu tập mới nhất.</p>
                     </div>
 
-                    <!-- Error -->
-                    <Transition name="fade">
-                        <div v-if="authError" class="mb-6 bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm flex items-center gap-2">
-                            <span class="material-symbols-outlined text-[18px] shrink-0">error</span>
-                            <span>{{ authError }}</span>
-                        </div>
-                    </Transition>
-
                     <!-- Form -->
                     <form @submit.prevent="handleLogin" class="space-y-6">
                         <!-- Email -->

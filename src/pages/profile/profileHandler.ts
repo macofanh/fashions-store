@@ -3,9 +3,10 @@ import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/useAuthStore'
 import { useUIStore } from '@/stores/useUIStore'
 import { profileServices } from './profileServices'
+import { membershipService, getTierByPoints } from './membershipService'
 import type { Address } from './addressService'
 
-export type ProfileTab = 'orders' | 'addresses' | 'profile'
+export type ProfileTab = 'orders' | 'membership' | 'addresses' | 'profile'
 
 export function profileHandler() {
     const router    = useRouter()
@@ -18,6 +19,8 @@ export function profileHandler() {
     const addresses          = ref<Address[]>([])
     const isLoading          = ref(true)
     const isAddressModalOpen = ref(false)
+    const totalPoints        = ref(0)
+    const isMembershipLoading = ref(true)
 
     // Address form
     const provinces            = ref<any[]>([])
@@ -71,6 +74,17 @@ export function profileHandler() {
         } finally {
             isLoading.value = false
         }
+
+        // Fetch membership riêng để không block UI chính
+        isMembershipLoading.value = true
+        try {
+            const res = await membershipService.getRewardHistory()
+            totalPoints.value = res.data.reduce((sum, item) => sum + item.points_delta, 0)
+        } catch (e) {
+            console.error('Lỗi lấy điểm thành viên:', e)
+        } finally {
+            isMembershipLoading.value = false
+        }
     }
 
     // ── Actions ────────────────────────────────────────────────────
@@ -92,7 +106,16 @@ export function profileHandler() {
         }
     }
 
-    const handleLogout = () => {
+    const handleLogout = async () => {
+        const confirmed = await uiStore.confirm({
+            title: 'Đăng xuất',
+            message: 'Bạn có chắc muốn đăng xuất khỏi tài khoản không?',
+            confirmLabel: 'Đăng xuất',
+            cancelLabel: 'Hủy',
+            variant: 'danger',
+        })
+        if (!confirmed) return
+
         authStore.logout()
         router.push({ name: 'login' })
     }
@@ -119,6 +142,7 @@ export function profileHandler() {
         // state
         activeTab, orders, addresses, isLoading,
         isAddressModalOpen,
+        totalPoints, isMembershipLoading,
         provinces, districts, wards,
         selectedProvinceCode, selectedDistrictCode,
         addressForm,

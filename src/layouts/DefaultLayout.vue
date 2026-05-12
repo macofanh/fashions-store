@@ -2,7 +2,7 @@
 import { RouterView } from 'vue-router'
 import HeaderLayout from './components/HeaderLayout.vue'
 import FooterLayout from './components/FooterLayout.vue'
-import ChatAIWidget from '@/components/chat-ai/ChatAIWidget.vue'
+import ChatAIWidget from '@/pages/chat-ai/ChatAIWidget.vue'
 </script>
 
 <template>

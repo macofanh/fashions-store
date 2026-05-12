@@ -1,9 +1,11 @@
 <script setup lang="ts">
 import { RouterView } from 'vue-router'
-import ToastNotification from '@/components/ToastNotification.vue'
+import Notification from '@/components/Notification.vue'
+import Popup from '@/components/Popup.vue'
 </script>
 
 <template>
     <RouterView />
-    <ToastNotification />
+    <Notification />
+    <Popup />
 </template>

@@ -4,27 +4,26 @@ import { useRouter } from 'vue-router'
 import { authHandler } from '../authHandler'
 import { RegisterRequest } from '../authTypes'
 import { APP_NAME, APP_COPYRIGHT } from '@/lib/appConfig'
+import { useUIStore } from '@/stores/useUIStore'
 
 const router = useRouter()
+const uiStore = useUIStore()
 const { register, isLoading, error: authError } = authHandler()
 const formData = reactive(new RegisterRequest())
 
 const showPassword = ref(false)
 const showConfirmPassword = ref(false)
-const validationError = ref<string | null>(null)
 
 const handleRegister = async () => {
-    validationError.value = null
     if (formData.password !== formData.confirmPassword) {
-        validationError.value = 'Mật khẩu xác nhận không khớp.'
+        uiStore.error('Mật khẩu xác nhận không khớp.')
         return
     }
     try {
         await register(formData)
-        alert('Đăng ký tài khoản thành công! Vui lòng đăng nhập.')
         router.push('/auth/login')
     } catch (err) {
-        console.error('Lỗi đăng ký:', err)
+        // lỗi đã được authHandler hiển thị qua uiStore
     }
 }
 </script>
@@ -58,14 +57,6 @@ const handleRegister = async () => {
 
                 <!-- Card -->
                 <div class="bg-white border border-border-light rounded-xl shadow-sm p-8 md:p-10">
-
-                    <!-- Error -->
-                    <Transition name="fade">
-                        <div v-if="authError || validationError" class="mb-6 bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm flex items-center gap-2">
-                            <span class="material-symbols-outlined text-[18px] shrink-0">error</span>
-                            <span>{{ authError || validationError }}</span>
-                        </div>
-                    </Transition>
 
                     <form @submit.prevent="handleRegister" class="space-y-5">
                         <!-- Row 1: Họ tên + SĐT -->

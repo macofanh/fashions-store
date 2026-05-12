@@ -1,29 +1,34 @@
 <script setup lang="ts">
-import { ref, onMounted, watch } from 'vue'
+import { ref, onMounted, computed, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { orderService } from '@/pages/cart/orderService'
 import { addressService, type Address } from '@/pages/profile/addressService'
 import GoongAddressInput from '@/components/GoongAddressInput.vue'
 import { useAuthStore } from '@/stores/useAuthStore'
 import { profileHandler } from './profileHandler'
+import { getTierByPoints } from './membershipService'
 
 import ProfileBanner  from './components/ProfileBanner.vue'
 import OrdersTab      from './components/OrdersTab.vue'
 import AddressesTab   from './components/AddressesTab.vue'
 import ProfileInfoTab from './components/ProfileInfoTab.vue'
 import AddressModal   from './components/AddressModal.vue'
+import MembershipCard from './components/MembershipCard.vue'
 
 const authStore = useAuthStore()
 
 const {
     activeTab, orders, addresses, isLoading,
     isAddressModalOpen,
+    totalPoints, isMembershipLoading,
     provinces, districts, wards,
     selectedProvinceCode, selectedDistrictCode,
     addressForm,
     init, openAddressModal, handleAddAddress, handleLogout,
     formatPrice, formatDate, getStatus,
 } = profileHandler()
+
+const currentTier = computed(() => getTierByPoints(totalPoints.value))
 
 onMounted(init)
 </script>
@@ -37,7 +42,8 @@ onMounted(init)
                 :user-name="authStore.userName"
                 :email="authStore.user?.email || ''"
                 :order-count="orders.length"
-                :address-count="addresses.length"
+                :membership-label="currentTier.label"
+                :membership-color="currentTier.color"
                 :role="authStore.user?.role?.toLowerCase() || 'customer'"
                 :active-tab="activeTab"
                 @update:active-tab="activeTab = $event"
@@ -54,6 +60,13 @@ onMounted(init)
                     :format-date="formatDate"
                     :get-status="getStatus"
                 />
+
+                <div v-if="activeTab === 'membership'">
+                    <h2 class="text-[10px] uppercase tracking-[0.3em] font-bold text-fashion-black mb-6 border-b border-border-light pb-4 font-display">Hạng thành viên</h2>
+                    <div class="max-w-lg">
+                        <MembershipCard :total-points="totalPoints" :is-loading="isMembershipLoading" />
+                    </div>
+                </div>
 
                 <AddressesTab
                     v-if="activeTab === 'addresses'"

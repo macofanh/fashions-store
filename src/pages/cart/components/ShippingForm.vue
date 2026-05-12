@@ -30,27 +30,37 @@ const emit = defineEmits<{
         </h2>
 
         <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
-            <!-- Họ tên — readonly từ auth -->
+            <!-- Họ tên — pre-fill từ auth, vẫn sửa được -->
             <div class="space-y-1.5">
                 <label class="text-[10px] uppercase tracking-widest font-bold text-text-muted font-display">
-                    Họ và tên
-                    <span class="ml-1 text-primary normal-case tracking-normal font-normal">(từ tài khoản)</span>
+                    Họ và tên <span class="text-red-400">*</span>
                 </label>
-                <div class="flex items-center gap-2 border border-border-light rounded-lg px-4 py-3 bg-fashion-gray">
-                    <span class="material-symbols-outlined text-text-muted text-[16px]">person</span>
-                    <span class="text-sm text-fashion-black font-display">{{ form.recipient_name }}</span>
+                <div class="relative flex items-center">
+                    <span class="material-symbols-outlined absolute left-3 text-text-muted text-[16px] pointer-events-none">person</span>
+                    <input
+                        v-model="form.recipient_name"
+                        type="text"
+                        required
+                        placeholder="Họ và tên người nhận"
+                        class="w-full border border-border-light rounded-lg pl-9 pr-4 py-3 text-sm outline-none focus:border-primary transition-colors font-display"
+                    />
                 </div>
             </div>
 
-            <!-- SĐT — readonly từ auth -->
+            <!-- SĐT — pre-fill từ auth, vẫn sửa được -->
             <div class="space-y-1.5">
                 <label class="text-[10px] uppercase tracking-widest font-bold text-text-muted font-display">
-                    Số điện thoại
-                    <span class="ml-1 text-primary normal-case tracking-normal font-normal">(từ tài khoản)</span>
+                    Số điện thoại <span class="text-red-400">*</span>
                 </label>
-                <div class="flex items-center gap-2 border border-border-light rounded-lg px-4 py-3 bg-fashion-gray">
-                    <span class="material-symbols-outlined text-text-muted text-[16px]">phone</span>
-                    <span class="text-sm text-fashion-black font-display">{{ form.phone || 'Chưa cập nhật' }}</span>
+                <div class="relative flex items-center">
+                    <span class="material-symbols-outlined absolute left-3 text-text-muted text-[16px] pointer-events-none">phone</span>
+                    <input
+                        v-model="form.phone"
+                        type="tel"
+                        required
+                        placeholder="Số điện thoại nhận hàng"
+                        class="w-full border border-border-light rounded-lg pl-9 pr-4 py-3 text-sm outline-none focus:border-primary transition-colors font-display"
+                    />
                 </div>
             </div>
 

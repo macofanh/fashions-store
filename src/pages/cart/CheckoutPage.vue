@@ -80,19 +80,6 @@ onMounted(init)
                     @toggle="toggleVoucher"
                 />
             </div>
-
-            <!-- RIGHT: Order summary -->
-            <OrderSummary
-                :items="cart?.items || []"
-                :subtotal="subtotal"
-                :shipping-fee="SHIPPING_FEE"
-                :discount-amount="discountAmount"
-                :total="total"
-                :selected-voucher="selectedVoucher"
-                :is-submitting="isSubmitting"
-                :format-price="formatPrice"
-                @submit="submitOrder"
-            />
             
         </div> <!-- Đóng thẻ max-w-[1300px] -->
     </div> <!-- Đóng thẻ bg-background-light -->

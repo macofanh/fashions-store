@@ -3,10 +3,12 @@ import { useRouter } from 'vue-router'
 import { authService } from './authServices'
 import type { LoginRequest, RegisterRequest } from './authTypes'
 import { useAuthStore } from '@/stores/useAuthStore'
+import { useUIStore } from '@/stores/useUIStore'
 
 export function authHandler() {
     const router = useRouter()
     const authStore = useAuthStore()
+    const uiStore = useUIStore()
     const isLoading = ref(false)
     const error = ref<string | null>(null)
 
@@ -17,6 +19,11 @@ export function authHandler() {
         router.push({ name: 'home' })
     }
 
+    const _setError = (msg: string) => {
+        error.value = msg
+        uiStore.error(msg)
+    }
+
     const login = async (credentials: LoginRequest) => {
         isLoading.value = true
         error.value = null
@@ -25,9 +32,7 @@ export function authHandler() {
             _handleAuthSuccess(response.data)
             return response.data
         } catch (err: any) {
-            error.value =
-                err.response?.data?.detail ||
-                'Đăng nhập thất bại. Vui lòng thử lại.'
+            _setError(err.response?.data?.detail || 'Đăng nhập thất bại. Vui lòng thử lại.')
             throw err
         } finally {
             isLoading.value = false
@@ -46,9 +51,7 @@ export function authHandler() {
             _handleAuthSuccess(response.data)
             return response.data
         } catch (err: any) {
-            error.value =
-                err.response?.data?.detail ||
-                'Đăng nhập Google thất bại. Vui lòng thử lại.'
+            _setError(err.response?.data?.detail || 'Đăng nhập Google thất bại. Vui lòng thử lại.')
             throw err
         } finally {
             isLoading.value = false
@@ -63,9 +66,7 @@ export function authHandler() {
             _handleAuthSuccess(response.data)
             return response.data
         } catch (err: any) {
-            error.value =
-                err.response?.data?.detail ||
-                'Xác thực Google thất bại. Vui lòng thử lại.'
+            _setError(err.response?.data?.detail || 'Xác thực Google thất bại. Vui lòng thử lại.')
             throw err
         } finally {
             isLoading.value = false
@@ -77,11 +78,10 @@ export function authHandler() {
         error.value = null
         try {
             const response = await authService.register(userData)
+            uiStore.success('Đăng ký tài khoản thành công! Vui lòng đăng nhập.')
             return response.data
         } catch (err: any) {
-            error.value =
-                err.response?.data?.detail ||
-                'Đăng ký thất bại. Vui lòng kiểm tra lại thông tin.'
+            _setError(err.response?.data?.detail || 'Đăng ký thất bại. Vui lòng kiểm tra lại thông tin.')
             throw err
         } finally {
             isLoading.value = false
@@ -89,7 +89,6 @@ export function authHandler() {
     }
 
     const logout = () => {
-        // Tắt auto-select của Google khi logout
         window.google?.accounts.id.disableAutoSelect()
         authStore.logout()
         router.push({ name: 'login' })

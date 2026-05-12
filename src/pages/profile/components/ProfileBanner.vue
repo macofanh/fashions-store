@@ -5,7 +5,8 @@ defineProps<{
     userName: string
     email: string
     orderCount: number
-    addressCount: number
+    membershipLabel: string
+    membershipColor: string
     role: string
     activeTab: ProfileTab
 }>()
@@ -16,9 +17,10 @@ const emit = defineEmits<{
 }>()
 
 const navItems: { key: ProfileTab; icon: string; label: string }[] = [
-    { key: 'profile',   icon: 'person',      label: 'Hồ sơ'    },
-    { key: 'orders',    icon: 'package_2',   label: 'Đơn hàng' },
-    { key: 'addresses', icon: 'location_on', label: 'Địa chỉ'  },
+    { key: 'profile',    icon: 'person',          label: 'Hồ sơ'           },
+    { key: 'membership', icon: 'workspace_premium', label: 'Hạng thành viên' },
+    { key: 'orders',     icon: 'package_2',        label: 'Đơn hàng'        },
+    { key: 'addresses',  icon: 'location_on',      label: 'Địa chỉ'         },
 ]
 </script>
 
@@ -49,8 +51,8 @@ const navItems: { key: ProfileTab; icon: string; label: string }[] = [
                 </div>
                 <div class="w-px bg-border-light"></div>
                 <div class="text-center">
-                    <p class="text-xl font-bold text-fashion-black font-display">{{ addressCount }}</p>
-                    <p class="text-[9px] uppercase tracking-widest text-text-muted font-display mt-0.5">Địa chỉ</p>
+                    <p :class="['text-xl font-bold font-display', membershipColor]">{{ membershipLabel }}</p>
+                    <p class="text-[9px] uppercase tracking-widest text-text-muted font-display mt-0.5">Hạng</p>
                 </div>
             </div>
         </div>

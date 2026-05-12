@@ -1,30 +1,53 @@
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/useAuthStore'
 import { useCartStore } from '@/stores/useCartStore'
-import { APP_NAME, APP_TAGLINE } from '@/lib/appConfig'
+import { useUIStore } from '@/stores/useUIStore'
+import { APP_NAME } from '@/lib/appConfig'
+import type { NavLink, ProfileMenuItem } from './headerTypes'
+import { membershipService, getTierByPoints } from '@/pages/profile/membershipService'
 
 const authStore = useAuthStore()
 const cartStore = useCartStore()
+const uiStore = useUIStore()
 const router = useRouter()
 
 const isScrolled = ref(false)
 const isMobileMenuOpen = ref(false)
+const totalPoints = ref(0)
 
+// Fetch điểm khi đã đăng nhập
+onMounted(async () => {
+    window.addEventListener('scroll', handleScroll, { passive: true })
+    if (authStore.isAuthenticated) {
+        try {
+            const res = await membershipService.getRewardHistory()
+            totalPoints.value = res.data.reduce((sum, item) => sum + item.points_delta, 0)
+        } catch { /* silent */ }
+    }
+})
+
+const currentTier = computed(() => getTierByPoints(totalPoints.value))
+
+// ─── Scroll handler ───────────────────────────────────────────────────────────
 const handleScroll = () => {
     isScrolled.value = window.scrollY > 60
 }
 
-onMounted(() => {
-    window.addEventListener('scroll', handleScroll, { passive: true })
-})
+onUnmounted(() => window.removeEventListener('scroll', handleScroll))
 
-onUnmounted(() => {
-    window.removeEventListener('scroll', handleScroll)
-})
+// ─── Actions ──────────────────────────────────────────────────────────────────
+const handleLogout = async () => {
+    const confirmed = await uiStore.confirm({
+        title: 'Đăng xuất',
+        message: 'Bạn có chắc muốn đăng xuất khỏi tài khoản không?',
+        confirmLabel: 'Đăng xuất',
+        cancelLabel: 'Hủy',
+        variant: 'danger',
+    })
+    if (!confirmed) return
 
-const handleLogout = () => {
     window.google?.accounts.id.disableAutoSelect()
     authStore.logout()
     cartStore.clearGuestCart()
@@ -35,6 +58,54 @@ const handleLogout = () => {
 const closeMobileMenu = () => {
     isMobileMenuOpen.value = false
 }
+
+// ─── Nav links (desktop + mobile) ─────────────────────────────────────────────
+const navLinks = computed<NavLink[]>(() => [
+    { label: 'Bộ sưu tập', to: '/products' },
+    { label: 'Ưu đãi', to: '/vouchers' },
+    {
+        label: 'Admin',
+        to: '/admin',
+        condition: authStore.isAdmin || authStore.isStaff,
+        extraClass: '!text-amber-600',
+    },
+])
+
+// ─── Profile dropdown items ────────────────────────────────────────────────────
+const profileMenuItems = computed<ProfileMenuItem[]>(() => [
+    {
+        key: 'profile',
+        label: 'Hồ sơ của tôi',
+        icon: 'person',
+        to: '/profile',
+    },
+    {
+        key: 'cart',
+        label: 'Giỏ hàng',
+        icon: 'shopping_bag',
+        to: '/cart',
+    },
+    {
+        key: 'vouchers',
+        label: 'Voucher của tôi',
+        icon: 'local_offer',
+        to: '/vouchers',
+    },
+    {
+        key: 'orders',
+        label: 'Đơn hàng của tôi',
+        icon: 'package_2',
+        to: '/orders',
+    },
+    {
+        key: 'logout',
+        label: 'Đăng xuất',
+        icon: 'logout',
+        action: handleLogout,
+        extraClass: 'text-red-500',
+        dividerBefore: true,
+    },
+])
 </script>
 
 <template>
@@ -66,9 +137,13 @@ const closeMobileMenu = () => {
 
                 <!-- Desktop Nav -->
                 <nav class="hidden md:flex items-center gap-8">
-                    <router-link to="/products" class="nav-link">Bộ sưu tập</router-link>
-                    <router-link to="/vouchers" class="nav-link">Ưu đãi</router-link>
-                    <router-link v-if="authStore.isAdmin || authStore.isStaff" to="/admin" class="nav-link !text-amber-600">Admin</router-link>
+                    <template v-for="link in navLinks" :key="link.to">
+                        <router-link
+                            v-if="link.condition !== false"
+                            :to="link.to"
+                            :class="['nav-link', link.extraClass]"
+                        >{{ link.label }}</router-link>
+                    </template>
                 </nav>
             </div>
 
@@ -106,26 +181,39 @@ const closeMobileMenu = () => {
                             <!-- Dropdown -->
                             <div class="absolute right-0 top-full pt-3 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 pointer-events-none group-hover:pointer-events-auto">
                                 <div class="bg-white border border-border-light shadow-xl rounded-lg py-2 w-52">
+                                    <!-- User info -->
                                     <div class="px-4 py-2 border-b border-border-light mb-1">
                                         <p class="text-xs font-bold text-fashion-black truncate">{{ authStore.userName }}</p>
+                                        <p :class="['text-[10px] font-medium mt-0.5 flex items-center gap-1', currentTier.color]">
+                                            <span class="material-symbols-outlined text-[12px]">{{ currentTier.icon }}</span>
+                                            {{ currentTier.label }}
+                                        </p>
                                     </div>
-                                    <router-link to="/profile" class="dropdown-item">
-                                        <span class="material-symbols-outlined text-[16px]">person</span>
-                                        Hồ sơ của tôi
-                                    </router-link>
-                                    <router-link to="/cart" class="dropdown-item">
-                                        <span class="material-symbols-outlined text-[16px]">shopping_bag</span>
-                                        Giỏ hàng
-                                    </router-link>
-                                    <router-link to="/vouchers" class="dropdown-item">
-                                        <span class="material-symbols-outlined text-[16px]">local_offer</span>
-                                        Voucher của tôi
-                                    </router-link>
-                                    <hr class="border-border-light my-1" />
-                                    <button @click="handleLogout" class="dropdown-item text-red-500 w-full text-left">
-                                        <span class="material-symbols-outlined text-[16px]">logout</span>
-                                        Đăng xuất
-                                    </button>
+
+                                    <!-- Menu items -->
+                                    <template v-for="item in profileMenuItems" :key="item.key">
+                                        <hr v-if="item.dividerBefore" class="border-border-light my-1" />
+
+                                        <!-- Router link item -->
+                                        <router-link
+                                            v-if="item.to"
+                                            :to="item.to"
+                                            :class="['dropdown-item', item.extraClass]"
+                                        >
+                                            <span class="material-symbols-outlined text-[16px]">{{ item.icon }}</span>
+                                            {{ item.label }}
+                                        </router-link>
+
+                                        <!-- Action button item -->
+                                        <button
+                                            v-else-if="item.action"
+                                            @click="item.action"
+                                            :class="['dropdown-item w-full text-left', item.extraClass]"
+                                        >
+                                            <span class="material-symbols-outlined text-[16px]">{{ item.icon }}</span>
+                                            {{ item.label }}
+                                        </button>
+                                    </template>
                                 </div>
                             </div>
                         </div>
@@ -170,21 +258,48 @@ const closeMobileMenu = () => {
 
             <hr class="border-border-light" />
 
-            <router-link to="/products" @click="closeMobileMenu" class="mobile-nav-link">Bộ sưu tập</router-link>
-            <router-link to="/vouchers" @click="closeMobileMenu" class="mobile-nav-link">Ưu đãi</router-link>
-            <router-link v-if="authStore.isAdmin || authStore.isStaff" to="/admin" @click="closeMobileMenu" class="mobile-nav-link text-amber-600">Admin Dashboard</router-link>
+            <template v-for="link in navLinks" :key="link.to">
+                <router-link
+                    v-if="link.condition !== false"
+                    :to="link.to"
+                    @click="closeMobileMenu"
+                    :class="['mobile-nav-link', link.extraClass]"
+                >{{ link.label }}</router-link>
+            </template>
 
             <hr class="border-border-light" />
 
             <template v-if="authStore.isAuthenticated">
-                <div class="space-y-4">
-                    <p class="text-[9px] uppercase tracking-[0.3em] font-bold text-text-muted">Đang đăng nhập</p>
-                    <p class="text-lg font-bold text-fashion-black">{{ authStore.userName }}</p>
-                    <router-link to="/profile" @click="closeMobileMenu" class="block text-sm font-medium text-fashion-black hover:text-primary py-2 transition-colors">Hồ sơ của tôi</router-link>
-                    <button
-                        @click="handleLogout"
-                        class="w-full border border-red-200 text-red-500 py-3 text-sm font-medium hover:bg-red-50 transition-colors rounded"
-                    >Đăng xuất</button>
+                <div class="space-y-1">
+                    <p class="text-[9px] uppercase tracking-[0.3em] font-bold text-text-muted mb-3">Đang đăng nhập</p>
+                    <p class="text-lg font-bold text-fashion-black mb-1">{{ authStore.userName }}</p>
+                    <p :class="['text-xs font-medium mb-4 flex items-center gap-1', currentTier.color]">
+                        <span class="material-symbols-outlined text-[14px]">{{ currentTier.icon }}</span>
+                        {{ currentTier.label }}
+                    </p>
+
+                    <template v-for="item in profileMenuItems" :key="item.key">
+                        <hr v-if="item.dividerBefore" class="border-border-light my-2" />
+
+                        <router-link
+                            v-if="item.to"
+                            :to="item.to"
+                            @click="closeMobileMenu"
+                            :class="['flex items-center gap-2 py-2 text-sm font-medium hover:text-primary transition-colors', item.extraClass ?? 'text-fashion-black']"
+                        >
+                            <span class="material-symbols-outlined text-[18px]">{{ item.icon }}</span>
+                            {{ item.label }}
+                        </router-link>
+
+                        <button
+                            v-else-if="item.action"
+                            @click="item.action"
+                            :class="['w-full flex items-center gap-2 py-2 text-sm font-medium transition-colors', item.extraClass ?? 'text-fashion-black']"
+                        >
+                            <span class="material-symbols-outlined text-[18px]">{{ item.icon }}</span>
+                            {{ item.label }}
+                        </button>
+                    </template>
                 </div>
             </template>
             <template v-else>

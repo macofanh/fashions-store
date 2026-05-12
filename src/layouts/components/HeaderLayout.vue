@@ -182,7 +182,7 @@ const profileMenuItems = computed<ProfileMenuItem[]>(() => [
                             <div class="absolute right-0 top-full pt-3 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 pointer-events-none group-hover:pointer-events-auto">
                                 <div class="bg-white border border-border-light shadow-xl rounded-lg py-2 w-52">
                                     <!-- User info -->
-                                    <div class="px-4 py-2 border-b border-border-light mb-1">
+                                    <div class="px-4 py-2 border-b border-border-light mb-1 flex justify-start items-center gap-5">
                                         <p class="text-xs font-bold text-fashion-black truncate">{{ authStore.userName }}</p>
                                         <p :class="['text-[10px] font-medium mt-0.5 flex items-center gap-1', currentTier.color]">
                                             <span class="material-symbols-outlined text-[12px]">{{ currentTier.icon }}</span>

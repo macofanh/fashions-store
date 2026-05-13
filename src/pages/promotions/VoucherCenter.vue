@@ -55,9 +55,9 @@ const getDiscountLabel = (v: Voucher) => {
 }
 
 // Màu nền mặc định nếu admin không set
-const DEFAULT_COLORS = ['#17b0cf', '#0e191b', '#4e8b97', '#e7f1f3', '#f5f5f0']
+const DEFAULT_COLORS: string[] = ['#17b0cf', '#0e191b', '#4e8b97', '#e7f1f3', '#f5f5f0']
 const getCardBg = (v: Voucher, idx: number) =>
-    v.bg_color || DEFAULT_COLORS[idx % DEFAULT_COLORS.length]
+    v.bg_color || DEFAULT_COLORS[idx % DEFAULT_COLORS.length] || '#17b0cf'
 
 const isLightColor = (hex: string) => {
     const c = hex.replace('#', '')

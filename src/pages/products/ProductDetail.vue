@@ -54,13 +54,13 @@ const fetchProduct = async () => {
 
 onMounted(fetchProduct)
 
-const availableColors = computed(() => {
+const availableColors = computed<any[]>(() => {
     if (!product.value) return []
     const colors = product.value.variants.map((v: any) => v.color)
     return Array.from(new Map(colors.map((c: any) => [c.color_id, c])).values())
 })
 
-const availableSizes = computed(() => {
+const availableSizes = computed<any[]>(() => {
     if (!product.value || !selectedColor.value) return []
     return product.value.variants
         .filter((v: any) => v.color_id === selectedColor.value.color_id)
@@ -165,7 +165,7 @@ const submitReview = async () => {
                                     : 'border-transparent hover:border-border-light'
                             ]"
                         >
-                            <img :src="getImageUrl(img.image_url)" class="w-full h-full object-cover" :alt="`${product.name} ${idx + 1}`" />
+                            <img :src="getImageUrl(img.image_url)" class="w-full h-full object-cover" :alt="`${product.name} ${Number(idx) + 1}`" />
                         </div>
                     </div>
                     <!-- Main image -->

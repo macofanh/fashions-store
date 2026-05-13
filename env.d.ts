@@ -9,7 +9,6 @@ declare module '*.vue' {
 // Khai báo biến môi trường Vite
 interface ImportMetaEnv {
     readonly VITE_API_BASE_URL: string
-    readonly VITE_GOOGLE_CLIENT_ID: string
 }
 
 interface ImportMeta {

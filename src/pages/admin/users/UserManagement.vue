@@ -139,18 +139,18 @@ onMounted(fetchUsers)
         <!-- Header -->
         <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div>
-                <h1 class="text-2xl font-bold text-gray-900">Quản lý Người dùng</h1>
-                <p class="text-sm text-gray-500 mt-1">
+                <h1 class="text-2xl font-bold text-slate-900">Quản lý Người dùng</h1>
+                <p class="text-sm text-slate-500 mt-1">
                     {{ isLoading ? 'Đang tải...' : `${filteredUsers.length} / ${users.length} tài khoản` }}
                 </p>
             </div>
             <div class="relative w-full sm:w-80">
-                <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-[20px] pointer-events-none">search</span>
+                <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-[20px] pointer-events-none">search</span>
                 <input
                     v-model="searchQuery"
                     type="text"
                     placeholder="Tìm tên, email, số điện thoại..."
-                    class="w-full pl-10 pr-4 py-2.5 rounded-xl border border-gray-200 text-sm outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100 transition-all bg-white"
+                    class="w-full pl-10 pr-4 py-2.5 rounded-xl border border-slate-200 text-sm outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100 transition-all bg-white"
                 />
             </div>
         </div>
@@ -161,30 +161,30 @@ onMounted(fetchUsers)
         </div>
 
         <!-- Empty -->
-        <div v-else-if="filteredUsers.length === 0" class="text-center py-20 bg-white rounded-2xl border border-gray-100">
-            <span class="material-symbols-outlined text-5xl text-gray-200 block mb-3">person_search</span>
-            <p class="text-gray-400 text-sm">{{ searchQuery ? 'Không tìm thấy người dùng nào.' : 'Chưa có người dùng nào.' }}</p>
+        <div v-else-if="filteredUsers.length === 0" class="text-center py-20 bg-white rounded-2xl border border-slate-100">
+            <span class="material-symbols-outlined text-5xl text-slate-200 block mb-3">person_search</span>
+            <p class="text-slate-400 text-sm">{{ searchQuery ? 'Không tìm thấy người dùng nào.' : 'Chưa có người dùng nào.' }}</p>
         </div>
 
         <!-- User Table -->
-        <div v-else class="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+        <div v-else class="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
             <table class="w-full text-left border-collapse">
-                <thead class="bg-gray-50 border-b border-gray-100">
+                <thead class="bg-slate-50 border-b border-slate-100">
                     <tr>
-                        <th class="px-5 py-3.5 text-xs font-semibold text-gray-400">Người dùng</th>
-                        <th class="px-5 py-3.5 text-xs font-semibold text-gray-400 hidden md:table-cell">Email</th>
-                        <th class="px-5 py-3.5 text-xs font-semibold text-gray-400">Vai trò</th>
-                        <th class="px-5 py-3.5 text-xs font-semibold text-gray-400 hidden lg:table-cell">Điểm</th>
-                        <th class="px-5 py-3.5 text-xs font-semibold text-gray-400 hidden lg:table-cell">Trạng thái</th>
-                        <th class="px-5 py-3.5 text-xs font-semibold text-gray-400 hidden xl:table-cell">Ngày tham gia</th>
-                        <th class="px-5 py-3.5 text-xs font-semibold text-gray-400 text-right">Thao tác</th>
+                        <th class="px-5 py-3.5 text-xs font-semibold text-slate-400">Người dùng</th>
+                        <th class="px-5 py-3.5 text-xs font-semibold text-slate-400 hidden md:table-cell">Email</th>
+                        <th class="px-5 py-3.5 text-xs font-semibold text-slate-400">Vai trò</th>
+                        <th class="px-5 py-3.5 text-xs font-semibold text-slate-400 hidden lg:table-cell">Điểm</th>
+                        <th class="px-5 py-3.5 text-xs font-semibold text-slate-400 hidden lg:table-cell">Trạng thái</th>
+                        <th class="px-5 py-3.5 text-xs font-semibold text-slate-400 hidden xl:table-cell">Ngày tham gia</th>
+                        <th class="px-5 py-3.5 text-xs font-semibold text-slate-400 text-right">Thao tác</th>
                     </tr>
                 </thead>
-                <tbody class="divide-y divide-gray-50">
+                <tbody class="divide-y divide-slate-50">
                     <tr
                         v-for="u in filteredUsers"
                         :key="u.user_id"
-                        :class="['hover:bg-gray-50/60 transition-colors group', !u.is_active ? 'opacity-60' : '']"
+                        :class="['hover:bg-slate-50/60 transition-colors group', !u.is_active ? 'opacity-60' : '']"
                     >
                         <!-- Avatar + tên -->
                         <td class="px-5 py-4">
@@ -193,16 +193,16 @@ onMounted(fetchUsers)
                                     {{ u.full_name?.charAt(0)?.toUpperCase() || '?' }}
                                 </div>
                                 <div>
-                                    <p class="text-sm font-semibold text-gray-900">{{ u.full_name }}</p>
-                                    <p class="text-xs text-gray-400">{{ u.phone || '—' }}</p>
+                                    <p class="text-sm font-semibold text-slate-900">{{ u.full_name }}</p>
+                                    <p class="text-xs text-slate-400">{{ u.phone || '—' }}</p>
                                 </div>
                             </div>
                         </td>
                         <!-- Email -->
-                        <td class="px-5 py-4 text-sm text-gray-500 hidden md:table-cell">{{ u.email }}</td>
+                        <td class="px-5 py-4 text-sm text-slate-500 hidden md:table-cell">{{ u.email }}</td>
                         <!-- Role -->
                         <td class="px-5 py-4">
-                            <span :class="['text-[10px] font-bold px-2.5 py-1 rounded-full uppercase tracking-wide', u.role === 'admin' ? 'bg-violet-100 text-violet-700' : u.role === 'staff' ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-500']">
+                            <span :class="['text-[10px] font-bold px-2.5 py-1 rounded-full uppercase tracking-wide', u.role === 'admin' ? 'bg-violet-100 text-violet-700' : u.role === 'staff' ? 'bg-blue-100 text-blue-700' : 'bg-slate-100 text-slate-500']">
                                 {{ roleLabel[u.role] || u.role }}
                             </span>
                         </td>
@@ -210,7 +210,7 @@ onMounted(fetchUsers)
                         <td class="px-5 py-4 hidden lg:table-cell">
                             <div class="flex items-center gap-1">
                                 <span class="material-symbols-outlined text-[14px] text-amber-400">star</span>
-                                <span class="text-sm font-medium text-gray-700">{{ u.total_points.toLocaleString('vi-VN') }}</span>
+                                <span class="text-sm font-medium text-slate-700">{{ u.total_points.toLocaleString('vi-VN') }}</span>
                             </div>
                         </td>
                         <!-- Trạng thái -->
@@ -221,7 +221,7 @@ onMounted(fetchUsers)
                             </span>
                         </td>
                         <!-- Ngày tham gia -->
-                        <td class="px-5 py-4 text-xs text-gray-400 hidden xl:table-cell">{{ formatDate(u.created_at) }}</td>
+                        <td class="px-5 py-4 text-xs text-slate-400 hidden xl:table-cell">{{ formatDate(u.created_at) }}</td>
                         <!-- Action -->
                         <td class="px-5 py-4 text-right">
                             <button
@@ -236,7 +236,7 @@ onMounted(fetchUsers)
                 </tbody>
             </table>
             <!-- Footer -->
-            <div class="px-5 py-3 border-t border-gray-50 text-xs text-gray-400">
+            <div class="px-5 py-3 border-t border-slate-50 text-xs text-slate-400">
                 Hiển thị {{ filteredUsers.length }} / {{ users.length }} người dùng
             </div>
         </div>
@@ -249,16 +249,16 @@ onMounted(fetchUsers)
 
                     <div class="relative w-full max-w-md bg-white shadow-2xl flex flex-col h-full rounded-l-2xl overflow-hidden">
                         <!-- Header -->
-                        <div class="px-6 py-5 border-b border-gray-100 flex items-center gap-4 shrink-0">
+                        <div class="px-6 py-5 border-b border-slate-100 flex items-center gap-4 shrink-0">
                             <div :class="['w-12 h-12 rounded-full flex items-center justify-center text-white font-bold text-lg shrink-0', editForm.role === 'admin' ? 'bg-gradient-to-br from-violet-500 to-purple-600' : editForm.role === 'staff' ? 'bg-gradient-to-br from-blue-400 to-indigo-500' : 'bg-gradient-to-br from-gray-400 to-gray-500']">
                                 {{ editForm.full_name?.charAt(0)?.toUpperCase() || '?' }}
                             </div>
                             <div class="flex-grow min-w-0">
-                                <h2 class="font-bold text-gray-900 truncate">{{ editForm.full_name }}</h2>
-                                <p class="text-xs text-gray-400 truncate">{{ editForm.email }}</p>
+                                <h2 class="font-bold text-slate-900 truncate">{{ editForm.full_name }}</h2>
+                                <p class="text-xs text-slate-400 truncate">{{ editForm.email }}</p>
                             </div>
-                            <button @click="closeDrawer" class="w-8 h-8 flex items-center justify-center hover:bg-gray-100 rounded-full transition-colors shrink-0">
-                                <span class="material-symbols-outlined text-[20px] text-gray-500">close</span>
+                            <button @click="closeDrawer" class="w-8 h-8 flex items-center justify-center hover:bg-slate-100 rounded-full transition-colors shrink-0">
+                                <span class="material-symbols-outlined text-[20px] text-slate-500">close</span>
                             </button>
                         </div>
 
@@ -266,11 +266,11 @@ onMounted(fetchUsers)
                         <div class="flex px-6 pt-4 gap-1 shrink-0">
                             <button
                                 @click="activeTab = 'info'"
-                                :class="['flex-1 py-2.5 text-xs font-semibold rounded-lg transition-all', activeTab === 'info' ? 'bg-indigo-50 text-indigo-700' : 'text-gray-500 hover:bg-gray-50']"
+                                :class="['flex-1 py-2.5 text-xs font-semibold rounded-lg transition-all', activeTab === 'info' ? 'bg-indigo-50 text-indigo-700' : 'text-slate-500 hover:bg-slate-50']"
                             >Thông tin</button>
                             <button
                                 @click="activeTab = 'points'"
-                                :class="['flex-1 py-2.5 text-xs font-semibold rounded-lg transition-all', activeTab === 'points' ? 'bg-indigo-50 text-indigo-700' : 'text-gray-500 hover:bg-gray-50']"
+                                :class="['flex-1 py-2.5 text-xs font-semibold rounded-lg transition-all', activeTab === 'points' ? 'bg-indigo-50 text-indigo-700' : 'text-slate-500 hover:bg-slate-50']"
                             >Điểm thưởng</button>
                         </div>
 
@@ -280,46 +280,46 @@ onMounted(fetchUsers)
                             <!-- TAB INFO -->
                             <template v-if="activeTab === 'info'">
                                 <div class="grid grid-cols-2 gap-3">
-                                    <div class="bg-gray-50 rounded-xl p-3">
-                                        <p class="text-[10px] uppercase tracking-wider text-gray-400 mb-1">Loại tài khoản</p>
-                                        <p class="text-sm font-semibold text-gray-700 capitalize">{{ editForm.account_type }}</p>
+                                    <div class="bg-slate-50 rounded-xl p-3">
+                                        <p class="text-[10px] uppercase tracking-wider text-slate-400 mb-1">Loại tài khoản</p>
+                                        <p class="text-sm font-semibold text-slate-700 capitalize">{{ editForm.account_type }}</p>
                                     </div>
-                                    <div class="bg-gray-50 rounded-xl p-3">
-                                        <p class="text-[10px] uppercase tracking-wider text-gray-400 mb-1">Ngày tham gia</p>
-                                        <p class="text-sm font-semibold text-gray-700">{{ formatDate(editForm.created_at) }}</p>
+                                    <div class="bg-slate-50 rounded-xl p-3">
+                                        <p class="text-[10px] uppercase tracking-wider text-slate-400 mb-1">Ngày tham gia</p>
+                                        <p class="text-sm font-semibold text-slate-700">{{ formatDate(editForm.created_at) }}</p>
                                     </div>
                                 </div>
 
                                 <div>
-                                    <label class="text-xs font-semibold text-gray-500 block mb-1.5">Họ và tên <span class="text-red-400">*</span></label>
+                                    <label class="text-xs font-semibold text-slate-500 block mb-1.5">Họ và tên <span class="text-red-400">*</span></label>
                                     <input v-model="editForm.full_name" type="text"
-                                        class="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100 transition-all"
+                                        class="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-sm outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100 transition-all"
                                         placeholder="Nhập họ và tên..." />
                                 </div>
 
                                 <div>
-                                    <label class="text-xs font-semibold text-gray-500 block mb-1.5">Số điện thoại</label>
+                                    <label class="text-xs font-semibold text-slate-500 block mb-1.5">Số điện thoại</label>
                                     <input v-model="editForm.phone" type="tel"
-                                        class="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100 transition-all"
+                                        class="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-sm outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100 transition-all"
                                         placeholder="Nhập số điện thoại..." />
                                 </div>
 
                                 <div>
-                                    <label class="text-xs font-semibold text-gray-500 block mb-2">Vai trò</label>
+                                    <label class="text-xs font-semibold text-slate-500 block mb-2">Vai trò</label>
                                     <div class="grid grid-cols-3 gap-2">
                                         <button
                                             v-for="r in ['customer', 'staff', 'admin']"
                                             :key="r"
                                             @click="editForm.role = r"
                                             :disabled="r === 'admin' && authStore.user?.role !== 'admin'"
-                                            :class="['py-2.5 text-xs font-semibold rounded-xl border-2 transition-all disabled:opacity-30 disabled:cursor-not-allowed', editForm.role === r ? (r === 'admin' ? 'bg-violet-600 text-white border-violet-600' : r === 'staff' ? 'bg-indigo-600 text-white border-indigo-600' : 'bg-gray-700 text-white border-gray-700') : 'border-gray-200 text-gray-500 hover:border-gray-400']"
+                                            :class="['py-2.5 text-xs font-semibold rounded-xl border-2 transition-all disabled:opacity-30 disabled:cursor-not-allowed', editForm.role === r ? (r === 'admin' ? 'bg-violet-600 text-white border-violet-600' : r === 'staff' ? 'bg-indigo-600 text-white border-indigo-600' : 'bg-slate-700 text-white border-slate-700') : 'border-slate-200 text-slate-500 hover:border-slate-400']"
                                         >{{ roleLabel[r] }}</button>
                                     </div>
-                                    <p v-if="authStore.user?.role !== 'admin'" class="text-[10px] text-gray-400 mt-1.5 italic">* Chỉ Admin mới có thể cấp quyền Admin</p>
+                                    <p v-if="authStore.user?.role !== 'admin'" class="text-[10px] text-slate-400 mt-1.5 italic">* Chỉ Admin mới có thể cấp quyền Admin</p>
                                 </div>
 
                                 <div>
-                                    <label class="text-xs font-semibold text-gray-500 block mb-2">Trạng thái tài khoản</label>
+                                    <label class="text-xs font-semibold text-slate-500 block mb-2">Trạng thái tài khoản</label>
                                     <button
                                         @click="!isCurrentUser && (editForm.is_active = !editForm.is_active)"
                                         :disabled="isCurrentUser"
@@ -335,12 +335,12 @@ onMounted(fetchUsers)
                                                 <p :class="['text-sm font-semibold', editForm.is_active ? 'text-emerald-700' : 'text-red-600']">
                                                     {{ editForm.is_active ? 'Đang hoạt động' : 'Đã bị khóa' }}
                                                 </p>
-                                                <p class="text-[10px] text-gray-400">
+                                                <p class="text-[10px] text-slate-400">
                                                     {{ isCurrentUser ? 'Không thể khóa tài khoản của chính mình' : 'Nhấn để ' + (editForm.is_active ? 'khóa' : 'mở khóa') }}
                                                 </p>
                                             </div>
                                         </div>
-                                        <div :class="['w-11 h-6 rounded-full transition-colors relative shrink-0', editForm.is_active ? 'bg-emerald-500' : 'bg-gray-300']">
+                                        <div :class="['w-11 h-6 rounded-full transition-colors relative shrink-0', editForm.is_active ? 'bg-emerald-500' : 'bg-slate-300']">
                                             <div :class="['absolute top-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform', editForm.is_active ? 'translate-x-5' : 'translate-x-0.5']"></div>
                                         </div>
                                     </button>
@@ -362,24 +362,24 @@ onMounted(fetchUsers)
 
                                 <div class="space-y-4">
                                     <div>
-                                        <label class="text-xs font-semibold text-gray-500 block mb-1.5">
+                                        <label class="text-xs font-semibold text-slate-500 block mb-1.5">
                                             Số điểm điều chỉnh
-                                            <span class="text-gray-400 font-normal ml-1">(+ cộng / - trừ)</span>
+                                            <span class="text-slate-400 font-normal ml-1">(+ cộng / - trừ)</span>
                                         </label>
                                         <div class="flex gap-2">
                                             <button
                                                 @click="pointsForm.points_delta = -Math.abs(Number(pointsForm.points_delta))"
-                                                :class="['px-3 py-2.5 rounded-xl border-2 text-sm font-bold transition-colors', Number(pointsForm.points_delta) < 0 ? 'bg-red-500 text-white border-red-500' : 'border-gray-200 text-gray-500 hover:border-red-300 hover:text-red-500']"
+                                                :class="['px-3 py-2.5 rounded-xl border-2 text-sm font-bold transition-colors', Number(pointsForm.points_delta) < 0 ? 'bg-red-500 text-white border-red-500' : 'border-slate-200 text-slate-500 hover:border-red-300 hover:text-red-500']"
                                             ><span class="material-symbols-outlined text-[18px]">remove</span></button>
                                             <input
                                                 v-model.number="pointsForm.points_delta"
                                                 type="number"
-                                                class="flex-grow border-2 border-gray-200 rounded-xl px-4 py-2.5 text-sm text-center font-bold outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100 transition-all"
+                                                class="flex-grow border-2 border-slate-200 rounded-xl px-4 py-2.5 text-sm text-center font-bold outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100 transition-all"
                                                 placeholder="0"
                                             />
                                             <button
                                                 @click="pointsForm.points_delta = Math.abs(Number(pointsForm.points_delta))"
-                                                :class="['px-3 py-2.5 rounded-xl border-2 text-sm font-bold transition-colors', Number(pointsForm.points_delta) > 0 ? 'bg-emerald-500 text-white border-emerald-500' : 'border-gray-200 text-gray-500 hover:border-emerald-300 hover:text-emerald-500']"
+                                                :class="['px-3 py-2.5 rounded-xl border-2 text-sm font-bold transition-colors', Number(pointsForm.points_delta) > 0 ? 'bg-emerald-500 text-white border-emerald-500' : 'border-slate-200 text-slate-500 hover:border-emerald-300 hover:text-emerald-500']"
                                             ><span class="material-symbols-outlined text-[18px]">add</span></button>
                                         </div>
                                         <p v-if="pointsForm.points_delta !== 0" :class="['text-xs font-semibold mt-1.5', Number(pointsForm.points_delta) > 0 ? 'text-emerald-600' : 'text-red-500']">
@@ -388,9 +388,9 @@ onMounted(fetchUsers)
                                     </div>
 
                                     <div>
-                                        <label class="text-xs font-semibold text-gray-500 block mb-1.5">Lý do <span class="text-red-400">*</span></label>
+                                        <label class="text-xs font-semibold text-slate-500 block mb-1.5">Lý do <span class="text-red-400">*</span></label>
                                         <input v-model="pointsForm.reason" type="text"
-                                            class="w-full border-2 border-gray-200 rounded-xl px-4 py-2.5 text-sm outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100 transition-all"
+                                            class="w-full border-2 border-slate-200 rounded-xl px-4 py-2.5 text-sm outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100 transition-all"
                                             placeholder="VD: Bù điểm do lỗi hệ thống..." />
                                     </div>
 
@@ -414,8 +414,8 @@ onMounted(fetchUsers)
                         </div>
 
                         <!-- Footer -->
-                        <div v-if="activeTab === 'info'" class="px-6 py-4 border-t border-gray-100 flex gap-3 shrink-0">
-                            <button @click="closeDrawer" class="flex-1 py-2.5 text-sm font-semibold text-gray-500 hover:text-gray-700 border border-gray-200 rounded-xl transition-colors">Hủy</button>
+                        <div v-if="activeTab === 'info'" class="px-6 py-4 border-t border-slate-100 flex gap-3 shrink-0">
+                            <button @click="closeDrawer" class="flex-1 py-2.5 text-sm font-semibold text-slate-500 hover:text-slate-700 border border-slate-200 rounded-xl transition-colors">Hủy</button>
                             <button
                                 @click="handleSave"
                                 :disabled="isSaving || !editForm.full_name.trim()"

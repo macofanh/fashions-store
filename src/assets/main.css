@@ -21,7 +21,7 @@
 
     /* ── Fonts ── */
     --font-display: 'Inter', sans-serif;
-    --font-serif: 'IBM Plex Serif', serif;
+    --font-serif: 'Playfair Display', serif;
 
     /* ── Radius ── */
     --radius-default: 0px;
@@ -38,9 +38,8 @@
         @apply font-display bg-background-light text-fashion-black antialiased;
     }
 
-    h1, h2, h3 {
-        @apply font-serif;
-    }
+    /* h1/h2/h3 KHÔNG tự động serif — admin dùng Inter cho heading
+       Storefront dùng class font-serif tường minh khi cần */
 
     /* Scrollbar */
     ::-webkit-scrollbar { width: 6px; height: 6px; }

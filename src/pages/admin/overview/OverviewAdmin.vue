@@ -64,29 +64,52 @@ const fetchRevenue = async () => {
 }
 
 // ── Computed ──────────────────────────────────────────────────────
+const chartData = computed(() => revenueStats.value?.data ?? [])
+
 const chartMax = computed(() => {
-    if (!revenueStats.value?.data.length) return 1
-    return Math.max(...revenueStats.value.data.map(d => d.revenue), 1)
+    const max = Math.max(...chartData.value.map(d => d.revenue), 0)
+    if (max === 0) return 1
+    // Làm tròn lên để trục Y đẹp hơn
+    const magnitude = Math.pow(10, Math.floor(Math.log10(max)))
+    return Math.ceil(max / magnitude) * magnitude
 })
 
-const chartData = computed(() => {
-    if (!revenueStats.value) return []
-    // Với mode=year hiện 12 tháng, mode=month hiện theo ngày, mode=day hiện theo giờ
-    // Gộp lại nếu quá nhiều điểm (mode=month > 31, mode=day > 24)
-    return revenueStats.value.data
+// Nhãn trục Y: 5 mức đều nhau
+const yLabels = computed(() => {
+    const max = chartMax.value
+    return [max, max * 0.75, max * 0.5, max * 0.25, 0]
 })
 
-// Chỉ hiện nhãn một số điểm để tránh chật
-const visibleLabels = computed(() => {
-    const data = chartData.value
-    if (!data.length) return new Set<number>()
-    if (revenueMode.value === 'year') return new Set(data.map((_, i) => i))
-    if (revenueMode.value === 'month') {
-        const last = data.length > 0 ? data[data.length - 1] : null
-        return new Set(data.filter(d => [1, 5, 10, 15, 20, 25].includes(d.period) || (last && d.period === last.period)).map(d => data.indexOf(d)))
-    }
-    return new Set(data.filter(d => d.period % 4 === 0).map(d => data.indexOf(d)))
+// Nhãn trục X: chỉ hiện một số nhãn tránh chật
+const xLabelVisible = computed(() => {
+    const n = chartData.value.length
+    if (n === 0) return () => false
+    if (revenueMode.value === 'year') return (_: RevenuePoint, i: number) => true          // 12 tháng → hiện hết
+    if (revenueMode.value === 'month') return (d: RevenuePoint) => d.period % 5 === 1      // ngày 1,6,11,16,21,26,31
+    return (d: RevenuePoint) => d.period % 6 === 0                                          // giờ 0,6,12,18
 })
+
+// Helper tính toán vị trí/kích thước cột trong SVG
+// chartWidth=740 (x: 52→792), chartHeight=184 (y: 8→192)
+const CHART_X0 = 52
+const CHART_W  = 740
+const CHART_Y0 = 8
+const CHART_H  = 184
+
+function barSlotWidth(n: number) { return CHART_W / n }
+function barWidth(n: number)     { return Math.min(barSlotWidth(n) * 0.6, 32) }
+function barX(idx: number, n: number) {
+    return CHART_X0 + (idx + 0.5) * barSlotWidth(n) - barWidth(n) / 2
+}
+function barY(revenue: number, max: number) {
+    return revenue > 0 ? CHART_Y0 + (1 - revenue / max) * CHART_H : CHART_Y0 + CHART_H - 1
+}
+function barH(revenue: number, max: number) {
+    return revenue > 0 ? (revenue / max) * CHART_H : 1
+}
+function labelX(idx: number, n: number) {
+    return CHART_X0 + (idx + 0.5) * barSlotWidth(n)
+}
 
 const modeLabel = computed(() => {
     if (revenueMode.value === 'year') return `Năm ${selectedYear.value}`
@@ -257,58 +280,74 @@ const statusConfig: Record<string, { label: string; cls: string }> = {
 
                 <!-- Bar Chart -->
                 <div class="relative">
-                    <div v-if="isChartLoading" class="h-48 flex items-center justify-center">
+                    <div v-if="isChartLoading" class="h-56 flex items-center justify-center">
                         <div class="animate-spin h-6 w-6 border-2 border-indigo-500 border-t-transparent rounded-full"></div>
                     </div>
 
-                    <div v-else-if="revenueStats && revenueStats.total_revenue === 0" class="h-48 flex flex-col items-center justify-center text-gray-300">
+                    <div v-else-if="!revenueStats || revenueStats.total_revenue === 0" class="h-56 flex flex-col items-center justify-center text-gray-300">
                         <span class="material-symbols-outlined text-4xl mb-2">bar_chart</span>
                         <p class="text-xs text-gray-400">Chưa có doanh thu trong kỳ này</p>
                     </div>
 
-                    <div v-else class="space-y-1">
-                        <div class="flex gap-2 items-end h-52">
-                            <!-- Y labels -->
-                            <div class="flex flex-col justify-between h-full text-right shrink-0 w-14">
-                                <span class="text-[9px] text-gray-400">{{ formatPriceShort(chartMax) }}</span>
-                                <span class="text-[9px] text-gray-400">{{ formatPriceShort(chartMax * 0.75) }}</span>
-                                <span class="text-[9px] text-gray-400">{{ formatPriceShort(chartMax * 0.5) }}</span>
-                                <span class="text-[9px] text-gray-400">{{ formatPriceShort(chartMax * 0.25) }}</span>
-                                <span class="text-[9px] text-gray-400">0</span>
-                            </div>
+                    <!-- SVG Chart -->
+                    <div v-else class="w-full select-none">
+                        <svg
+                            viewBox="0 0 800 220"
+                            preserveAspectRatio="none"
+                            class="w-full overflow-visible"
+                            style="height: 220px"
+                        >
+                            <defs>
+                                <linearGradient id="barGrad" x1="0" y1="0" x2="0" y2="1">
+                                    <stop offset="0%" stop-color="#6366f1"/>
+                                    <stop offset="100%" stop-color="#818cf8"/>
+                                </linearGradient>
+                            </defs>
 
-                            <!-- Bars -->
-                            <div class="flex-grow flex items-end gap-px h-full relative">
-                                <div class="absolute inset-0 flex flex-col justify-between pointer-events-none">
-                                    <div v-for="i in 5" :key="i" class="border-t border-gray-100 w-full"></div>
-                                </div>
-                                <div
-                                    v-for="(point, idx) in chartData"
-                                    :key="idx"
-                                    class="flex-1 flex flex-col items-center justify-end group relative"
+                            <!-- Grid lines ngang: 5 mức (100%, 75%, 50%, 25%, 0%) -->
+                            <line v-for="(_, gi) in 5" :key="gi"
+                                x1="52" :y1="8 + gi * 46"
+                                x2="792" :y2="8 + gi * 46"
+                                :stroke="gi === 4 ? '#e2e8f0' : '#f1f5f9'"
+                                :stroke-width="gi === 4 ? 1.5 : 1"
+                            />
+
+                            <!-- Y-axis labels -->
+                            <text v-for="(val, yi) in yLabels" :key="yi"
+                                x="48" :y="8 + yi * 46 + 3"
+                                text-anchor="end"
+                                font-size="9"
+                                fill="#94a3b8"
+                            >{{ formatPriceShort(val) }}</text>
+
+                            <!-- Bars + X labels -->
+                            <g v-for="(point, idx) in chartData" :key="idx">
+                                <rect
+                                    :x="barX(idx, chartData.length)"
+                                    :y="barY(point.revenue, chartMax)"
+                                    :width="barWidth(chartData.length)"
+                                    :height="barH(point.revenue, chartMax)"
+                                    :fill="point.revenue > 0 ? 'url(#barGrad)' : '#f1f5f9'"
+                                    rx="3"
+                                    class="cursor-pointer"
+                                    style="transition: opacity 0.15s"
+                                    @mouseenter="(e) => (e.target as SVGElement).style.opacity = '0.75'"
+                                    @mouseleave="(e) => (e.target as SVGElement).style.opacity = '1'"
                                 >
-                                    <div
-                                        :style="{ height: chartMax > 0 ? (point.revenue / chartMax * 100) + '%' : '0%' }"
-                                        :class="['w-full min-h-[2px] rounded-t-sm transition-all duration-500 relative', point.revenue > 0 ? 'bg-indigo-500 group-hover:bg-indigo-600' : 'bg-gray-100']"
-                                    >
-                                        <div v-if="point.revenue > 0" class="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 bg-gray-900 text-white text-[9px] px-2 py-1 rounded-lg whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-10">
-                                            {{ formatPrice(point.revenue) }}<br/>
-                                            <span class="text-gray-400">{{ point.count }} đơn</span>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
+                                    <title>{{ point.label }}: {{ formatPrice(point.revenue) }} · {{ point.count }} đơn</title>
+                                </rect>
 
-                        <!-- X-axis labels -->
-                        <div class="flex gap-px pl-16">
-                            <div v-for="(point, idx) in chartData" :key="idx" class="flex-1 text-center">
-                                <span
-                                    v-if="revenueMode === 'year' || (revenueMode === 'month' && [1, 5, 10, 15, 20, 25].includes(point.period)) || (revenueMode === 'day' && point.period % 6 === 0)"
-                                    class="text-[8px] text-gray-400"
-                                >{{ point.label }}</span>
-                            </div>
-                        </div>
+                                <!-- X label -->
+                                <text
+                                    v-if="xLabelVisible(point, idx)"
+                                    :x="labelX(idx, chartData.length)"
+                                    y="210"
+                                    text-anchor="middle"
+                                    font-size="9"
+                                    fill="#94a3b8"
+                                >{{ point.label }}</text>
+                            </g>
+                        </svg>
                     </div>
                 </div>
             </div>

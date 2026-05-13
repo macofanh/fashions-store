@@ -1,6 +1,9 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
 import axiosClient from '@/lib/axiosClient'
+import { useUIStore } from '@/stores/useUIStore'
+
+const uiStore = useUIStore()
 
 interface VariantStock {
     variant_id: number; product_name: string; sku: string
@@ -79,7 +82,7 @@ const openAdjustDrawer = (variant?: VariantStock) => {
 }
 
 const handleAdjustStock = async () => {
-    if (!form.value.variant_id) return alert('Vui lòng chọn biến thể')
+    if (!form.value.variant_id) return uiStore.warning('Vui lòng chọn biến thể')
     isSubmitting.value = true
     try {
         await axiosClient.post('/api/v1/inventory/inventory-logs', {
@@ -89,9 +92,10 @@ const handleAdjustStock = async () => {
             note: form.value.note
         })
         isDrawerOpen.value = false
+        uiStore.success('Cập nhật kho thành công!')
         activeTab.value === 'stock' ? fetchStock() : fetchLogs()
     } catch (e: any) {
-        alert(e.response?.data?.detail || 'Lỗi khi cập nhật kho')
+        uiStore.error(e.response?.data?.detail || 'Lỗi khi cập nhật kho')
     } finally { isSubmitting.value = false }
 }
 

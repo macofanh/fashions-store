@@ -1,12 +1,14 @@
 <script setup lang="ts">
 import { ref } from 'vue'
+import { useUIStore } from '@/stores/useUIStore'
 
+const uiStore = useUIStore()
 const emailInput = ref('')
 
 const handleSubscribe = () => {
     if (!emailInput.value) return
     console.log('Đăng ký nhận bản tin với email:', emailInput.value)
-    alert('Cảm ơn bạn đã đăng ký nhận bản tin!')
+    uiStore.success('Cảm ơn bạn đã đăng ký nhận bản tin!')
     emailInput.value = ''
 }
 </script>

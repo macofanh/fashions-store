@@ -3,7 +3,6 @@ import { ref, onMounted, computed, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { orderService } from '@/pages/cart/orderService'
 import { addressService, type Address } from '@/pages/profile/addressService'
-import GoongAddressInput from '@/components/GoongAddressInput.vue'
 import { useAuthStore } from '@/stores/useAuthStore'
 import { profileHandler } from './profileHandler'
 import { getTierByPoints } from './membershipService'
@@ -19,12 +18,15 @@ const authStore = useAuthStore()
 
 const {
     activeTab, orders, addresses, isLoading,
-    isAddressModalOpen,
+    isAddressModalOpen, modalMode, isSubmitting,
     totalPoints, isMembershipLoading,
     provinces, districts, wards,
     selectedProvinceCode, selectedDistrictCode,
     addressForm,
-    init, openAddressModal, handleAddAddress, handleLogout,
+    init,
+    openAddressModal, openEditModal,
+    handleAddAddress, handleDeleteAddress, handleSetDefault,
+    handleLogout,
     formatPrice, formatDate, getStatus,
 } = profileHandler()
 
@@ -73,6 +75,9 @@ onMounted(init)
                     :addresses="addresses"
                     :is-loading="isLoading"
                     @open-modal="openAddressModal"
+                    @open-edit="openEditModal"
+                    @delete-address="handleDeleteAddress"
+                    @set-default="handleSetDefault"
                 />
 
                 <ProfileInfoTab
@@ -83,55 +88,20 @@ onMounted(init)
         </div>
 
         <!-- ── ADDRESS MODAL ──────────────────────────────────── -->
-        <div v-if="isAddressModalOpen" class="fixed inset-0 z-[100] flex items-center justify-center p-6 bg-fashion-black/60 backdrop-blur-sm">
-            <div class="bg-white w-full max-w-xl shadow-2xl p-10 space-y-8">
-                <header class="flex justify-between items-center">
-                    <h2 class="text-2xl font-serif italic text-fashion-black">Thêm địa chỉ mới</h2>
-                    <button @click="isAddressModalOpen = false" class="material-symbols-outlined text-text-muted hover:text-fashion-black">close</button>
-                </header>
-
-                <form @submit.prevent="handleAddAddress" class="space-y-6">
-                    <div class="grid grid-cols-2 gap-4">
-                        <div class="space-y-1">
-                            <label class="text-[9px] uppercase font-bold text-text-muted">Tên người nhận</label>
-                            <input v-model="addressForm.recipient_name" required type="text" class="input-underline" />
-                        </div>
-                        <div class="space-y-1">
-                            <label class="text-[9px] uppercase font-bold text-text-muted">Số điện thoại</label>
-                            <input v-model="addressForm.phone" required type="tel" class="input-underline" />
-                        </div>
-                    </div>
-
-                    <div class="space-y-4">
-                        <div class="space-y-1">
-                            <label class="text-[9px] uppercase font-bold text-text-muted">Tỉnh / Thành phố</label>
-                            <select v-model="selectedProvinceCode" required class="input-underline bg-transparent">
-                                <option value="" disabled>Chọn Tỉnh / Thành phố</option>
-                                <option v-for="p in provinces" :key="p.code" :value="p.code">{{ p.name }}</option>
-                            </select>
-                        </div>
-                        <div class="space-y-1">
-                            <label class="text-[9px] uppercase font-bold text-text-muted">Quận / Huyện</label>
-                            <select v-model="selectedDistrictCode" :disabled="selectedProvinceCode === ''" required class="input-underline bg-transparent disabled:opacity-30">
-                                <option value="" disabled>Chọn Quận / Huyện</option>
-                                <option v-for="d in districts" :key="d.code" :value="d.code">{{ d.name }}</option>
-                            </select>
-                        </div>
-                        <div class="space-y-1">
-                            <label class="text-[9px] uppercase font-bold text-text-muted">Phường / Xã</label>
-                            <select v-model="addressForm.ward" :disabled="selectedDistrictCode === ''" required class="input-underline bg-transparent disabled:opacity-30">
-                                <option value="" disabled>Chọn Phường / Xã</option>
-                                <option v-for="w in wards" :key="w.code" :value="w.name">{{ w.name }}</option>
-                            </select>
-                        </div>
-                        <div class="space-y-1">
-                            <GoongAddressInput v-model="addressForm.street_address" />
-                        </div>
-                    </div>
-
-                    <button type="submit" class="btn-dark w-full py-4">Lưu địa chỉ</button>
-                </form>
-            </div>
-        </div>
+        <AddressModal
+            v-if="isAddressModalOpen"
+            :mode="modalMode"
+            :form="addressForm"
+            :provinces="provinces"
+            :districts="districts"
+            :wards="wards"
+            :selected-province-code="selectedProvinceCode"
+            :selected-district-code="selectedDistrictCode"
+            :is-submitting="isSubmitting"
+            @close="isAddressModalOpen = false"
+            @submit="handleAddAddress"
+            @update:selected-province-code="selectedProvinceCode = $event"
+            @update:selected-district-code="selectedDistrictCode = $event"
+        />
     </div>
 </template>

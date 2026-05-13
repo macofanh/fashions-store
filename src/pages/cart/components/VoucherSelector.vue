@@ -10,12 +10,20 @@ const props = defineProps<{
 
 const emit = defineEmits<{ toggle: [uv: UserVoucher] }>()
 
+// Chỉ hiện voucher chưa dùng hết (used_count < usage_per_user)
+const usableVouchers = props.vouchers.filter(
+    uv => uv.used_count < (uv.voucher.usage_per_user ?? 1)
+)
+
 const getDiscountLabel = (v: UserVoucher['voucher']) => {
     if (v.discount_type === 'PERCENT')      return `-${v.discount_value}%`
     if (v.discount_type === 'FIXED_AMOUNT') return `-${props.formatPrice(Number(v.discount_value))}`
     if (v.discount_type === 'FREE_SHIP')    return 'Free ship'
     return ''
 }
+
+const isEligible = (uv: UserVoucher) =>
+    props.subtotal >= Number(uv.voucher.min_order_value)
 </script>
 
 <template>
@@ -25,21 +33,22 @@ const getDiscountLabel = (v: UserVoucher['voucher']) => {
             Mã giảm giá
         </h2>
 
-        <div v-if="vouchers.length === 0" class="text-sm text-text-muted italic font-display">
+        <!-- Không có voucher nào khả dụng -->
+        <div v-if="usableVouchers.length === 0" class="text-sm text-text-muted italic font-display">
             Bạn chưa có voucher nào.
             <router-link to="/vouchers" class="text-primary underline underline-offset-4 ml-1">Khám phá ưu đãi</router-link>
         </div>
 
         <div v-else class="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div
-                v-for="uv in vouchers"
+                v-for="uv in usableVouchers"
                 :key="uv.id"
-                @click="emit('toggle', uv)"
+                @click="isEligible(uv) && emit('toggle', uv)"
                 :class="[
                     'relative flex items-center gap-3 p-4 border-2 rounded-xl transition-all',
                     selected?.id === uv.id
                         ? 'border-primary bg-primary-light cursor-pointer'
-                        : subtotal < Number(uv.voucher.min_order_value)
+                        : !isEligible(uv)
                             ? 'border-border-light opacity-50 cursor-not-allowed'
                             : 'border-border-light hover:border-primary/50 cursor-pointer bg-white'
                 ]"
@@ -54,21 +63,33 @@ const getDiscountLabel = (v: UserVoucher['voucher']) => {
 
                 <div class="flex-grow min-w-0">
                     <div class="flex items-center justify-between gap-2">
-                        <span class="text-[10px] font-bold bg-fashion-black text-white px-2 py-0.5 rounded font-display">{{ uv.voucher.code }}</span>
+                        <span class="text-[10px] font-bold bg-fashion-black text-white px-2 py-0.5 rounded font-display">
+                            {{ uv.voucher.code }}
+                        </span>
                         <span :class="['text-sm font-bold font-display', selected?.id === uv.id ? 'text-primary' : 'text-fashion-black']">
                             {{ getDiscountLabel(uv.voucher) }}
                         </span>
                     </div>
                     <p class="text-[11px] text-fashion-black mt-1 font-display truncate">{{ uv.voucher.name }}</p>
-                    <p class="text-[10px] text-text-muted font-display">Đơn tối thiểu {{ formatPrice(Number(uv.voucher.min_order_value)) }}</p>
+                    <p class="text-[10px] text-text-muted font-display">
+                        Đơn tối thiểu {{ formatPrice(Number(uv.voucher.min_order_value)) }}
+                    </p>
                 </div>
 
-                <!-- Not eligible overlay -->
-                <div v-if="subtotal < Number(uv.voucher.min_order_value)"
+                <!-- Chưa đủ điều kiện overlay -->
+                <div v-if="!isEligible(uv)"
                     class="absolute inset-0 rounded-xl bg-white/60 flex items-center justify-center">
-                    <span class="text-[9px] uppercase font-bold text-red-500 bg-white px-2 py-1 rounded shadow-sm font-display">Chưa đủ điều kiện</span>
+                    <span class="text-[9px] uppercase font-bold text-red-500 bg-white px-2 py-1 rounded shadow-sm font-display">
+                        Chưa đủ điều kiện
+                    </span>
                 </div>
             </div>
         </div>
+
+        <!-- Có voucher đã dùng hết — hiện link gợi ý -->
+        <p v-if="vouchers.length > usableVouchers.length" class="text-[10px] text-text-muted font-display">
+            {{ vouchers.length - usableVouchers.length }} voucher đã được sử dụng.
+            <router-link to="/vouchers" class="text-primary underline underline-offset-4 ml-1">Lấy thêm ưu đãi</router-link>
+        </p>
     </section>
 </template>

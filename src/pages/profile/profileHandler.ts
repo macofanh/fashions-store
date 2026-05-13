@@ -5,6 +5,7 @@ import { useUIStore } from '@/stores/useUIStore'
 import { profileServices } from './profileServices'
 import { membershipService, getTierByPoints } from './membershipService'
 import type { Address } from './addressService'
+import { addressService } from './addressService'
 
 export type ProfileTab = 'orders' | 'membership' | 'addresses' | 'profile'
 
@@ -14,13 +15,18 @@ export function profileHandler() {
     const uiStore   = useUIStore()
 
     // ── State ──────────────────────────────────────────────────────
-    const activeTab          = ref<ProfileTab>('orders')
-    const orders             = ref<any[]>([])
-    const addresses          = ref<Address[]>([])
-    const isLoading          = ref(true)
-    const isAddressModalOpen = ref(false)
-    const totalPoints        = ref(0)
+    const activeTab           = ref<ProfileTab>('orders')
+    const orders              = ref<any[]>([])
+    const addresses           = ref<Address[]>([])
+    const isLoading           = ref(true)
+    const isAddressModalOpen  = ref(false)
+    const totalPoints         = ref(0)
     const isMembershipLoading = ref(true)
+
+    // Modal mode
+    const modalMode        = ref<'add' | 'edit'>('add')
+    const editingAddressId = ref<number | null>(null)
+    const isSubmitting     = ref(false)
 
     // Address form
     const provinces            = ref<any[]>([])
@@ -35,6 +41,7 @@ export function profileHandler() {
         district:       '',
         ward:           '',
         street_address: '',
+        is_default:     false,
     })
 
     // ── Watchers ───────────────────────────────────────────────────
@@ -75,7 +82,6 @@ export function profileHandler() {
             isLoading.value = false
         }
 
-        // Fetch membership riêng để không block UI chính
         isMembershipLoading.value = true
         try {
             const res = await membershipService.getRewardHistory()
@@ -87,25 +93,97 @@ export function profileHandler() {
         }
     }
 
-    // ── Actions ────────────────────────────────────────────────────
+    const refreshAddresses = async () => {
+        const res = await profileServices.getMyAddresses()
+        addresses.value = res.data
+    }
+
+    const resetForm = () => {
+        addressForm.value = { recipient_name: '', phone: '', province: '', district: '', ward: '', street_address: '', is_default: false }
+        selectedProvinceCode.value = ''
+        selectedDistrictCode.value = ''
+        districts.value = []
+        wards.value = []
+    }
+
+    // ── Mở modal thêm ─────────────────────────────────────────────
     const openAddressModal = () => {
-        addressForm.value = { recipient_name: '', phone: '', province: '', district: '', ward: '', street_address: '' }
-        selectedProvinceCode.value = ''; selectedDistrictCode.value = ''
+        modalMode.value = 'add'
+        editingAddressId.value = null
+        resetForm()
         isAddressModalOpen.value = true
     }
 
+    // ── Mở modal sửa ──────────────────────────────────────────────
+    const openEditModal = (addr: Address) => {
+        modalMode.value = 'edit'
+        editingAddressId.value = addr.address_id
+        addressForm.value = {
+            recipient_name: addr.recipient_name,
+            phone:          addr.phone,
+            province:       addr.province,
+            district:       addr.district,
+            ward:           addr.ward,
+            street_address: addr.street_address,
+            is_default:     addr.is_default,
+        }
+        selectedProvinceCode.value = ''
+        selectedDistrictCode.value = ''
+        districts.value = []
+        wards.value = []
+        isAddressModalOpen.value = true
+    }
+
+    // ── Submit (thêm hoặc sửa) ─────────────────────────────────────
     const handleAddAddress = async () => {
+        isSubmitting.value = true
         try {
-            await profileServices.addAddress(addressForm.value)
-            uiStore.success('Thêm địa chỉ thành công!')
+            if (modalMode.value === 'edit' && editingAddressId.value) {
+                await addressService.updateAddress(editingAddressId.value, addressForm.value)
+                uiStore.success('Cập nhật địa chỉ thành công!')
+            } else {
+                await profileServices.addAddress(addressForm.value)
+                uiStore.success('Thêm địa chỉ thành công!')
+            }
             isAddressModalOpen.value = false
-            const res = await profileServices.getMyAddresses()
-            addresses.value = res.data
+            await refreshAddresses()
         } catch (e: any) {
-            uiStore.error(e.response?.data?.detail || 'Lỗi khi thêm địa chỉ.')
+            uiStore.error(e.response?.data?.detail || 'Có lỗi xảy ra.')
+        } finally {
+            isSubmitting.value = false
         }
     }
 
+    // ── Xóa địa chỉ ───────────────────────────────────────────────
+    const handleDeleteAddress = async (addr: Address) => {
+        const ok = await uiStore.confirm({
+            title: 'Xóa địa chỉ',
+            message: `Bạn có chắc muốn xóa địa chỉ của "${addr.recipient_name}"?`,
+            confirmLabel: 'Xóa',
+            variant: 'danger',
+        })
+        if (!ok) return
+        try {
+            await addressService.deleteAddress(addr.address_id)
+            uiStore.success('Đã xóa địa chỉ.')
+            await refreshAddresses()
+        } catch (e: any) {
+            uiStore.error(e.response?.data?.detail || 'Lỗi khi xóa địa chỉ.')
+        }
+    }
+
+    // ── Đặt mặc định ──────────────────────────────────────────────
+    const handleSetDefault = async (addr: Address) => {
+        try {
+            await addressService.setDefault(addr.address_id)
+            uiStore.success('Đã đặt làm địa chỉ mặc định.')
+            await refreshAddresses()
+        } catch (e: any) {
+            uiStore.error(e.response?.data?.detail || 'Lỗi khi đặt mặc định.')
+        }
+    }
+
+    // ── Đăng xuất ─────────────────────────────────────────────────
     const handleLogout = async () => {
         const confirmed = await uiStore.confirm({
             title: 'Đăng xuất',
@@ -115,7 +193,6 @@ export function profileHandler() {
             variant: 'danger',
         })
         if (!confirmed) return
-
         authStore.logout()
         router.push({ name: 'login' })
     }
@@ -141,13 +218,16 @@ export function profileHandler() {
     return {
         // state
         activeTab, orders, addresses, isLoading,
-        isAddressModalOpen,
+        isAddressModalOpen, modalMode, isSubmitting,
         totalPoints, isMembershipLoading,
         provinces, districts, wards,
         selectedProvinceCode, selectedDistrictCode,
         addressForm,
         // actions
-        init, openAddressModal, handleAddAddress, handleLogout,
+        init,
+        openAddressModal, openEditModal,
+        handleAddAddress, handleDeleteAddress, handleSetDefault,
+        handleLogout,
         // helpers
         formatPrice, formatDate, getStatus,
     }

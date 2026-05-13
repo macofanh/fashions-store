@@ -1,6 +1,9 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
 import axiosClient from '@/lib/axiosClient'
+import { useUIStore } from '@/stores/useUIStore'
+
+const uiStore = useUIStore()
 
 const orders = ref<any[]>([])
 const isLoading = ref(true)
@@ -42,7 +45,7 @@ const handleUpdateStatus = async (orderId: number, newStatus: string) => {
         const order = orders.value.find(o => o.order_id === orderId)
         if (order) order.status = newStatus
     } catch (error: any) {
-        alert(error.response?.data?.detail || 'Cập nhật thất bại.')
+        uiStore.error(error.response?.data?.detail || 'Cập nhật thất bại.')
     }
 }
 

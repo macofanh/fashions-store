@@ -1,5 +1,6 @@
 import { createRouter, createWebHistory, type RouteRecordRaw } from 'vue-router'
 import { useAuthStore } from '@/stores/useAuthStore'
+import { useUIStore } from '@/stores/useUIStore'
 
 const routes: Array<RouteRecordRaw> = [
     {
@@ -145,7 +146,8 @@ router.beforeEach((to, from, next) => {
         next({ name: 'home' })
     } else if (to.meta.roles && Array.isArray(to.meta.roles)) {
         if (!to.meta.roles.includes(userRole)) {
-            alert('Bạn không có quyền truy cập trang quản trị này!')
+            const uiStore = useUIStore()
+            uiStore.error('Bạn không có quyền truy cập trang quản trị này!')
             next({ name: 'home' })
         } else {
             next()

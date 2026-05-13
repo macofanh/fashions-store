@@ -1,6 +1,8 @@
 import axiosClient from '@/lib/axiosClient'
 import { apiEndpoints } from '@/lib/endPoints'
 
+export type TierKey = 'bronze' | 'silver' | 'gold' | 'platinum' | 'diamond'
+
 export interface Voucher {
     voucher_id: number
     code: string
@@ -11,7 +13,9 @@ export interface Voucher {
     max_discount?: number
     min_order_value: number
     usage_limit?: number
+    usage_per_user: number
     used_count: number
+    required_tier: TierKey | null
     start_date: string
     end_date: string
     is_active: boolean

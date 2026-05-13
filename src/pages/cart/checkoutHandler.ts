@@ -4,6 +4,7 @@ import { useAuthStore } from '@/stores/useAuthStore'
 import { useUIStore } from '@/stores/useUIStore'
 import { checkoutServices } from './checkoutServices'
 import type { UserVoucher } from '@/pages/promotions/promotionService'
+import type { Address } from '@/pages/profile/addressService'
 
 export function checkoutHandler() {
     const route     = useRoute()
@@ -17,6 +18,10 @@ export function checkoutHandler() {
     const selectedVoucher = ref<UserVoucher | null>(null)
     const isLoading       = ref(true)
     const isSubmitting    = ref(false)
+
+    // Địa chỉ đã lưu
+    const savedAddresses    = ref<Address[]>([])
+    const selectedAddressId = ref<number | null>(null)
 
     // Form — họ tên + SĐT lấy từ auth store
     const form = ref({
@@ -36,6 +41,22 @@ export function checkoutHandler() {
     const wards                = ref<any[]>([])
     const selectedProvinceCode = ref<number | ''>('')
     const selectedDistrictCode = ref<number | ''>('')
+
+    // ── Áp dụng địa chỉ đã lưu vào form ──────────────────────────
+    const applyAddress = (addr: Address) => {
+        selectedAddressId.value = addr.address_id
+        form.value.recipient_name = addr.recipient_name
+        form.value.phone          = addr.phone
+        form.value.province       = addr.province
+        form.value.district       = addr.district
+        form.value.ward           = addr.ward
+        form.value.street_address = addr.street_address
+        // Reset cascading selects — không cần load lại vì đã có text đầy đủ
+        selectedProvinceCode.value = ''
+        selectedDistrictCode.value = ''
+        districts.value = []
+        wards.value     = []
+    }
 
     // ── Watchers ───────────────────────────────────────────────────
     watch(selectedProvinceCode, async (val) => {
@@ -57,23 +78,38 @@ export function checkoutHandler() {
         }
     })
 
+    // Khi user tự nhập form → bỏ chọn địa chỉ đã lưu
+    watch(
+        () => [form.value.recipient_name, form.value.phone, form.value.street_address],
+        () => { selectedAddressId.value = null },
+        { flush: 'sync' }
+    )
+
     // ── Init ───────────────────────────────────────────────────────
     const init = async () => {
         isLoading.value = true
         try {
-            const [cartRes, vouchersRes, provincesRes] = await Promise.all([
+            const [cartRes, vouchersRes, provincesRes, addressesRes] = await Promise.all([
                 checkoutServices.getCart(),
                 checkoutServices.getMyVouchers(),
                 checkoutServices.getProvinces(),
+                checkoutServices.getMyAddresses(),
             ])
 
             cart.value         = cartRes.data
             myVouchers.value   = vouchersRes.data
             provinces.value    = provincesRes.data
+            savedAddresses.value = addressesRes.data
 
             if (!cart.value.items?.length) {
                 router.push({ name: 'cart' })
                 return
+            }
+
+            // Auto-select địa chỉ mặc định (hoặc địa chỉ đầu tiên)
+            if (savedAddresses.value.length > 0) {
+                const defaultAddr = savedAddresses.value.find(a => a.is_default) ?? savedAddresses.value[0]
+                applyAddress(defaultAddr)
             }
 
             // Auto-select voucher từ query param
@@ -153,10 +189,11 @@ export function checkoutHandler() {
         isLoading, isSubmitting,
         form, provinces, districts, wards,
         selectedProvinceCode, selectedDistrictCode,
+        savedAddresses, selectedAddressId,
         // computed
         subtotal, discountAmount, total,
         SHIPPING_FEE,
         // actions
-        init, toggleVoucher, submitOrder, formatPrice,
+        init, toggleVoucher, submitOrder, formatPrice, applyAddress,
     }
 }

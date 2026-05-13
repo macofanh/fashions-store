@@ -4,134 +4,191 @@ import { orderService } from '@/pages/cart/orderService'
 import { addressService, type Address } from '@/pages/profile/addressService'
 import { membershipService, getTierByPoints } from '@/pages/auth/membershipService'
 import MembershipCard from '@/pages/auth/components/MembershipCard.vue'
+import AddressesTab from '@/pages/profile/components/AddressesTab.vue'
+import AddressModal from '@/pages/profile/components/AddressModal.vue'
+import { useUIStore } from '@/stores/useUIStore'
 import axios from 'axios'
+
+const uiStore = useUIStore()
 
 const activeTab = ref<'orders' | 'membership' | 'addresses'>('orders')
 const orders = ref<any[]>([])
 const addresses = ref<Address[]>([])
 const isLoading = ref(true)
 const isMembershipLoading = ref(true)
-const isAddressModalOpen = ref(false)
 const userInfo = ref<any>(JSON.parse(localStorage.getItem('user_info') || '{}'))
 const totalPoints = ref(0)
 
-// Vietnam Address Data for Modal
+// ── Address Modal ──────────────────────────────────────────────────
+const modalMode = ref<'add' | 'edit'>('add')
+const isModalOpen = ref(false)
+const isSubmitting = ref(false)
+const editingAddressId = ref<number | null>(null)
+
+const PROVINCE_API = 'https://provinces.open-api.vn/api'
 const provinces = ref<any[]>([])
 const districts = ref<any[]>([])
-const wards = ref<any[]>([])
+const wards     = ref<any[]>([])
 const selectedProvinceCode = ref<number | ''>('')
 const selectedDistrictCode = ref<number | ''>('')
-const addressForm = ref({
+
+const emptyForm = () => ({
     recipient_name: '',
     phone: '',
     province: '',
     district: '',
     ward: '',
-    street_address: ''
+    street_address: '',
+    is_default: false,
 })
+const addressForm = ref(emptyForm())
 
-const PROVINCE_API = 'https://provinces.open-api.vn/api'
-
+// ── Fetch helpers ──────────────────────────────────────────────────
 const fetchOrders = async () => {
-    try {
-        const response = await orderService.getMyOrders()
-        orders.value = response.data
-    } catch (error) {
-        console.error('Lỗi lấy đơn hàng:', error)
-    }
+    try { orders.value = (await orderService.getMyOrders()).data }
+    catch (e) { console.error(e) }
 }
 
 const fetchAddresses = async () => {
-    try {
-        const response = await addressService.getMyAddresses()
-        addresses.value = response.data
-    } catch (error) {
-        console.error('Lỗi lấy địa chỉ:', error)
-    }
+    try { addresses.value = (await addressService.getMyAddresses()).data }
+    catch (e) { console.error(e) }
 }
 
 const fetchMembership = async () => {
     isMembershipLoading.value = true
-    try {
-        const res = await membershipService.getRewardHistory()
-        totalPoints.value = res.data.total_points ?? 0
-    } catch (error) {
-        console.error('Lỗi lấy điểm thành viên:', error)
-    } finally {
-        isMembershipLoading.value = false
-    }
+    try { totalPoints.value = (await membershipService.getRewardHistory()).data.total_points ?? 0 }
+    catch (e) { console.error(e) }
+    finally { isMembershipLoading.value = false }
 }
-
-const currentTier = computed(() => getTierByPoints(totalPoints.value))
 
 const fetchProvinces = async () => {
-    try {
-        const res = await axios.get(`${PROVINCE_API}/p/`)
-        provinces.value = res.data
-    } catch (error) {
-        console.error('Lỗi lấy tỉnh thành:', error)
-    }
+    try { provinces.value = (await axios.get(`${PROVINCE_API}/p/`)).data }
+    catch (e) { console.error(e) }
 }
 
-const fetchDistricts = async (provinceCode: number) => {
-    try {
-        const res = await axios.get(`${PROVINCE_API}/p/${provinceCode}?depth=2`)
-        districts.value = res.data.districts
-    } catch (error) {
-        console.error('Lỗi lấy quận huyện:', error)
-    }
+const fetchDistricts = async (code: number) => {
+    try { districts.value = (await axios.get(`${PROVINCE_API}/p/${code}?depth=2`)).data.districts }
+    catch (e) { console.error(e) }
 }
 
-const fetchWards = async (districtCode: number) => {
-    try {
-        const res = await axios.get(`${PROVINCE_API}/d/${districtCode}?depth=2`)
-        wards.value = res.data.wards
-    } catch (error) {
-        console.error('Lỗi lấy phường xã:', error)
-    }
+const fetchWards = async (code: number) => {
+    try { wards.value = (await axios.get(`${PROVINCE_API}/d/${code}?depth=2`)).data.wards }
+    catch (e) { console.error(e) }
 }
 
-watch(selectedProvinceCode, (newVal) => {
-    addressForm.value.province = provinces.value.find(p => p.code === newVal)?.name || ''
+// ── Watchers cascading ─────────────────────────────────────────────
+watch(selectedProvinceCode, (val) => {
+    addressForm.value.province = provinces.value.find(p => p.code === val)?.name || ''
     addressForm.value.district = ''
     addressForm.value.ward = ''
     selectedDistrictCode.value = ''
     districts.value = []
     wards.value = []
-    if (newVal !== '') fetchDistricts(newVal as number)
+    if (val !== '') fetchDistricts(val as number)
 })
 
-watch(selectedDistrictCode, (newVal) => {
-    addressForm.value.district = districts.value.find(d => d.code === newVal)?.name || ''
+watch(selectedDistrictCode, (val) => {
+    addressForm.value.district = districts.value.find(d => d.code === val)?.name || ''
     addressForm.value.ward = ''
     wards.value = []
-    if (newVal !== '') fetchWards(newVal as number)
+    if (val !== '') fetchWards(val as number)
 })
 
-const handleAddAddress = async () => {
+// ── Modal open/close ───────────────────────────────────────────────
+const openAdd = () => {
+    modalMode.value = 'add'
+    editingAddressId.value = null
+    addressForm.value = emptyForm()
+    selectedProvinceCode.value = ''
+    selectedDistrictCode.value = ''
+    districts.value = []
+    wards.value = []
+    isModalOpen.value = true
+}
+
+const openEdit = (addr: Address) => {
+    modalMode.value = 'edit'
+    editingAddressId.value = addr.address_id
+    addressForm.value = {
+        recipient_name: addr.recipient_name,
+        phone: addr.phone,
+        province: addr.province,
+        district: addr.district,
+        ward: addr.ward,
+        street_address: addr.street_address,
+        is_default: addr.is_default,
+    }
+    // Reset cascading — text đã có sẵn trong form
+    selectedProvinceCode.value = ''
+    selectedDistrictCode.value = ''
+    districts.value = []
+    wards.value = []
+    isModalOpen.value = true
+}
+
+const closeModal = () => { isModalOpen.value = false }
+
+// ── Submit (thêm / sửa) ────────────────────────────────────────────
+const handleSubmit = async () => {
+    isSubmitting.value = true
     try {
-        await addressService.addAddress(addressForm.value)
-        alert('Thêm địa chỉ thành công!')
-        isAddressModalOpen.value = false
-        fetchAddresses()
-        // Reset form
-        addressForm.value = { recipient_name: '', phone: '', province: '', district: '', ward: '', street_address: '' }
-        selectedProvinceCode.value = ''
-        selectedDistrictCode.value = ''
-    } catch (error: any) {
-        alert(error.response?.data?.detail || 'Lỗi khi thêm địa chỉ.')
+        if (modalMode.value === 'edit' && editingAddressId.value) {
+            await addressService.updateAddress(editingAddressId.value, addressForm.value)
+            uiStore.success('Cập nhật địa chỉ thành công!')
+        } else {
+            await addressService.addAddress(addressForm.value)
+            uiStore.success('Thêm địa chỉ thành công!')
+        }
+        closeModal()
+        await fetchAddresses()
+    } catch (e: any) {
+        uiStore.error(e.response?.data?.detail || 'Có lỗi xảy ra.')
+    } finally {
+        isSubmitting.value = false
     }
 }
 
+// ── Xóa địa chỉ ───────────────────────────────────────────────────
+const handleDelete = async (addr: Address) => {
+    const ok = await uiStore.confirm({
+        title: 'Xóa địa chỉ',
+        message: `Bạn có chắc muốn xóa địa chỉ của "${addr.recipient_name}"?`,
+        confirmLabel: 'Xóa',
+        variant: 'danger',
+    })
+    if (!ok) return
+    try {
+        await addressService.deleteAddress(addr.address_id)
+        uiStore.success('Đã xóa địa chỉ.')
+        await fetchAddresses()
+    } catch (e: any) {
+        uiStore.error(e.response?.data?.detail || 'Lỗi khi xóa địa chỉ.')
+    }
+}
+
+// ── Đặt mặc định ──────────────────────────────────────────────────
+const handleSetDefault = async (addr: Address) => {
+    try {
+        await addressService.setDefault(addr.address_id)
+        uiStore.success('Đã đặt làm địa chỉ mặc định.')
+        await fetchAddresses()
+    } catch (e: any) {
+        uiStore.error(e.response?.data?.detail || 'Lỗi khi đặt mặc định.')
+    }
+}
+
+// ── Lifecycle ──────────────────────────────────────────────────────
 onMounted(async () => {
     isLoading.value = true
     await Promise.all([fetchOrders(), fetchAddresses(), fetchProvinces(), fetchMembership()])
     isLoading.value = false
 })
 
-const formatPrice = (price: number) => {
-    return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(price)
-}
+const currentTier = computed(() => getTierByPoints(totalPoints.value))
+
+// ── Helpers hiển thị ──────────────────────────────────────────────
+const formatPrice = (price: number) =>
+    new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(price)
 
 const getStatusClass = (status: string) => {
     switch (status) {
@@ -157,18 +214,14 @@ const getStatusDot = (status: string) => {
 
 const getStatusLabel = (status: string) => {
     const map: Record<string, string> = {
-        PENDING: 'Chờ xác nhận',
-        CONFIRMED: 'Đã xác nhận',
-        SHIPPING: 'Đang giao',
-        DELIVERED: 'Đã giao',
-        CANCELLED: 'Đã hủy',
+        PENDING: 'Chờ xác nhận', CONFIRMED: 'Đã xác nhận',
+        SHIPPING: 'Đang giao', DELIVERED: 'Đã giao', CANCELLED: 'Đã hủy',
     }
     return map[status] || status
 }
 
-const formatDate = (dateStr: string) => {
-    return new Date(dateStr).toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric' })
-}
+const formatDate = (dateStr: string) =>
+    new Date(dateStr).toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric' })
 </script>
 
 <template>
@@ -298,83 +351,35 @@ const formatDate = (dateStr: string) => {
 
                     <!-- Tab Addresses -->
                     <div v-if="activeTab === 'addresses'">
-                        <div class="flex justify-between items-end mb-8 border-b border-zinc-100 pb-4">
-                            <h2 class="text-[10px] uppercase tracking-[0.3em] font-bold text-zinc-900">Sổ địa chỉ của bạn</h2>
-                            <button @click="isAddressModalOpen = true" class="text-[10px] uppercase tracking-[0.2em] font-bold text-zinc-900 underline underline-offset-4">Thêm địa chỉ mới</button>
-                        </div>
-
-                        <div v-if="addresses.length === 0" class="text-center py-20 text-zinc-400 italic">
-                            Bạn chưa lưu địa chỉ nào.
-                        </div>
-
-                        <div v-else class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                            <div v-for="addr in addresses" :key="addr.address_id" class="border border-zinc-100 p-6 relative group">
-                                <div v-if="addr.is_default" class="absolute top-4 right-6 bg-zinc-900 text-white text-[8px] uppercase px-2 py-1 font-bold tracking-widest">Mặc định</div>
-                                <h4 class="text-xs font-bold text-zinc-900 mb-2 uppercase tracking-tight">{{ addr.recipient_name }}</h4>
-                                <p class="text-[11px] text-zinc-500 mb-1">{{ addr.phone }}</p>
-                                <p class="text-[11px] text-zinc-400 font-light leading-relaxed">
-                                    {{ addr.street_address }}<br />
-                                    {{ addr.ward }}, {{ addr.district }}, {{ addr.province }}
-                                </p>
-                            </div>
-                        </div>
+                        <AddressesTab
+                            :addresses="addresses"
+                            :is-loading="isLoading"
+                            @open-add="openAdd"
+                            @open-edit="openEdit"
+                            @delete="handleDelete"
+                            @set-default="handleSetDefault"
+                        />
                     </div>
                 </main>
             </div>
         </div>
 
-        <!-- Address Modal -->
-        <div v-if="isAddressModalOpen" class="fixed inset-0 z-[100] flex items-center justify-center p-6 bg-zinc-900/60 backdrop-blur-sm">
-            <div class="bg-white w-full max-w-xl shadow-2xl p-10 space-y-8">
-                <header class="flex justify-between items-center">
-                    <h2 class="text-2xl font-serif italic">Thêm địa chỉ mới</h2>
-                    <button @click="isAddressModalOpen = false" class="material-symbols-outlined text-zinc-400 hover:text-zinc-900">close</button>
-                </header>
-
-                <form @submit.prevent="handleAddAddress" class="space-y-6">
-                    <div class="grid grid-cols-2 gap-4">
-                        <div class="space-y-1">
-                            <label class="text-[9px] uppercase font-bold text-zinc-400">Tên người nhận</label>
-                            <input v-model="addressForm.recipient_name" required type="text" class="w-full border-b border-zinc-100 py-2 focus:border-zinc-900 outline-none text-sm font-light" />
-                        </div>
-                        <div class="space-y-1">
-                            <label class="text-[9px] uppercase font-bold text-zinc-400">Số điện thoại</label>
-                            <input v-model="addressForm.phone" required type="tel" class="w-full border-b border-zinc-100 py-2 focus:border-zinc-900 outline-none text-sm font-light" />
-                        </div>
-                    </div>
-
-                    <div class="space-y-4">
-                        <div class="space-y-1">
-                            <label class="text-[9px] uppercase font-bold text-zinc-400">Tỉnh / Thành phố</label>
-                            <select v-model="selectedProvinceCode" required class="w-full border-b border-zinc-100 py-2 focus:border-zinc-900 outline-none text-sm font-light bg-transparent">
-                                <option value="" disabled>Chọn Tỉnh / Thành phố</option>
-                                <option v-for="p in provinces" :key="p.code" :value="p.code">{{ p.name }}</option>
-                            </select>
-                        </div>
-                        <div class="space-y-1">
-                            <label class="text-[9px] uppercase font-bold text-zinc-400">Quận / Huyện</label>
-                            <select v-model="selectedDistrictCode" :disabled="selectedProvinceCode === ''" required class="w-full border-b border-zinc-100 py-2 focus:border-zinc-900 outline-none text-sm font-light bg-transparent disabled:opacity-30">
-                                <option value="" disabled>Chọn Quận / Huyện</option>
-                                <option v-for="d in districts" :key="d.code" :value="d.code">{{ d.name }}</option>
-                            </select>
-                        </div>
-                        <div class="space-y-1">
-                            <label class="text-[9px] uppercase font-bold text-zinc-400">Phường / Xã</label>
-                            <select v-model="addressForm.ward" :disabled="selectedDistrictCode === ''" required class="w-full border-b border-zinc-100 py-2 focus:border-zinc-900 outline-none text-sm font-light bg-transparent disabled:opacity-30">
-                                <option value="" disabled>Chọn Phường / Xã</option>
-                                <option v-for="w in wards" :key="w.code" :value="w.name">{{ w.name }}</option>
-                            </select>
-                        </div>
-                        <div class="space-y-1">
-                            <label class="text-[9px] uppercase font-bold text-zinc-400">Địa chỉ chi tiết</label>
-                            <input v-model="addressForm.street_address" required type="text" class="w-full border-b border-zinc-100 py-2 focus:border-zinc-900 outline-none text-sm font-light" placeholder="Số nhà, tên đường..." />
-                        </div>
-                    </div>
-
-                    <button type="submit" class="w-full bg-zinc-900 text-white py-4 text-[10px] uppercase font-bold tracking-widest hover:bg-zinc-800 transition-all">Lưu địa chỉ</button>
-                </form>
-            </div>
-        </div>
+        <!-- Address Modal (thêm / sửa) -->
+        <AddressModal
+            v-if="isModalOpen"
+            :mode="modalMode"
+            :form="addressForm"
+            :provinces="provinces"
+            :districts="districts"
+            :wards="wards"
+            :selected-province-code="selectedProvinceCode"
+            :selected-district-code="selectedDistrictCode"
+            :is-submitting="isSubmitting"
+            @close="closeModal"
+            @submit="handleSubmit"
+            @update:selected-province-code="selectedProvinceCode = $event"
+            @update:selected-district-code="selectedDistrictCode = $event"
+        />
     </div>
 </template>
 

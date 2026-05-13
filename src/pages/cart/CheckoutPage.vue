@@ -18,8 +18,9 @@ const {
     isLoading, isSubmitting,
     form, provinces, districts, wards,
     selectedProvinceCode, selectedDistrictCode,
+    savedAddresses, selectedAddressId,
     subtotal, discountAmount, total, SHIPPING_FEE,
-    init, toggleVoucher, submitOrder, formatPrice,
+    init, toggleVoucher, submitOrder, formatPrice, applyAddress,
 } = checkoutHandler()
 
 onMounted(init)
@@ -57,8 +58,11 @@ onMounted(init)
                         :wards="wards"
                         :selected-province-code="selectedProvinceCode"
                         :selected-district-code="selectedDistrictCode"
+                        :saved-addresses="savedAddresses"
+                        :selected-address-id="selectedAddressId"
                         @update:selected-province-code="selectedProvinceCode = $event"
                         @update:selected-district-code="selectedDistrictCode = $event"
+                        @select-address="applyAddress"
                     />
 
                     <PaymentMethod

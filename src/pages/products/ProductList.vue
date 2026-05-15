@@ -139,8 +139,8 @@ const applyPriceRange = () => {
 
 const setSort = (val: string) => {
     const [by, order] = val.split(':')
-    filters.sort_by    = by
-    filters.sort_order = order
+    filters.sort_by    = by || 'created_at'
+    filters.sort_order = order || 'desc'
     applyFilters()
 }
 

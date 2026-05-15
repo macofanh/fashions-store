@@ -13,6 +13,7 @@ defineProps<{
     formatPrice: (n: number) => string
     distanceKm: number | null
     shippingResult: { fee: number; isFree: boolean; outOfRange: boolean; hasCoords: boolean }
+    submitLabel?: string
 }>()
 
 const emit = defineEmits<{ submit: [] }>()
@@ -95,7 +96,7 @@ const emit = defineEmits<{ submit: [] }>()
                 >
                     <span v-if="isSubmitting" class="animate-spin h-4 w-4 border-2 border-white border-t-transparent rounded-full"></span>
                     <span v-else class="material-symbols-outlined text-[18px]">lock</span>
-                    {{ isSubmitting ? 'Đang xử lý...' : 'Xác nhận đặt hàng' }}
+                    {{ isSubmitting ? 'Đang xử lý...' : (submitLabel ?? 'Xác nhận đặt hàng') }}
                 </button>
 
                 <!-- Trust -->

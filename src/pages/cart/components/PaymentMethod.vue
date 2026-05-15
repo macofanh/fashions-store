@@ -1,5 +1,19 @@
 <script setup lang="ts">
-defineProps<{ modelValue: string }>()
+interface SePayQrSession {
+    orderId: number
+    orderCode: string
+    amount: number
+    description: string
+    qrUrl: string
+}
+
+defineProps<{
+    modelValue: string
+    qrSession: SePayQrSession | null
+    qrStatus: 'idle' | 'waiting' | 'paid' | 'failed'
+    qrStatusMessage: string
+    formatPrice: (n: number) => string
+}>()
 const emit = defineEmits<{ 'update:modelValue': [val: string] }>()
 
 const methods = [
@@ -56,6 +70,42 @@ const methods = [
                     <p class="text-[10px] text-text-muted font-display mt-0.5">{{ m.desc }}</p>
                 </div>
             </label>
+        </div>
+    </section>
+
+    <section v-if="qrSession && modelValue === 'QR_CODE'" class="bg-white border border-primary/20 rounded-xl p-6 md:p-8 space-y-5 mt-5">
+        <div class="flex items-start gap-3">
+            <div :class="['w-10 h-10 rounded-full flex items-center justify-center shrink-0', qrStatus === 'paid' ? 'bg-green-100 text-green-600' : 'bg-primary/10 text-primary']">
+                <span class="material-symbols-outlined text-[20px]">qr_code_2</span>
+            </div>
+            <div class="min-w-0 flex-1">
+                <h3 class="text-sm font-bold text-fashion-black font-display">Vui lòng thanh toán </h3>
+                <p class="text-xs text-text-muted mt-0.5 leading-relaxed">
+                    {{ qrStatusMessage || 'Quét mã QR bên dưới để thanh toán.' }}
+                </p>
+            </div>
+        </div>
+
+        <div class="rounded-2xl border border-border-light bg-fashion-gray/30 p-4 flex flex-col items-center gap-4">
+            <img :src="qrSession.qrUrl" alt="Mã QR thanh toán SePay" class="w-full max-w-[280px] aspect-square object-contain rounded-xl bg-white border border-border-light p-3" />
+
+            <div class="w-full grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
+                <div class="rounded-xl bg-white border border-border-light p-3">
+                    <p class="text-[10px] uppercase tracking-widest text-text-muted font-bold font-display">Mã đơn</p>
+                    <p class="mt-1 font-semibold text-fashion-black break-all">{{ qrSession.orderCode }}</p>
+                </div>
+                <div class="rounded-xl bg-white border border-border-light p-3">
+                    <p class="text-[10px] uppercase tracking-widest text-text-muted font-bold font-display">Số tiền</p>
+                    <p class="mt-1 font-semibold text-primary">{{ formatPrice(qrSession.amount) }}</p>
+                </div>
+            </div>
+
+            <div class="w-full rounded-xl bg-white border border-border-light p-3 text-sm">
+                <p class="text-[10px] uppercase tracking-widest text-text-muted font-bold font-display">Nội dung chuyển khoản</p>
+                <p class="mt-1 text-fashion-black leading-relaxed break-words">{{ qrSession.description }}</p>
+            </div>
+
+            
         </div>
     </section>
 </template>

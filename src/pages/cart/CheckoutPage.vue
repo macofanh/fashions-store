@@ -10,11 +10,13 @@ import OrderSummary    from './components/OrderSummary.vue'
 const {
     cart, myVouchers, selectedVoucher,
     isLoading, isSubmitting,
+    qrSession, qrStatus, qrStatusMessage,
     form, provinces, districts, wards,
     selectedProvinceCode, selectedDistrictCode,
     savedAddresses, selectedAddressId,
     subtotal, discountAmount, total, SHIPPING_FEE,
     shippingResult, distanceKm,
+    submitLabel,
     init, toggleVoucher, submitOrder, formatPrice, applyAddress,
 } = checkoutHandler()
 
@@ -63,6 +65,10 @@ onMounted(init)
                     <PaymentMethod
                         :model-value="form.payment_method"
                         @update:model-value="form.payment_method = $event"
+                        :qr-session="qrSession"
+                        :qr-status="qrStatus"
+                        :qr-status-message="qrStatusMessage"
+                        :format-price="formatPrice"
                     />
 
                     <VoucherSelector
@@ -86,6 +92,7 @@ onMounted(init)
                     :format-price="formatPrice"
                     :distance-km="distanceKm"
                     :shipping-result="shippingResult"
+                    :submit-label="submitLabel"
                     @submit="submitOrder"
                 />
             </div>

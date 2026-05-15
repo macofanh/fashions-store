@@ -1,4 +1,4 @@
-import { ref, computed, watch } from 'vue'
+import { ref, computed, watch, onBeforeUnmount } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/useAuthStore'
 import { useUIStore } from '@/stores/useUIStore'
@@ -7,6 +7,74 @@ import { useShippingConfigStore } from '@/stores/useShippingConfigStore'
 import { haversineDistance, calcShippingFee } from '@/lib/distanceHelper'
 import type { UserVoucher } from '@/pages/promotions/promotionService'
 import type { Address } from '@/pages/profile/addressService'
+
+interface SePayQrSession {
+    orderId: number
+    orderCode: string
+    amount: number
+    description: string
+    qrUrl: string
+}
+
+const SEPAY_ACCOUNT = 'VQRQAICLZ9488'
+const SEPAY_BANK = 'MBBank'
+
+function buildSePayQrUrl(amount: number, description: string) {
+    const params = new URLSearchParams({
+        acc: SEPAY_ACCOUNT,
+        bank: SEPAY_BANK,
+        amount: String(Math.round(amount)),
+        des: description,
+    })
+
+    return `https://qr.sepay.vn/img?${params.toString()}`
+}
+
+function normalizeTransferText(value: string) {
+    return value
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .replace(/[^\w\s-]/g, '')
+        .replace(/\s+/g, ' ')
+        .trim()
+}
+
+function buildTransferDescription(customerName: string, orderCode: string) {
+    const safeName = normalizeTransferText(customerName)
+    const safeOrderCode = normalizeTransferText(orderCode) || orderCode
+
+    return safeName
+        ? `Khách hàng ${safeName} chuyển tiền đơn ${safeOrderCode}`
+        : `Khách hàng chuyển tiền đơn ${safeOrderCode}`
+}
+
+function unwrapOrderPayload(response: any) {
+    return response?.data?.data ?? response?.data ?? null
+}
+
+function extractOrderId(payload: any) {
+    const orderId = payload?.order_id ?? payload?.id ?? payload?.order?.order_id ?? payload?.order?.id
+    return orderId ? Number(orderId) : null
+}
+
+function extractOrderCode(payload: any) {
+    return payload?.order_code ?? payload?.code ?? payload?.order?.order_code ?? payload?.order?.code ?? ''
+}
+
+function isPaidStatus(value: unknown) {
+    return ['PAID', 'SUCCESS', 'SUCCESSFUL', 'COMPLETED', 'DONE', 'FINISHED'].includes(String(value).toUpperCase())
+}
+
+function isOrderPaid(orderData: any) {
+    if (!orderData) return false
+
+    if (orderData.is_paid === true) return true
+    if (orderData.payment_status && isPaidStatus(orderData.payment_status)) return true
+    if (orderData.payment_state && isPaidStatus(orderData.payment_state)) return true
+    if (orderData.status && isPaidStatus(orderData.status)) return true
+
+    return false
+}
 
 export function checkoutHandler() {
     const route     = useRoute()
@@ -21,10 +89,14 @@ export function checkoutHandler() {
     const selectedVoucher = ref<UserVoucher | null>(null)
     const isLoading       = ref(true)
     const isSubmitting    = ref(false)
+    const qrSession       = ref<SePayQrSession | null>(null)
+    const qrStatus        = ref<'idle' | 'waiting' | 'paid' | 'failed'>('idle')
+    const qrStatusMessage = ref('')
 
     // Địa chỉ đã lưu
     const savedAddresses    = ref<Address[]>([])
     const selectedAddressId = ref<number | null>(null)
+    let qrPollTimer: ReturnType<typeof window.setInterval> | null = null
 
     // Form — họ tên + SĐT lấy từ auth store
     const form = ref({
@@ -64,6 +136,56 @@ export function checkoutHandler() {
         wards.value     = []
     }
 
+    const clearQrPoller = () => {
+        if (qrPollTimer !== null) {
+            window.clearInterval(qrPollTimer)
+            qrPollTimer = null
+        }
+    }
+
+    const resetQrSession = () => {
+        clearQrPoller()
+        qrSession.value = null
+        qrStatus.value = 'idle'
+        qrStatusMessage.value = ''
+    }
+
+    const watchQrPayment = async (orderId: number) => {
+        clearQrPoller()
+        qrStatus.value = 'waiting'
+        qrStatusMessage.value = 'Đang chờ hệ thống xác nhận thanh toán...'
+
+        const checkOrder = async () => {
+            try {
+                const response = await checkoutServices.getOrderDetail(orderId)
+                const orderData = unwrapOrderPayload(response)
+
+                if (isOrderPaid(orderData)) {
+                    clearQrPoller()
+                    qrStatus.value = 'paid'
+                    qrStatusMessage.value = 'Thanh toán đã được xác nhận.'
+                    uiStore.success('Thanh toán QR thành công!')
+                    setTimeout(() => {
+                        router.push({ name: 'profile' })
+                    }, 1200)
+                    return true
+                }
+
+                return false
+            } catch (error) {
+                console.error('Lỗi kiểm tra thanh toán QR:', error)
+                return false
+            }
+        }
+
+        const isPaidImmediately = await checkOrder()
+        if (!isPaidImmediately) {
+            qrPollTimer = window.setInterval(() => {
+                void checkOrder()
+            }, 5000)
+        }
+    }
+
     // ── Watchers ───────────────────────────────────────────────────
     watch(selectedProvinceCode, async (val) => {
         form.value.province = provinces.value.find(p => p.code === val)?.name || ''
@@ -81,6 +203,12 @@ export function checkoutHandler() {
         if (val !== '') {
             const res = await checkoutServices.getWards(val as number)
             wards.value = res.data.wards
+        }
+    })
+
+    watch(() => form.value.payment_method, (method) => {
+        if (method !== 'QR_CODE') {
+            resetQrSession()
         }
     })
 
@@ -115,7 +243,9 @@ export function checkoutHandler() {
             // Auto-select địa chỉ mặc định (hoặc địa chỉ đầu tiên)
             if (savedAddresses.value.length > 0) {
                 const defaultAddr = savedAddresses.value.find(a => a.is_default) ?? savedAddresses.value[0]
-                applyAddress(defaultAddr)
+                if (defaultAddr) {
+                    applyAddress(defaultAddr)
+                }
             }
 
             // Fetch tọa độ cửa hàng để tính khoảng cách (chạy nền, không block)
@@ -186,6 +316,18 @@ export function checkoutHandler() {
 
     const total = computed(() => Math.max(0, subtotal.value + SHIPPING_FEE.value - discountAmount.value))
 
+    const transferCustomerName = computed(() => {
+        const enteredName = form.value.recipient_name.trim()
+        if (enteredName) return enteredName
+        return authStore.user?.full_name?.trim() || ''
+    })
+
+    const submitLabel = computed(() => {
+        if (qrStatus.value === 'waiting' && qrSession.value) return 'Đang chờ thanh toán'
+        if (form.value.payment_method === 'QR_CODE') return 'Mở QR thanh toán'
+        return 'Xác nhận đặt hàng'
+    })
+
     // ── Actions ────────────────────────────────────────────────────
     const toggleVoucher = (uv: UserVoucher) => {
         if (subtotal.value < Number(uv.voucher.min_order_value)) return
@@ -195,7 +337,7 @@ export function checkoutHandler() {
     const submitOrder = async () => {
         isSubmitting.value = true
         try {
-            await checkoutServices.createOrder({
+            const response = await checkoutServices.createOrder({
                 payment_method: form.value.payment_method,
                 address_snapshot: {
                     recipient_name: form.value.recipient_name,
@@ -209,6 +351,33 @@ export function checkoutHandler() {
                 voucher_id:   selectedVoucher.value?.voucher_id,
                 note:         form.value.note,
             })
+
+            if (form.value.payment_method === 'QR_CODE') {
+                const payload = unwrapOrderPayload(response)
+                const orderId = extractOrderId(payload)
+                const orderCode = extractOrderCode(payload)
+
+                if (!orderId || !orderCode) {
+                    throw new Error('Không lấy được thông tin đơn hàng QR.')
+                }
+
+                const description = buildTransferDescription(transferCustomerName.value, orderCode)
+                const qrUrl = buildSePayQrUrl(total.value, description)
+
+                qrSession.value = {
+                    orderId,
+                    orderCode,
+                    amount: total.value,
+                    description,
+                    qrUrl,
+                }
+                qrStatus.value = 'waiting'
+                qrStatusMessage.value = 'Quét mã QR bên dưới và chuyển khoản đúng số tiền.'
+                uiStore.info('Đã tạo mã QR SePay. Vui lòng quét mã ở bên dưới để hoàn tất thanh toán.')
+                await watchQrPayment(orderId)
+                return
+            }
+
             uiStore.success('Đặt hàng thành công!')
             router.push({ name: 'profile' })
         } catch (e: any) {
@@ -221,17 +390,23 @@ export function checkoutHandler() {
     const formatPrice = (price: number) =>
         new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(price)
 
+    onBeforeUnmount(() => {
+        clearQrPoller()
+    })
+
     return {
         // state
         cart, myVouchers, selectedVoucher,
         isLoading, isSubmitting,
+        qrSession, qrStatus, qrStatusMessage,
         form, provinces, districts, wards,
         selectedProvinceCode, selectedDistrictCode,
         savedAddresses, selectedAddressId,
         // computed
         subtotal, discountAmount, total,
         SHIPPING_FEE, distanceKm, shippingResult,
+        submitLabel,
         // actions
-        init, toggleVoucher, submitOrder, formatPrice, applyAddress,
+        init, toggleVoucher, submitOrder, formatPrice, applyAddress, resetQrSession,
     }
 }

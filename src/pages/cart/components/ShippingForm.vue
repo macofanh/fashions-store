@@ -1,8 +1,9 @@
 <script setup lang="ts">
 import GoongAddressInput from '@/components/GoongAddressInput.vue'
 import type { Address } from '@/pages/profile/addressService'
+import type { GoongAddressDetail } from '@/lib/goongService'
 
-defineProps<{
+const props = defineProps<{
     form: {
         recipient_name: string
         phone: string
@@ -11,6 +12,8 @@ defineProps<{
         ward: string
         street_address: string
         note: string
+        latitude: number | null
+        longitude: number | null
     }
     provinces: any[]
     districts: any[]
@@ -26,6 +29,17 @@ const emit = defineEmits<{
     'update:selectedDistrictCode': [val: number | '']
     'selectAddress': [addr: Address]
 }>()
+
+// Khi user chọn địa chỉ từ Goong trong form nhập tay
+const handleGoongSelected = (detail: GoongAddressDetail | null) => {
+    if (!detail) {
+        props.form.latitude  = null
+        props.form.longitude = null
+        return
+    }
+    props.form.latitude  = detail.latitude
+    props.form.longitude = detail.longitude
+}
 </script>
 
 <template>
@@ -172,7 +186,7 @@ const emit = defineEmits<{
 
             <!-- Địa chỉ cụ thể -->
             <div class="space-y-1.5 md:col-span-2">
-                <GoongAddressInput v-model="form.street_address" />
+                <GoongAddressInput v-model="form.street_address" @selected="handleGoongSelected" />
             </div>
 
             <!-- Ghi chú -->

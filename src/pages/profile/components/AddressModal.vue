@@ -13,6 +13,8 @@ const props = defineProps<{
         ward: string
         street_address: string
         is_default: boolean
+        latitude: number | null
+        longitude: number | null
     }
     provinces: any[]
     districts: any[]
@@ -64,6 +66,9 @@ const handleGoongSelected = (detail: GoongAddressDetail | null) => {
         props.form.province  = parsed.province
         props.form.district  = parsed.district
         props.form.ward      = parsed.ward
+        // Lưu tọa độ GPS
+        props.form.latitude  = detail.latitude
+        props.form.longitude = detail.longitude
         // Reset cascading selects vì không cần dùng nữa
         emit('update:selectedProvinceCode', '')
         emit('update:selectedDistrictCode', '')
@@ -76,9 +81,11 @@ const handleGoongSelected = (detail: GoongAddressDetail | null) => {
 watch(() => props.form.street_address, (val) => {
     if (!val) {
         showDropdowns.value = true
-        props.form.province = ''
-        props.form.district = ''
-        props.form.ward     = ''
+        props.form.province  = ''
+        props.form.district  = ''
+        props.form.ward      = ''
+        props.form.latitude  = null
+        props.form.longitude = null
     }
 })
 </script>

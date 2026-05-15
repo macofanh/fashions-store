@@ -382,17 +382,7 @@ onMounted(() => { fetchProducts(); fetchCategories() })
                                     >
                                         <span v-if="quickAddingId === product.product_id" class="animate-spin h-4 w-4 border-2 border-current border-t-transparent rounded-full"></span>
                                         <span v-else class="material-symbols-outlined text-[18px]">shopping_bag</span>
-                                        Thêm nhanh
-                                    </button>
-                                </div>
-
-                                <!-- Wishlist button -->
-                                <div class="absolute top-3 right-3">
-                                    <button
-                                        @click.prevent
-                                        class="p-1.5 rounded-full bg-white/70 hover:bg-white text-fashion-black transition-colors shadow-sm"
-                                    >
-                                        <span class="material-symbols-outlined text-[20px] block">favorite</span>
+                                        Thêm vào giỏ hàng
                                     </button>
                                 </div>
 

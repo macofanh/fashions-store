@@ -34,7 +34,7 @@ export function profileHandler() {
     const wards                = ref<any[]>([])
     const selectedProvinceCode = ref<number | ''>('')
     const selectedDistrictCode = ref<number | ''>('')
-    const addressForm          = ref({
+    const addressForm = ref({
         recipient_name: '',
         phone:          '',
         province:       '',
@@ -42,6 +42,8 @@ export function profileHandler() {
         ward:           '',
         street_address: '',
         is_default:     false,
+        latitude:       null as number | null,
+        longitude:      null as number | null,
     })
 
     // ── Watchers ───────────────────────────────────────────────────
@@ -64,34 +66,63 @@ export function profileHandler() {
         }
     })
 
-    // ── Init ───────────────────────────────────────────────────────
-    const init = async () => {
-        isLoading.value = true
-        try {
-            const [ordersRes, addressesRes, provincesRes] = await Promise.all([
-                profileServices.getMyOrders(),
-                profileServices.getMyAddresses(),
-                profileServices.getProvinces(),
-            ])
-            orders.value    = ordersRes.data
-            addresses.value = addressesRes.data
-            provinces.value = provincesRes.data
-        } catch (e) {
-            console.error('Lỗi khởi tạo profile:', e)
-        } finally {
-            isLoading.value = false
+    // ── Init (lazy-load theo tab) ──────────────────────────────────
+    const loadedTabs = new Set<string>()
+
+    const loadTab = async (tab: string) => {
+        if (loadedTabs.has(tab)) return
+        loadedTabs.add(tab)
+
+        if (tab === 'orders') {
+            isLoading.value = true
+            try {
+                const res = await profileServices.getMyOrders()
+                orders.value = res.data
+            } catch (e) {
+                console.error('Lỗi lấy đơn hàng:', e)
+            } finally {
+                isLoading.value = false
+            }
         }
 
-        isMembershipLoading.value = true
-        try {
-            const res = await membershipService.getRewardHistory()
-            totalPoints.value = res.data.reduce((sum, item) => sum + item.points_delta, 0)
-        } catch (e) {
-            console.error('Lỗi lấy điểm thành viên:', e)
-        } finally {
-            isMembershipLoading.value = false
+        if (tab === 'membership') {
+            isMembershipLoading.value = true
+            try {
+                const res = await membershipService.getRewardHistory()
+                totalPoints.value = res.data.reduce((sum, item) => sum + item.points_delta, 0)
+            } catch (e) {
+                console.error('Lỗi lấy điểm thành viên:', e)
+            } finally {
+                isMembershipLoading.value = false
+            }
+        }
+
+        if (tab === 'addresses') {
+            isLoading.value = true
+            try {
+                const [addressesRes, provincesRes] = await Promise.all([
+                    profileServices.getMyAddresses(),
+                    profileServices.getProvinces(),
+                ])
+                addresses.value = addressesRes.data
+                provinces.value = provincesRes.data
+            } catch (e) {
+                console.error('Lỗi lấy địa chỉ:', e)
+            } finally {
+                isLoading.value = false
+            }
         }
     }
+
+    // Gọi khi component mount — chỉ load tab đang active
+    const init = () => {
+        loadTab(activeTab.value)
+    }
+
+    // Khi user bấm sang tab khác mới gọi API của tab đó
+    watch(activeTab, (tab) => {
+        loadTab(tab)
+    })
 
     const refreshAddresses = async () => {
         const res = await profileServices.getMyAddresses()
@@ -99,7 +130,10 @@ export function profileHandler() {
     }
 
     const resetForm = () => {
-        addressForm.value = { recipient_name: '', phone: '', province: '', district: '', ward: '', street_address: '', is_default: false }
+        addressForm.value = {
+            recipient_name: '', phone: '', province: '', district: '', ward: '',
+            street_address: '', is_default: false, latitude: null, longitude: null,
+        }
         selectedProvinceCode.value = ''
         selectedDistrictCode.value = ''
         districts.value = []
@@ -126,6 +160,8 @@ export function profileHandler() {
             ward:           addr.ward,
             street_address: addr.street_address,
             is_default:     addr.is_default,
+            latitude:       addr.latitude ?? null,
+            longitude:      addr.longitude ?? null,
         }
         selectedProvinceCode.value = ''
         selectedDistrictCode.value = ''

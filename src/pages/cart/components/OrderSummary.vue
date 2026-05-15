@@ -11,6 +11,8 @@ defineProps<{
     selectedVoucher: UserVoucher | null
     isSubmitting: boolean
     formatPrice: (n: number) => string
+    distanceKm: number | null
+    shippingResult: { fee: number; isFree: boolean; outOfRange: boolean; hasCoords: boolean }
 }>()
 
 const emit = defineEmits<{ submit: [] }>()
@@ -52,8 +54,20 @@ const emit = defineEmits<{ submit: [] }>()
                     <span class="font-medium text-fashion-black font-display">{{ formatPrice(subtotal) }}</span>
                 </div>
                 <div class="flex justify-between text-sm">
-                    <span class="text-text-muted font-display">Phí vận chuyển</span>
-                    <span :class="['font-medium font-display', discountAmount > 0 && selectedVoucher?.voucher.discount_type === 'FREE_SHIP' ? 'line-through text-text-muted' : 'text-fashion-black']">
+                    <span class="text-text-muted font-display flex items-center gap-1">
+                        Phí vận chuyển
+                        <span v-if="shippingResult.hasCoords && distanceKm !== null" class="text-[10px] text-zinc-400">
+                            ({{ distanceKm.toFixed(1) }} km)
+                        </span>
+                    </span>
+                    <span v-if="shippingResult.outOfRange" class="text-xs font-bold text-red-500 font-display">
+                        Ngoài vùng giao
+                    </span>
+                    <span v-else-if="shippingResult.isFree || shippingFee === 0" class="text-xs font-bold text-green-600 font-display flex items-center gap-1">
+                        <span class="material-symbols-outlined text-[13px]">check_circle</span>
+                        Miễn phí
+                    </span>
+                    <span v-else :class="['font-medium font-display', discountAmount > 0 && selectedVoucher?.voucher.discount_type === 'FREE_SHIP' ? 'line-through text-text-muted' : 'text-fashion-black']">
                         {{ formatPrice(shippingFee) }}
                     </span>
                 </div>

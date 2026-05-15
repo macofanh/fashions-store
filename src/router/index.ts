@@ -93,6 +93,7 @@ const routes: Array<RouteRecordRaw> = [
                 name: 'admin-overview',
                 path: 'overview',
                 component: () => import('@/pages/admin/overview/OverviewAdmin.vue'),
+                meta: { requiresAuth: true, roles: ['admin'] }, // Chỉ admin
             },
             {
                 name: 'admin-products',
@@ -118,6 +119,12 @@ const routes: Array<RouteRecordRaw> = [
                 name: 'admin-vouchers',
                 path: 'vouchers',
                 component: () => import('@/pages/admin/promotions/VoucherManagement.vue'),
+            },
+            {
+                name: 'admin-shipping',
+                path: 'shipping',
+                component: () => import('@/pages/admin/shipping/ShippingConfig.vue'),
+                meta: { requiresAuth: true, roles: ['admin'] }, // Chỉ admin
             },
         ],
     },
@@ -147,8 +154,9 @@ router.beforeEach((to, from, next) => {
     } else if (to.meta.roles && Array.isArray(to.meta.roles)) {
         if (!to.meta.roles.includes(userRole)) {
             const uiStore = useUIStore()
-            uiStore.error('Bạn không có quyền truy cập trang quản trị này!')
-            next({ name: 'home' })
+            uiStore.error('Bạn không có quyền truy cập trang này!')
+            // Staff bị chặn khỏi trang admin-only → redirect về trang đầu tiên có quyền
+            next({ name: 'admin-products' })
         } else {
             next()
         }

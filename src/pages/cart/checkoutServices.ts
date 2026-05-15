@@ -11,6 +11,7 @@ export const checkoutServices = {
     getMyVouchers:   () => promotionService.getMyVouchers(),
     getMyAddresses:  () => addressService.getMyAddresses(),
     createOrder:     (data: OrderCreateData) => orderService.createOrder(data),
+    getOrderDetail:  (id: number) => orderService.getOrderDetail(id),
 
     getProvinces:  () => axios.get(`${PROVINCE_API}/p/`),
     getDistricts:  (code: number) => axios.get(`${PROVINCE_API}/p/${code}?depth=2`),

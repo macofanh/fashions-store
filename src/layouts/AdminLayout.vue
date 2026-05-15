@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, computed } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useAuthStore } from '@/stores/useAuthStore'
 
@@ -8,14 +8,22 @@ const router = useRouter()
 const route = useRoute()
 const isMobileMenuOpen = ref(false)
 
-const menuItems = [
-    { name: 'Tổng quan',       icon: 'dashboard',           routeName: 'admin-overview'  },
-    { name: 'Sản phẩm',        icon: 'inventory_2',         routeName: 'admin-products'  },
-    { name: 'Kho hàng',        icon: 'swap_horiz',          routeName: 'admin-inventory' },
-    { name: 'Đơn hàng',        icon: 'shopping_cart',       routeName: 'admin-orders'    },
-    { name: 'Người dùng',      icon: 'group',               routeName: 'admin-users'     },
-    { name: 'Voucher',         icon: 'confirmation_number', routeName: 'admin-vouchers'  },
+const allMenuItems = [
+    { name: 'Tổng quan',           icon: 'dashboard',           routeName: 'admin-overview',  adminOnly: true  },
+    { name: 'Sản phẩm',            icon: 'inventory_2',         routeName: 'admin-products',  adminOnly: false },
+    { name: 'Kho hàng',            icon: 'swap_horiz',          routeName: 'admin-inventory', adminOnly: false },
+    { name: 'Đơn hàng',            icon: 'shopping_cart',       routeName: 'admin-orders',    adminOnly: false },
+    { name: 'Người dùng',          icon: 'group',               routeName: 'admin-users',     adminOnly: false },
+    { name: 'Voucher',             icon: 'confirmation_number', routeName: 'admin-vouchers',  adminOnly: false },
+    { name: 'Thông tin giao hàng', icon: 'local_shipping',      routeName: 'admin-shipping',  adminOnly: true  },
 ]
+
+// Staff chỉ thấy các mục không phải adminOnly
+const menuItems = computed(() =>
+    authStore.isAdmin
+        ? allMenuItems
+        : allMenuItems.filter(item => !item.adminOnly)
+)
 
 const pageTitles: Record<string, string> = {
     'admin-overview':  'Tổng quan',
@@ -24,6 +32,7 @@ const pageTitles: Record<string, string> = {
     'admin-orders':    'Quản lý Đơn hàng',
     'admin-users':     'Quản lý Người dùng',
     'admin-vouchers':  'Quản lý Voucher',
+    'admin-shipping':  'Thông tin giao hàng',
 }
 
 const handleLogout = () => {

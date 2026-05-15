@@ -3,7 +3,10 @@ import { useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/useAuthStore'
 import { useUIStore } from '@/stores/useUIStore'
 import { checkoutServices } from '@/pages/cart/checkoutServices'
+import { useShippingConfigStore } from '@/stores/useShippingConfigStore'
+import { haversineDistance, calcShippingFee } from '@/lib/distanceHelper'
 import type { UserVoucher } from '@/pages/promotions/promotionService'
+import type { Address } from '@/pages/profile/addressService'
 
 interface SePayQrSession {
     orderId: number
@@ -77,6 +80,7 @@ export function checkoutHelper() {
     const router    = useRouter()
     const authStore = useAuthStore()
     const uiStore   = useUIStore()
+    const shippingStore = useShippingConfigStore()
 
     // ── State ──────────────────────────────────────────────────────
     const cart            = ref<any>(null)
@@ -100,7 +104,30 @@ export function checkoutHelper() {
         street_address: '',
         payment_method: 'COD',
         note:           '',
+        latitude:       null as number | null,
+        longitude:      null as number | null,
     })
+
+    // Địa chỉ đã lưu
+    const savedAddresses    = ref<Address[]>([])
+    const selectedAddressId = ref<number | null>(null)
+
+    // ── Áp dụng địa chỉ đã lưu vào form ──────────────────────────
+    const applyAddress = (addr: Address) => {
+        selectedAddressId.value   = addr.address_id
+        form.value.recipient_name = addr.recipient_name
+        form.value.phone          = addr.phone
+        form.value.province       = addr.province
+        form.value.district       = addr.district
+        form.value.ward           = addr.ward
+        form.value.street_address = addr.street_address
+        form.value.latitude       = addr.latitude ?? null
+        form.value.longitude      = addr.longitude ?? null
+        selectedProvinceCode.value = ''
+        selectedDistrictCode.value = ''
+        districts.value = []
+        wards.value     = []
+    }
 
     // Address cascading
     const provinces            = ref<any[]>([])
@@ -189,20 +216,31 @@ export function checkoutHelper() {
     const init = async () => {
         isLoading.value = true
         try {
-            const [cartRes, vouchersRes, provincesRes] = await Promise.all([
+            const [cartRes, vouchersRes, provincesRes, addressesRes] = await Promise.all([
                 checkoutServices.getCart(),
                 checkoutServices.getMyVouchers(),
                 checkoutServices.getProvinces(),
+                checkoutServices.getMyAddresses(),
             ])
 
-            cart.value         = cartRes.data
-            myVouchers.value   = vouchersRes.data
-            provinces.value    = provincesRes.data
+            cart.value           = cartRes.data
+            myVouchers.value     = vouchersRes.data
+            provinces.value      = provincesRes.data
+            savedAddresses.value = addressesRes.data
 
             if (!cart.value.items?.length) {
                 router.push({ name: 'cart' })
                 return
             }
+
+            // Auto-select địa chỉ mặc định
+            if (savedAddresses.value.length > 0) {
+                const defaultAddr = savedAddresses.value.find(a => a.is_default) ?? savedAddresses.value[0]!
+                applyAddress(defaultAddr)
+            }
+
+            // Fetch tọa độ cửa hàng chạy nền
+            shippingStore.fetchStoreCoords()
 
             const voucherIdFromQuery = route.query.voucher_id ? Number(route.query.voucher_id) : null
             if (voucherIdFromQuery) {
@@ -217,12 +255,36 @@ export function checkoutHelper() {
     }
 
     // ── Computed ───────────────────────────────────────────────────
-    const SHIPPING_FEE = 30000
-
     const subtotal = computed(() => {
         if (!cart.value?.items) return 0
         return cart.value.items.reduce((s: number, i: any) => s + i.unit_price * i.quantity, 0)
     })
+
+    const distanceKm = computed<number | null>(() => {
+        const { latitude: dLat, longitude: dLng } = form.value
+        const storeCoords = shippingStore.storeCoords
+        if (!dLat || !dLng || !storeCoords) return null
+        return haversineDistance(storeCoords.lat, storeCoords.lng, dLat, dLng)
+    })
+
+    const shippingResult = computed(() => {
+        const cfg = shippingStore.config
+        const km  = distanceKm.value
+        if (km === null) {
+            const isFree = subtotal.value >= cfg.free_shipping_threshold
+            return { fee: isFree ? 0 : cfg.base_fee, isFree, outOfRange: false, hasCoords: false }
+        }
+        return { ...calcShippingFee({
+            distanceKm: km,
+            subtotal: subtotal.value,
+            baseFee: cfg.base_fee,
+            pricePerKm: cfg.price_per_km,
+            freeThreshold: cfg.free_shipping_threshold,
+            maxDistanceKm: cfg.max_distance_km,
+        }), hasCoords: true }
+    })
+
+    const SHIPPING_FEE = computed(() => shippingResult.value.fee)
 
     const discountAmount = computed(() => {
         if (!selectedVoucher.value) return 0
@@ -233,11 +295,11 @@ export function checkoutHelper() {
             const amt = subtotal.value * (Number(v.discount_value) / 100)
             return v.max_discount ? Math.min(amt, Number(v.max_discount)) : amt
         }
-        if (v.discount_type === 'FREE_SHIP') return SHIPPING_FEE
+        if (v.discount_type === 'FREE_SHIP') return SHIPPING_FEE.value
         return 0
     })
 
-    const total = computed(() => Math.max(0, subtotal.value + SHIPPING_FEE - discountAmount.value))
+    const total = computed(() => Math.max(0, subtotal.value + SHIPPING_FEE.value - discountAmount.value))
 
     const transferCustomerName = computed(() => {
         const enteredName = form.value.recipient_name.trim()
@@ -264,7 +326,7 @@ export function checkoutHelper() {
                     ward:           form.value.ward,
                     street_address: form.value.street_address,
                 },
-                shipping_fee: SHIPPING_FEE,
+                shipping_fee: SHIPPING_FEE.value,
                 voucher_id:   selectedVoucher.value?.voucher_id,
                 note:         form.value.note,
             })
@@ -320,10 +382,11 @@ export function checkoutHelper() {
         qrSession, qrStatus, qrStatusMessage,
         form, provinces, districts, wards,
         selectedProvinceCode, selectedDistrictCode,
+        savedAddresses, selectedAddressId,
         subtotal, discountAmount, total,
-        SHIPPING_FEE,
+        SHIPPING_FEE, distanceKm, shippingResult,
         submitLabel,
         init, toggleVoucher, submitOrder, formatPrice,
-        resetQrSession,
+        applyAddress, resetQrSession,
     }
 }

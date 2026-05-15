@@ -221,11 +221,6 @@ const profileMenuItems = computed<ProfileMenuItem[]>(() => [
                         </router-link>
                     </template>
 
-                    <!-- Wishlist -->
-                    <button class="icon-btn">
-                        <span class="material-symbols-outlined text-[24px]">favorite</span>
-                    </button>
-
                     <!-- Mobile hamburger -->
                     <button @click="isMobileMenuOpen = !isMobileMenuOpen" class="icon-btn md:hidden ml-1">
                         <span class="material-symbols-outlined text-[26px]">{{ isMobileMenuOpen ? 'close' : 'menu' }}</span>

@@ -1,12 +1,6 @@
 <script setup lang="ts">
-import { ref, onMounted, computed, watch } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
-import { cartService } from '@/pages/cart/cartService'
+import { onMounted } from 'vue'
 import { checkoutHandler } from './checkoutHandler'
-import { orderService, type OrderCreateData } from '@/pages/cart/orderService'
-import { promotionService, type UserVoucher } from '@/pages/promotions/promotionService'
-import { getImageUrl } from '@/lib/urlHelper'
-import axios from 'axios'
 
 import ShippingForm    from './components/ShippingForm.vue'
 import PaymentMethod   from './components/PaymentMethod.vue'
@@ -20,6 +14,7 @@ const {
     selectedProvinceCode, selectedDistrictCode,
     savedAddresses, selectedAddressId,
     subtotal, discountAmount, total, SHIPPING_FEE,
+    shippingResult, distanceKm,
     init, toggleVoucher, submitOrder, formatPrice, applyAddress,
 } = checkoutHandler()
 
@@ -89,6 +84,8 @@ onMounted(init)
                     :selected-voucher="selectedVoucher"
                     :is-submitting="isSubmitting"
                     :format-price="formatPrice"
+                    :distance-km="distanceKm"
+                    :shipping-result="shippingResult"
                     @submit="submitOrder"
                 />
             </div>

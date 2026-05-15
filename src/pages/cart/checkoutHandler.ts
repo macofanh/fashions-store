@@ -1,8 +1,10 @@
-import { ref, computed, watch, onMounted } from 'vue'
+import { ref, computed, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/useAuthStore'
 import { useUIStore } from '@/stores/useUIStore'
 import { checkoutServices } from './checkoutServices'
+import { useShippingConfigStore } from '@/stores/useShippingConfigStore'
+import { haversineDistance, calcShippingFee } from '@/lib/distanceHelper'
 import type { UserVoucher } from '@/pages/promotions/promotionService'
 import type { Address } from '@/pages/profile/addressService'
 
@@ -11,6 +13,7 @@ export function checkoutHandler() {
     const router    = useRouter()
     const authStore = useAuthStore()
     const uiStore   = useUIStore()
+    const shippingStore = useShippingConfigStore()
 
     // ── State ──────────────────────────────────────────────────────
     const cart            = ref<any>(null)
@@ -33,6 +36,8 @@ export function checkoutHandler() {
         street_address: '',
         payment_method: 'COD',
         note:           '',
+        latitude:       null as number | null,
+        longitude:      null as number | null,
     })
 
     // Address cascading
@@ -51,7 +56,8 @@ export function checkoutHandler() {
         form.value.district       = addr.district
         form.value.ward           = addr.ward
         form.value.street_address = addr.street_address
-        // Reset cascading selects — không cần load lại vì đã có text đầy đủ
+        form.value.latitude       = addr.latitude ?? null
+        form.value.longitude      = addr.longitude ?? null
         selectedProvinceCode.value = ''
         selectedDistrictCode.value = ''
         districts.value = []
@@ -112,6 +118,9 @@ export function checkoutHandler() {
                 applyAddress(defaultAddr)
             }
 
+            // Fetch tọa độ cửa hàng để tính khoảng cách (chạy nền, không block)
+            shippingStore.fetchStoreCoords()
+
             // Auto-select voucher từ query param
             const voucherIdFromQuery = route.query.voucher_id ? Number(route.query.voucher_id) : null
             if (voucherIdFromQuery) {
@@ -126,12 +135,41 @@ export function checkoutHandler() {
     }
 
     // ── Computed ───────────────────────────────────────────────────
-    const SHIPPING_FEE = 30000
-
     const subtotal = computed(() => {
         if (!cart.value?.items) return 0
         return cart.value.items.reduce((s: number, i: any) => s + i.unit_price * i.quantity, 0)
     })
+
+    // Khoảng cách từ cửa hàng đến địa chỉ giao (km), null nếu chưa có tọa độ
+    const distanceKm = computed<number | null>(() => {
+        const { latitude: dLat, longitude: dLng } = form.value
+        const storeCoords = shippingStore.storeCoords
+        if (!dLat || !dLng || !storeCoords) return null
+        return haversineDistance(storeCoords.lat, storeCoords.lng, dLat, dLng)
+    })
+
+    const shippingResult = computed(() => {
+        const cfg = shippingStore.config
+        const km = distanceKm.value
+
+        // Chưa có tọa độ → fallback về base_fee hoặc free nếu đủ ngưỡng
+        if (km === null) {
+            const isFree = subtotal.value >= cfg.free_shipping_threshold
+            return { fee: isFree ? 0 : cfg.base_fee, isFree, outOfRange: false, hasCoords: false }
+        }
+
+        const result = calcShippingFee({
+            distanceKm: km,
+            subtotal: subtotal.value,
+            baseFee: cfg.base_fee,
+            pricePerKm: cfg.price_per_km,
+            freeThreshold: cfg.free_shipping_threshold,
+            maxDistanceKm: cfg.max_distance_km,
+        })
+        return { ...result, hasCoords: true }
+    })
+
+    const SHIPPING_FEE = computed(() => shippingResult.value.fee)
 
     const discountAmount = computed(() => {
         if (!selectedVoucher.value) return 0
@@ -142,11 +180,11 @@ export function checkoutHandler() {
             const amt = subtotal.value * (Number(v.discount_value) / 100)
             return v.max_discount ? Math.min(amt, Number(v.max_discount)) : amt
         }
-        if (v.discount_type === 'FREE_SHIP') return SHIPPING_FEE
+        if (v.discount_type === 'FREE_SHIP') return SHIPPING_FEE.value
         return 0
     })
 
-    const total = computed(() => Math.max(0, subtotal.value + SHIPPING_FEE - discountAmount.value))
+    const total = computed(() => Math.max(0, subtotal.value + SHIPPING_FEE.value - discountAmount.value))
 
     // ── Actions ────────────────────────────────────────────────────
     const toggleVoucher = (uv: UserVoucher) => {
@@ -167,7 +205,7 @@ export function checkoutHandler() {
                     ward:           form.value.ward,
                     street_address: form.value.street_address,
                 },
-                shipping_fee: SHIPPING_FEE,
+                shipping_fee: SHIPPING_FEE.value,
                 voucher_id:   selectedVoucher.value?.voucher_id,
                 note:         form.value.note,
             })
@@ -192,7 +230,7 @@ export function checkoutHandler() {
         savedAddresses, selectedAddressId,
         // computed
         subtotal, discountAmount, total,
-        SHIPPING_FEE,
+        SHIPPING_FEE, distanceKm, shippingResult,
         // actions
         init, toggleVoucher, submitOrder, formatPrice, applyAddress,
     }

@@ -1,5 +1,8 @@
 <script setup lang="ts">
 import { APP_NAME, APP_TAGLINE, APP_COPYRIGHT } from '@/lib/appConfig'
+import { useShippingConfigStore } from '@/stores/useShippingConfigStore'
+
+const shippingStore = useShippingConfigStore()
 </script>
 
 <template>
@@ -64,9 +67,24 @@ import { APP_NAME, APP_TAGLINE, APP_COPYRIGHT } from '@/lib/appConfig'
             <!-- Bottom bar -->
             <div class="border-t border-white/10 pt-8 flex flex-col md:flex-row justify-between items-center gap-4">
                 <p class="text-xs text-zinc-500">{{ APP_COPYRIGHT }}</p>
-                <div class="flex items-center gap-2">
-                    <span class="material-symbols-outlined text-primary text-[16px]">lock</span>
-                    <span class="text-[10px] text-zinc-500 uppercase tracking-widest">Thanh toán bảo mật 100%</span>
+                <div class="flex flex-col sm:flex-row items-center gap-4">
+                    <a
+                        :href="`tel:${shippingStore.config.phone_support}`"
+                        class="flex items-center gap-2 hover:opacity-80 transition-opacity"
+                    >
+                        <span class="material-symbols-outlined text-primary text-[16px]">call</span>
+                        <span class="text-[10px] text-zinc-500 uppercase tracking-widest">{{ shippingStore.config.phone_support }}</span>
+                    </a>
+                    <span class="hidden sm:block w-px h-3 bg-white/10"></span>
+                    <a
+                        :href="`https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(shippingStore.config.store_address)}`"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        class="flex items-center gap-2 hover:opacity-80 transition-opacity"
+                    >
+                        <span class="material-symbols-outlined text-primary text-[16px]">location_on</span>
+                        <span class="text-[10px] text-zinc-500 uppercase tracking-widest underline">{{ shippingStore.config.store_address }}</span>
+                    </a>
                 </div>
             </div>
         </div>

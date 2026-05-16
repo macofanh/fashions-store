@@ -1,11 +1,42 @@
 <script setup lang="ts">
+import { ref } from 'vue'
+import { getImageUrl } from '@/lib/urlHelper'
+
 defineProps<{
     user: {
         full_name?: string
         email?: string
         role?: string
+        avatar_url?: string | null
     } | null
+    fullName: string
+    phone: string
+    avatarUrl: string
+    isProfileSaving: boolean
+    isAvatarUploading: boolean
 }>()
+
+const emit = defineEmits<{
+    'update:fullName': [value: string]
+    'update:phone': [value: string]
+    'save-profile': []
+    'change-avatar': [file: File]
+}>()
+
+const avatarInput = ref<HTMLInputElement | null>(null)
+
+const handleAvatarClick = () => {
+    avatarInput.value?.click()
+}
+
+const handleAvatarChange = (event: Event) => {
+    const target = event.target as HTMLInputElement
+    const file = target.files?.[0]
+    if (!file) return
+
+    emit('change-avatar', file)
+    target.value = ''
+}
 </script>
 
 <template>
@@ -15,21 +46,84 @@ defineProps<{
             <p class="text-text-muted text-sm font-display">Quản lý thông tin tài khoản của bạn.</p>
         </div>
 
-        <div class="bg-white border border-border-light rounded-xl p-8 max-w-lg shadow-sm">
-            <div class="space-y-6">
-                <div v-for="field in [
-                    { label: 'Họ và tên',  value: user?.full_name,              icon: 'person'    },
-                    { label: 'Email',       value: user?.email,                  icon: 'mail'      },
-                    { label: 'Vai trò',     value: user?.role?.toLowerCase(),    icon: 'badge'     },
-                ]" :key="field.label" class="flex items-center gap-4 py-4 border-b border-border-light last:border-0">
-                    <div class="w-10 h-10 bg-primary-light rounded-lg flex items-center justify-center shrink-0">
-                        <span class="material-symbols-outlined text-primary text-[18px]">{{ field.icon }}</span>
-                    </div>
-                    <div>
-                        <p class="text-[10px] uppercase tracking-widest font-bold text-text-muted mb-0.5 font-display">{{ field.label }}</p>
-                        <p class="text-sm font-medium text-fashion-black capitalize font-display">{{ field.value || '—' }}</p>
+        <div class="bg-white border border-border-light rounded-xl p-8 max-w-2xl shadow-sm space-y-8">
+            <div class="flex flex-col sm:flex-row gap-6 sm:items-center">
+                <div class="relative shrink-0">
+                    <input ref="avatarInput" type="file" class="hidden" accept="image/*" @change="handleAvatarChange" />
+                    <button
+                        type="button"
+                        @click="handleAvatarClick"
+                        class="relative w-24 h-24 rounded-full overflow-hidden border-2 border-border-light bg-fashion-gray flex items-center justify-center hover:ring-4 hover:ring-primary/10 transition-all"
+                    >
+                        <img
+                            v-if="avatarUrl"
+                            :src="getImageUrl(avatarUrl)"
+                            :alt="user?.full_name || 'Avatar'"
+                            class="w-full h-full object-cover"
+                        />
+                        <span v-else class="material-symbols-outlined text-text-muted text-4xl" style="font-variation-settings:'FILL' 1">person</span>
+
+                        <span class="absolute inset-x-0 bottom-0 bg-black/55 text-white text-[10px] font-semibold py-1">{{ isAvatarUploading ? 'Đang tải...' : 'Đổi ảnh' }}</span>
+                    </button>
+                </div>
+
+                <div class="min-w-0">
+                    <h3 class="text-xl font-bold text-fashion-black font-display">{{ user?.full_name || '—' }}</h3>
+                    <p class="text-sm text-text-muted font-display">{{ user?.email || '—' }}</p>
+                    <p class="mt-2 inline-flex items-center rounded-full bg-primary-light px-2.5 py-1 text-[10px] font-bold uppercase tracking-widest text-primary font-display capitalize">
+                        {{ user?.role?.toLowerCase() || 'customer' }}
+                    </p>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div class="md:col-span-2 space-y-2">
+                    <label class="text-xs font-semibold uppercase tracking-wider text-text-muted font-display">Họ và tên</label>
+                    <input
+                        :value="fullName"
+                        @input="emit('update:fullName', ($event.target as HTMLInputElement).value)"
+                        type="text"
+                        class="w-full rounded-xl border border-border-light px-4 py-3 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all"
+                        placeholder="Nhập họ và tên"
+                    />
+                </div>
+
+                <div class="space-y-2">
+                    <label class="text-xs font-semibold uppercase tracking-wider text-text-muted font-display">Số điện thoại</label>
+                    <input
+                        :value="phone"
+                        @input="emit('update:phone', ($event.target as HTMLInputElement).value)"
+                        type="tel"
+                        class="w-full rounded-xl border border-border-light px-4 py-3 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all"
+                        placeholder="Nhập số điện thoại"
+                    />
+                </div>
+
+                <div class="space-y-2">
+                    <label class="text-xs font-semibold uppercase tracking-wider text-text-muted font-display">Email</label>
+                    <div class="w-full rounded-xl border border-border-light px-4 py-3 text-sm bg-fashion-gray/40 text-fashion-black">
+                        {{ user?.email || '—' }}
                     </div>
                 </div>
+
+                <div class="space-y-2">
+                    <label class="text-xs font-semibold uppercase tracking-wider text-text-muted font-display">Vai trò</label>
+                    <div class="w-full rounded-xl border border-border-light px-4 py-3 text-sm bg-fashion-gray/40 text-fashion-black capitalize">
+                        {{ user?.role?.toLowerCase() || 'customer' }}
+                    </div>
+                </div>
+            </div>
+
+            <div class="flex justify-end">
+                <button
+                    type="button"
+                    @click="emit('save-profile')"
+                    :disabled="isProfileSaving"
+                    class="inline-flex items-center justify-center gap-2 rounded-xl bg-primary px-5 py-3 text-sm font-semibold text-white transition-colors hover:bg-primary/90 disabled:opacity-60"
+                >
+                    <span v-if="isProfileSaving" class="animate-spin h-4 w-4 rounded-full border-2 border-white border-t-transparent"></span>
+                    {{ isProfileSaving ? 'Đang lưu...' : 'Lưu thay đổi' }}
+                </button>
             </div>
         </div>
     </div>

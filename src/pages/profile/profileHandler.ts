@@ -83,6 +83,13 @@ export function profileHandler() {
     const isAddressModalOpen  = ref(false)
     const totalPoints         = ref(0)
     const isMembershipLoading = ref(true)
+    const isProfileSaving     = ref(false)
+    const isAvatarUploading   = ref(false)
+    const profileForm         = ref({
+        full_name: '',
+        phone: '',
+    })
+    const avatarPreviewUrl    = ref<string | null>(null)
 
     // Modal mode
     const modalMode        = ref<'add' | 'edit'>('add')
@@ -106,6 +113,18 @@ export function profileHandler() {
         latitude:       null as number | null,
         longitude:      null as number | null,
     })
+
+    const syncProfileForm = () => {
+        profileForm.value = {
+            full_name: authStore.user?.full_name || '',
+            phone: authStore.user?.phone || '',
+        }
+        avatarPreviewUrl.value = authStore.user?.avatar_url || null
+    }
+
+    watch(() => authStore.user, () => {
+        syncProfileForm()
+    }, { immediate: true, deep: true })
 
     // ── Watchers ───────────────────────────────────────────────────
     watch(selectedProvinceCode, async (val) => {
@@ -173,6 +192,10 @@ export function profileHandler() {
                 isLoading.value = false
             }
         }
+
+        if (tab === 'profile') {
+            syncProfileForm()
+        }
     }
 
     // Gọi khi component mount — chỉ load tab đang active
@@ -229,6 +252,60 @@ export function profileHandler() {
     const refreshAddresses = async () => {
         const res = await profileServices.getMyAddresses()
         addresses.value = res.data
+    }
+
+    const handleSaveProfile = async () => {
+        const fullName = profileForm.value.full_name.trim()
+        if (!fullName) {
+            uiStore.warning('Vui lòng nhập họ và tên.')
+            return
+        }
+
+        isProfileSaving.value = true
+        try {
+            const response = await profileServices.updateMyProfile({
+                full_name: fullName,
+                phone: profileForm.value.phone.trim() || null,
+            })
+
+            authStore.hydrateUser({
+                ...(authStore.user as any),
+                ...response.data,
+            })
+            syncProfileForm()
+            uiStore.success('Cập nhật hồ sơ thành công!')
+        } catch (e: any) {
+            uiStore.error(e.response?.data?.detail || 'Không thể cập nhật hồ sơ.')
+        } finally {
+            isProfileSaving.value = false
+        }
+    }
+
+    const handleAvatarChange = async (file: File) => {
+        if (!file) return
+
+        const previousAvatar = avatarPreviewUrl.value
+        const temporaryPreview = URL.createObjectURL(file)
+        avatarPreviewUrl.value = temporaryPreview
+        isAvatarUploading.value = true
+
+        try {
+            const response = await profileServices.updateMyAvatar(file)
+            authStore.hydrateUser({
+                ...(authStore.user as any),
+                ...response.data,
+            })
+            avatarPreviewUrl.value = response.data.avatar_url || temporaryPreview
+            uiStore.success('Cập nhật avatar thành công!')
+        } catch (e: any) {
+            avatarPreviewUrl.value = previousAvatar || authStore.user?.avatar_url || null
+            uiStore.error(e.response?.data?.detail || 'Không thể cập nhật avatar.')
+        } finally {
+            isAvatarUploading.value = false
+            if (avatarPreviewUrl.value !== temporaryPreview) {
+                URL.revokeObjectURL(temporaryPreview)
+            }
+        }
     }
 
     const resetForm = () => {
@@ -359,6 +436,8 @@ export function profileHandler() {
         isOrderDetailLoading, isOrderDetailOpen,
         selectedOrder, orderQrSession, orderQrStatusMessage,
         isAddressModalOpen, modalMode, isSubmitting,
+        isProfileSaving, isAvatarUploading,
+        profileForm, avatarPreviewUrl,
         totalPoints, isMembershipLoading,
         provinces, districts, wards,
         selectedProvinceCode, selectedDistrictCode,
@@ -368,6 +447,7 @@ export function profileHandler() {
         openOrderDetail,
         closeOrderDetail,
         openAddressModal, openEditModal,
+        handleSaveProfile, handleAvatarChange,
         handleAddAddress, handleDeleteAddress, handleSetDefault,
         handleLogout,
         // helpers

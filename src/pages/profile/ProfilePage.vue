@@ -19,6 +19,8 @@ const {
     isOrderDetailLoading, isOrderDetailOpen,
     selectedOrder, orderQrSession, orderQrStatusMessage,
     isAddressModalOpen, modalMode, isSubmitting,
+    isProfileSaving, isAvatarUploading,
+    profileForm, avatarPreviewUrl,
     totalPoints, isMembershipLoading,
     provinces, districts, wards,
     selectedProvinceCode, selectedDistrictCode,
@@ -26,6 +28,7 @@ const {
     init,
     openOrderDetail, closeOrderDetail,
     openAddressModal, openEditModal,
+    handleSaveProfile, handleAvatarChange,
     handleAddAddress, handleDeleteAddress, handleSetDefault,
     handleLogout,
     formatPrice, formatDate, getStatus,
@@ -48,6 +51,7 @@ onMounted(init)
                 :membership-label="currentTier.label"
                 :membership-color="currentTier.color"
                 :role="authStore.user?.role?.toLowerCase() || 'customer'"
+                :avatar-url="authStore.user?.avatar_url || ''"
                 :active-tab="activeTab"
                 @update:active-tab="activeTab = $event"
                 @logout="handleLogout"
@@ -85,6 +89,15 @@ onMounted(init)
                 <ProfileInfoTab
                     v-if="activeTab === 'profile'"
                     :user="authStore.user"
+                    :full-name="profileForm.full_name"
+                    :phone="profileForm.phone"
+                    :avatar-url="avatarPreviewUrl || authStore.user?.avatar_url || ''"
+                    :is-profile-saving="isProfileSaving"
+                    :is-avatar-uploading="isAvatarUploading"
+                    @update:full-name="profileForm.full_name = $event"
+                    @update:phone="profileForm.phone = $event"
+                    @save-profile="handleSaveProfile"
+                    @change-avatar="handleAvatarChange"
                 />
             </section>
         </div>

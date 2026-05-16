@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import type { ProfileTab } from '../profileHandler'
+import { getImageUrl } from '@/lib/urlHelper'
 
 defineProps<{
     userName: string
@@ -9,6 +10,7 @@ defineProps<{
     membershipColor: string
     role: string
     activeTab: ProfileTab
+    avatarUrl?: string | null
 }>()
 
 const emit = defineEmits<{
@@ -31,8 +33,9 @@ const navItems: { key: ProfileTab; icon: string; label: string }[] = [
         <!-- User card -->
         <div class="bg-white border border-border-light rounded-xl p-6 mb-4 shadow-sm">
             <div class="flex flex-col items-center text-center gap-3">
-                <div class="w-16 h-16 rounded-full bg-primary-light border-2 border-primary/20 flex items-center justify-center">
-                    <span class="material-symbols-outlined text-primary text-3xl" style="font-variation-settings:'FILL' 1">person</span>
+                <div class="w-16 h-16 rounded-full bg-primary-light border-2 border-primary/20 flex items-center justify-center overflow-hidden">
+                    <img v-if="avatarUrl" :src="getImageUrl(avatarUrl)" :alt="userName" class="w-full h-full object-cover" />
+                    <span v-else class="material-symbols-outlined text-primary text-3xl" style="font-variation-settings:'FILL' 1">person</span>
                 </div>
                 <div>
                     <h2 class="font-bold text-fashion-black font-display">{{ userName }}</h2>

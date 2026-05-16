@@ -2,12 +2,68 @@ import { ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/useAuthStore'
 import { useUIStore } from '@/stores/useUIStore'
+import { orderService } from '@/pages/cart/orderService'
 import { profileServices } from './profileServices'
 import { membershipService, getTierByPoints } from './membershipService'
 import type { Address } from './addressService'
 import { addressService } from './addressService'
 
 export type ProfileTab = 'orders' | 'membership' | 'addresses' | 'profile'
+
+interface SePayQrSession {
+    orderCode: string
+    amount: number
+    description: string
+    qrUrl: string
+}
+
+const SEPAY_ACCOUNT = 'VQRQAICLZ9488'
+const SEPAY_BANK = 'MBBank'
+
+function buildSePayQrUrl(amount: number, description: string) {
+    const params = new URLSearchParams({
+        acc: SEPAY_ACCOUNT,
+        bank: SEPAY_BANK,
+        amount: String(Math.round(amount)),
+        des: description,
+    })
+
+    return `https://qr.sepay.vn/img?${params.toString()}`
+}
+
+function normalizeTransferText(value: string) {
+    return value
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .replace(/[^\w\s-]/g, '')
+        .replace(/\s+/g, ' ')
+        .trim()
+}
+
+function buildTransferDescription(customerName: string, orderCode: string) {
+    const safeName = normalizeTransferText(customerName)
+    const safeOrderCode = normalizeTransferText(orderCode) || orderCode
+
+    return safeName
+        ? `Khách hàng ${safeName} chuyển tiền đơn ${safeOrderCode}`
+        : `Khách hàng chuyển tiền đơn ${safeOrderCode}`
+}
+
+function isPaidStatus(value: unknown) {
+    return ['PAID', 'SUCCESS', 'SUCCESSFUL', 'COMPLETED', 'DONE', 'FINISHED'].includes(String(value).toUpperCase())
+}
+
+function isOrderPaid(orderData: any) {
+    if (!orderData) return false
+
+    if (orderData.is_paid === true) return true
+    if (orderData.payment_status && isPaidStatus(orderData.payment_status)) return true
+    if (orderData.payment_state && isPaidStatus(orderData.payment_state)) return true
+    if (orderData.payment?.status && isPaidStatus(orderData.payment.status)) return true
+    if (orderData.status && isPaidStatus(orderData.status)) return true
+
+    return false
+}
 
 export function profileHandler() {
     const router    = useRouter()
@@ -19,6 +75,11 @@ export function profileHandler() {
     const orders              = ref<any[]>([])
     const addresses           = ref<Address[]>([])
     const isLoading           = ref(true)
+    const isOrderDetailLoading = ref(false)
+    const isOrderDetailOpen   = ref(false)
+    const selectedOrder       = ref<any>(null)
+    const orderQrSession      = ref<SePayQrSession | null>(null)
+    const orderQrStatusMessage = ref('')
     const isAddressModalOpen  = ref(false)
     const totalPoints         = ref(0)
     const isMembershipLoading = ref(true)
@@ -117,6 +178,47 @@ export function profileHandler() {
     // Gọi khi component mount — chỉ load tab đang active
     const init = () => {
         loadTab(activeTab.value)
+    }
+
+    const closeOrderDetail = () => {
+        isOrderDetailOpen.value = false
+        selectedOrder.value = null
+        orderQrSession.value = null
+        orderQrStatusMessage.value = ''
+    }
+
+    const openOrderDetail = async (order: any) => {
+        isOrderDetailOpen.value = true
+        isOrderDetailLoading.value = true
+        selectedOrder.value = order
+        orderQrSession.value = null
+        orderQrStatusMessage.value = ''
+
+        try {
+            const res = await orderService.getOrderDetail(order.order_id)
+            const detail = res.data
+            selectedOrder.value = detail
+
+            if (detail?.payment_method === 'QR_CODE' && !isOrderPaid(detail)) {
+                const orderCode = detail.order_code || order.order_code || ''
+                const totalAmount = Number(detail.total_amount ?? detail.total ?? 0)
+                const customerName = detail.address_snapshot?.recipient_name || authStore.user?.full_name || ''
+                const description = buildTransferDescription(customerName, orderCode)
+
+                orderQrSession.value = {
+                    orderCode,
+                    amount: totalAmount,
+                    description,
+                    qrUrl: buildSePayQrUrl(totalAmount, description),
+                }
+                orderQrStatusMessage.value = 'Đơn hàng này đang chờ thanh toán. Quét mã QR bên dưới để thanh toán.'
+            }
+        } catch (e) {
+            console.error('Lỗi lấy chi tiết đơn hàng:', e)
+            uiStore.error('Không lấy được chi tiết đơn hàng.')
+        } finally {
+            isOrderDetailLoading.value = false
+        }
     }
 
     // Khi user bấm sang tab khác mới gọi API của tab đó
@@ -254,6 +356,8 @@ export function profileHandler() {
     return {
         // state
         activeTab, orders, addresses, isLoading,
+        isOrderDetailLoading, isOrderDetailOpen,
+        selectedOrder, orderQrSession, orderQrStatusMessage,
         isAddressModalOpen, modalMode, isSubmitting,
         totalPoints, isMembershipLoading,
         provinces, districts, wards,
@@ -261,6 +365,8 @@ export function profileHandler() {
         addressForm,
         // actions
         init,
+        openOrderDetail,
+        closeOrderDetail,
         openAddressModal, openEditModal,
         handleAddAddress, handleDeleteAddress, handleSetDefault,
         handleLogout,

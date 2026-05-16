@@ -16,6 +16,7 @@ interface Review {
 const props = defineProps<{
     reviews: Review[]
     avgRating: number
+    isLoading?: boolean
 }>()
 
 const emit = defineEmits<{ openModal: [] }>()
@@ -40,7 +41,7 @@ const getInitial = (review: Review, idx: number) => {
 const getDisplayName = (review: Review) => {
     if (review.user_name) return review.user_name
     if (review.user_email) {
-        const [local, domain] = review.user_email.split('@')
+        const [local = '', domain = ''] = review.user_email.split('@')
         return local.slice(0, 3) + '***@' + domain
     }
     return 'Khách hàng đã mua'
@@ -49,6 +50,11 @@ const getDisplayName = (review: Review) => {
 
 <template>
     <div class="mt-24 pt-16 border-t border-border-light">
+        <div v-if="props.isLoading" class="flex items-center justify-center py-16 text-sm text-text-muted font-display">
+            Đang tải đánh giá...
+        </div>
+
+        <template v-else>
         <!-- Header -->
         <div class="flex flex-col md:flex-row justify-between items-start md:items-end gap-8 mb-12">
             <div class="flex flex-col sm:flex-row gap-8 items-start sm:items-center">
@@ -150,5 +156,6 @@ const getDisplayName = (review: Review) => {
                 </div>
             </div>
         </div>
+        </template>
     </div>
 </template>

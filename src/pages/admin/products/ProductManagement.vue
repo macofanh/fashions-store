@@ -7,272 +7,381 @@ import { useUIStore } from '@/stores/useUIStore'
 
 const uiStore = useUIStore()
 
-const products = ref<Product[]>([])
-const isLoading = ref(true)
-const isDrawerOpen = ref(false)
-const selectedProduct = ref<any>(null)
-const isSaving = ref(false)
-const isUploading = ref(false)
-const fileInput = ref<HTMLInputElement | null>(null)
-const showDeleted = ref(false)
+    const products = ref<Product[]>([])
+    const isLoading = ref(true)
+    const isDrawerOpen = ref(false)
+    const selectedProduct = ref<any>(null)
+    const isSaving = ref(false)
+    const isUploading = ref(false)
+    const fileInput = ref<HTMLInputElement | null>(null)
+    const showDeleted = ref(false)
 
-const allColors = ref<any[]>([])
-const allSizes = ref<any[]>([])
-const allCategories = ref<any[]>([])
-const genderOptions = ['male', 'female', 'unisex', 'kids']
+    const allColors = ref<any[]>([])
+    const allSizes = ref<any[]>([])
+    const allCategories = ref<any[]>([])
+    const genderOptions = ['male', 'female', 'unisex', 'kids']
 
-const newVariant = ref({
-    color_id: null,
-    size_id: null,
-    sku: '',
-    price: 0,
-    stock_qty: 0,
-    low_stock_threshold: 5
-})
+    const isVariantFormOpen = ref(false)
+    const editingVariantIndex = ref<number | null>(null)
+    const variantImageInput = ref<HTMLInputElement | null>(null)
+    const isVariantImageUploading = ref(false)
 
-const fetchProducts = async () => {
-    isLoading.value = true
-    try {
-        const response = await axiosClient.get('/api/v1/products', { params: { page_size: 100 } })
-        products.value = response.data.items
-    } catch (error) {
-        console.error('Lỗi lấy danh sách sản phẩm:', error)
-    } finally {
-        isLoading.value = false
-    }
-}
-
-const filteredProducts = computed(() => {
-    if (showDeleted.value) return products.value
-    return products.value.filter(p => !p.deleted_at)
-})
-
-const fetchMetaData = async () => {
-    try {
-        const [colorsRes, sizesRes, categoriesRes] = await Promise.all([
-            axiosClient.get('/api/v1/products/colors'),
-            axiosClient.get('/api/v1/products/sizes'),
-            axiosClient.get('/api/v1/categories')
-        ])
-        allColors.value = colorsRes.data
-        allSizes.value = sizesRes.data
-        allCategories.value = categoriesRes.data
-    } catch (error) {
-        console.error('Lỗi lấy meta data:', error)
-    }
-}
-
-const openCreate = () => {
-    selectedProduct.value = {
-        name: '',
-        base_price: 0,
-        brand: '',
-        description: '',
+    const createVariantDraft = (basePrice = 0) => ({
+        color_id: null,
+        size_id: null,
+        sku: '',
+        price: basePrice,
+        compare_price: null,
+        stock_qty: 0,
+        low_stock_threshold: 5,
+        image_url: '',
         is_active: true,
-        category_id: allCategories.value[0]?.category_id || null,
-        gender: 'unisex',
-        images: [],
-        variants: []
-    }
-    isDrawerOpen.value = true
-}
-
-const openDetail = (product: Product) => {
-    selectedProduct.value = JSON.parse(JSON.stringify(product))
-    isDrawerOpen.value = true
-}
-
-const closeDrawer = () => {
-    isDrawerOpen.value = false
-    selectedProduct.value = null
-}
-
-const triggerFileInput = () => {
-    fileInput.value?.click()
-}
-
-const handleFileUpload = async (event: Event) => {
-    const target = event.target as HTMLInputElement
-    if (!target.files?.length || !selectedProduct.value) return
-
-    const file = target.files[0]
-    if (!file) return
-    const formData = new FormData()
-    formData.append('file', file)
-    formData.append('is_primary', selectedProduct.value.images.length === 0 ? 'true' : 'false')
-
-    isUploading.value = true
-    try {
-        const response = await axiosClient.post(
-            `/api/v1/products/${selectedProduct.value.product_id}/images`,
-            formData,
-            { headers: { 'Content-Type': 'multipart/form-data' } }
-        )
-        selectedProduct.value.images.push(response.data)
-        updateLocalProductSync()
-        uiStore.success('Upload ảnh thành công!')
-    } catch (error: any) {
-        console.error('Lỗi upload ảnh:', error)
-        uiStore.error(error.response?.data?.detail || 'Lỗi upload ảnh.')
-    } finally {
-        isUploading.value = false
-        target.value = ''
-    }
-}
-
-const handleSetPrimary = async (imageId: number) => {
-    if (!selectedProduct.value) return
-    try {
-        await axiosClient.put(`/api/v1/products/${selectedProduct.value.product_id}/images/${imageId}/primary`)
-        // Cập nhật state UI
-        selectedProduct.value.images.forEach((img: any) => {
-            img.is_primary = (img.image_id === imageId)
-        })
-        updateLocalProductSync()
-    } catch (error) {
-        uiStore.error('Lỗi khi đặt ảnh chính.')
-    }
-}
-
-const handleDeleteImage = async (imageId: number) => {
-    const confirmed = await uiStore.confirm({
-        title: 'Xóa ảnh',
-        message: 'Bạn có chắc muốn xóa ảnh này?',
-        confirmLabel: 'Xóa',
-        variant: 'danger',
     })
-    if (!confirmed) return
-    try {
-        await axiosClient.delete(`/api/v1/products/images/${imageId}`)
-        selectedProduct.value.images = selectedProduct.value.images.filter((img: any) => img.image_id !== imageId)
-        updateLocalProductSync()
-    } catch (error) {
-        uiStore.error('Lỗi khi xóa ảnh.')
-    }
-}
 
-// Helper để đồng bộ dữ liệu Drawer với List chính
-const updateLocalProductSync = () => {
-    const index = products.value.findIndex(p => p.product_id === selectedProduct.value.product_id)
-    if (index !== -1 && products.value[index]) {
-        products.value[index].images = [...selectedProduct.value.images]
-    }
-}
+    const newVariant = ref(createVariantDraft())
 
-const handleSave = async () => {
-    if (!selectedProduct.value) return
-    isSaving.value = true
-    try {
-        const payload = {
-            name: selectedProduct.value.name,
-            base_price: selectedProduct.value.base_price,
-            brand: selectedProduct.value.brand,
-            description: selectedProduct.value.description,
-            is_active: selectedProduct.value.is_active,
-            category_id: selectedProduct.value.category_id,
-            gender: selectedProduct.value.gender
+    const normalizeVariantPayload = (variant: any) => ({
+        variant_id: variant.variant_id ?? null,
+        color_id: variant.color_id ?? null,
+        size_id: variant.size_id ?? null,
+        sku: variant.sku ?? '',
+        price: variant.price ?? 0,
+        compare_price: variant.compare_price ?? null,
+        stock_qty: variant.stock_qty ?? 0,
+        low_stock_threshold: variant.low_stock_threshold ?? 5,
+        image_url: variant.image_url ?? '',
+        is_active: variant.is_active ?? true,
+    })
+
+    const fetchProducts = async () => {
+        isLoading.value = true
+        try {
+            const response = await axiosClient.get('/api/v1/products', { params: { page_size: 100 } })
+            products.value = response.data.items
+        } catch (error) {
+            console.error('Lỗi lấy danh sách sản phẩm:', error)
+        } finally {
+            isLoading.value = false
         }
+    }
 
-        if (selectedProduct.value.product_id) {
-            // Update
-            await axiosClient.put(`/api/v1/products/${selectedProduct.value.product_id}`, payload)
-            
-            const index = products.value.findIndex(p => p.product_id === selectedProduct.value.product_id)
-            if (index !== -1) {
-                products.value[index] = { ...products.value[index], ...selectedProduct.value }
+    const filteredProducts = computed(() => {
+        if (showDeleted.value) return products.value
+        return products.value.filter(p => !p.deleted_at)
+    })
+
+    const fetchMetaData = async () => {
+        try {
+            const [colorsRes, sizesRes, categoriesRes] = await Promise.all([
+                axiosClient.get('/api/v1/products/colors'),
+                axiosClient.get('/api/v1/products/sizes'),
+                axiosClient.get('/api/v1/categories')
+            ])
+            allColors.value = colorsRes.data
+            allSizes.value = sizesRes.data
+            allCategories.value = categoriesRes.data
+        } catch (error) {
+            console.error('Lỗi lấy meta data:', error)
+        }
+    }
+
+    const openCreate = () => {
+        selectedProduct.value = {
+            name: '',
+            base_price: 0,
+            brand: '',
+            description: '',
+            is_active: true,
+            category_id: allCategories.value[0]?.category_id || null,
+            gender: 'unisex',
+            images: [],
+            variants: [],
+        }
+        newVariant.value = createVariantDraft(0)
+        isVariantFormOpen.value = false
+        editingVariantIndex.value = null
+        isDrawerOpen.value = true
+    }
+
+    const openDetail = async (product: Product) => {
+        isDrawerOpen.value = true
+        selectedProduct.value = JSON.parse(JSON.stringify(product))
+        newVariant.value = createVariantDraft(selectedProduct.value?.base_price || 0)
+        isVariantFormOpen.value = false
+        editingVariantIndex.value = null
+
+        try {
+            const response = await productService.getProductById(product.product_id)
+            selectedProduct.value = JSON.parse(JSON.stringify(response.data))
+            newVariant.value = createVariantDraft(selectedProduct.value?.base_price || 0)
+            updateLocalProductSync()
+        } catch (error) {
+            console.error('Lỗi lấy chi tiết sản phẩm:', error)
+        }
+    }
+
+    const closeDrawer = () => {
+        isDrawerOpen.value = false
+        selectedProduct.value = null
+        isVariantFormOpen.value = false
+        editingVariantIndex.value = null
+        newVariant.value = createVariantDraft()
+    }
+
+    const triggerFileInput = () => {
+        fileInput.value?.click()
+    }
+
+    const triggerVariantImageInput = () => {
+        variantImageInput.value?.click()
+    }
+
+    const handleFileUpload = async (event: Event) => {
+        const target = event.target as HTMLInputElement
+        if (!target.files?.length || !selectedProduct.value) return
+
+        const file = target.files[0]
+        if (!file) return
+
+        const formData = new FormData()
+        formData.append('file', file)
+        formData.append('is_primary', selectedProduct.value.images.length === 0 ? 'true' : 'false')
+
+        isUploading.value = true
+        try {
+            const response = await axiosClient.post(
+                `/api/v1/products/${selectedProduct.value.product_id}/images`,
+                formData,
+                { headers: { 'Content-Type': 'multipart/form-data' } }
+            )
+            selectedProduct.value.images.push(response.data)
+            updateLocalProductSync()
+            uiStore.success('Upload ảnh thành công!')
+        } catch (error: any) {
+            console.error('Lỗi upload ảnh:', error)
+            uiStore.error(error.response?.data?.detail || 'Lỗi upload ảnh.')
+        } finally {
+            isUploading.value = false
+            target.value = ''
+        }
+    }
+
+    const handleVariantImageUpload = async (event: Event) => {
+        const target = event.target as HTMLInputElement
+        if (!target.files?.length || !selectedProduct.value) return
+
+        const file = target.files[0]
+        if (!file) return
+
+        const formData = new FormData()
+        formData.append('file', file)
+        formData.append('is_primary', 'false')
+
+        isVariantImageUploading.value = true
+        try {
+            const response = await axiosClient.post(
+                `/api/v1/products/${selectedProduct.value.product_id}/images`,
+                formData,
+                { headers: { 'Content-Type': 'multipart/form-data' } }
+            )
+
+            newVariant.value.image_url = response.data.image_url || ''
+            selectedProduct.value.images = selectedProduct.value.images || []
+            selectedProduct.value.images.push(response.data)
+            updateLocalProductSync()
+            uiStore.success('Upload ảnh biến thể thành công!')
+        } catch (error: any) {
+            console.error('Lỗi upload ảnh biến thể:', error)
+            uiStore.error(error.response?.data?.detail || 'Lỗi upload ảnh biến thể.')
+        } finally {
+            isVariantImageUploading.value = false
+            target.value = ''
+        }
+    }
+
+    const handleSetPrimary = async (imageId: number) => {
+        if (!selectedProduct.value) return
+        try {
+            await axiosClient.put(`/api/v1/products/${selectedProduct.value.product_id}/images/${imageId}/primary`)
+            selectedProduct.value.images.forEach((img: any) => {
+                img.is_primary = (img.image_id === imageId)
+            })
+            updateLocalProductSync()
+        } catch (error) {
+            uiStore.error('Lỗi khi đặt ảnh chính.')
+        }
+    }
+
+    const handleDeleteImage = async (imageId: number) => {
+        const confirmed = await uiStore.confirm({
+            title: 'Xóa ảnh',
+            message: 'Bạn có chắc muốn xóa ảnh này?',
+            confirmLabel: 'Xóa',
+            variant: 'danger',
+        })
+        if (!confirmed) return
+
+        try {
+            await axiosClient.delete(`/api/v1/products/images/${imageId}`)
+            selectedProduct.value.images = selectedProduct.value.images.filter((img: any) => img.image_id !== imageId)
+            updateLocalProductSync()
+        } catch (error) {
+            uiStore.error('Lỗi khi xóa ảnh.')
+        }
+    }
+
+    const updateLocalProductSync = () => {
+        if (!selectedProduct.value) return
+        const index = products.value.findIndex(p => p.product_id === selectedProduct.value.product_id)
+        if (index === -1) return
+
+        const product = products.value[index]
+        if (!product) return
+
+        const syncedProduct = {
+            ...product,
+            ...selectedProduct.value,
+        }
+        syncedProduct.images = [...(selectedProduct.value.images || [])]
+        products.value[index] = syncedProduct
+    }
+
+    const handleSave = async () => {
+        if (!selectedProduct.value) return
+        isSaving.value = true
+        try {
+            const payload = {
+                name: selectedProduct.value.name,
+                base_price: selectedProduct.value.base_price,
+                brand: selectedProduct.value.brand,
+                description: selectedProduct.value.description,
+                is_active: selectedProduct.value.is_active,
+                category_id: selectedProduct.value.category_id,
+                gender: selectedProduct.value.gender,
+                variants: (selectedProduct.value.variants || []).map(normalizeVariantPayload),
             }
-            uiStore.success('Cập nhật sản phẩm thành công!')
+
+            if (selectedProduct.value.product_id) {
+                const response = await axiosClient.put(`/api/v1/products/${selectedProduct.value.product_id}`, payload)
+                selectedProduct.value = JSON.parse(JSON.stringify(response.data))
+
+                const index = products.value.findIndex(p => p.product_id === selectedProduct.value.product_id)
+                if (index !== -1) {
+                    products.value[index] = { ...products.value[index], ...response.data }
+                }
+                uiStore.success('Cập nhật sản phẩm thành công!')
+            } else {
+                const response = await axiosClient.post('/api/v1/products', payload)
+                products.value.unshift(response.data)
+                selectedProduct.value = response.data
+                uiStore.success('Tạo sản phẩm thành công! Bạn có thể thêm ảnh và biến thể bây giờ.')
+            }
+        } catch (error: any) {
+            console.error('Lỗi lưu sản phẩm:', error)
+            uiStore.error(error.response?.data?.detail || 'Có lỗi xảy ra khi lưu.')
+        } finally {
+            isSaving.value = false
+        }
+    }
+
+    const openVariantForm = (variant?: any, index?: number) => {
+        if (!selectedProduct.value) return
+
+        if (variant) {
+            editingVariantIndex.value = typeof index === 'number' ? index : null
+            newVariant.value = JSON.parse(JSON.stringify({
+                ...normalizeVariantPayload(variant),
+            }))
         } else {
-            // Create
-            const response = await axiosClient.post('/api/v1/products', payload)
-            products.value.unshift(response.data)
-            selectedProduct.value = response.data
-            uiStore.success('Tạo sản phẩm thành công! Bạn có thể thêm ảnh và biến thể bây giờ.')
+            editingVariantIndex.value = null
+            newVariant.value = createVariantDraft(selectedProduct.value.base_price)
         }
-    } catch (error: any) {
-        console.error('Lỗi lưu sản phẩm:', error)
-        uiStore.error(error.response?.data?.detail || 'Có lỗi xảy ra khi lưu.')
-    } finally {
-        isSaving.value = false
-    }
-}
 
-const handleAddVariant = async () => {
-    if (!selectedProduct.value?.product_id) return
-    if (!newVariant.value.color_id || !newVariant.value.size_id || !newVariant.value.sku) {
-        uiStore.warning('Vui lòng điền đầy đủ thông tin biến thể!')
-        return
+        isVariantFormOpen.value = true
     }
 
-    try {
-        const response = await axiosClient.post(`/api/v1/products/${selectedProduct.value.product_id}/variants`, newVariant.value)
-        selectedProduct.value.variants.push(response.data)
-        
-        // Reset form
-        newVariant.value = {
-            color_id: null,
-            size_id: null,
-            sku: '',
-            price: selectedProduct.value.base_price,
-            stock_qty: 0,
-            low_stock_threshold: 5
+    const handleAddVariant = async () => {
+        if (!selectedProduct.value) return
+        if (!newVariant.value.color_id || !newVariant.value.size_id || !newVariant.value.sku) {
+            uiStore.warning('Vui lòng điền đầy đủ thông tin biến thể!')
+            return
         }
-        uiStore.success('Thêm biến thể thành công!')
-    } catch (error: any) {
-        uiStore.error(error.response?.data?.detail || 'Lỗi khi thêm biến thể.')
-    }
-}
 
-const handleUpdateVariant = async (variant: any) => {
-    if (variant.stock_qty < 0) {
-        uiStore.warning('Số lượng tồn kho không được âm!')
-        return
+        selectedProduct.value.variants = selectedProduct.value.variants || []
+        const variantPayload = JSON.parse(JSON.stringify(newVariant.value))
+
+        if (editingVariantIndex.value !== null && selectedProduct.value.variants[editingVariantIndex.value]) {
+            selectedProduct.value.variants[editingVariantIndex.value] = {
+                ...selectedProduct.value.variants[editingVariantIndex.value],
+                ...variantPayload,
+            }
+            uiStore.success('Đã cập nhật biến thể trong form. Bấm Lưu thay đổi để lưu sản phẩm.')
+        } else {
+            selectedProduct.value.variants.push(variantPayload)
+            uiStore.success('Đã thêm biến thể vào form. Bấm Lưu thay đổi để lưu sản phẩm.')
+        }
+
+        newVariant.value = createVariantDraft(selectedProduct.value.base_price)
+        isVariantFormOpen.value = false
+        editingVariantIndex.value = null
     }
-    try {
-        await axiosClient.put(`/api/v1/products/variants/${variant.variant_id}`, {
-            price: variant.price,
-            stock_qty: variant.stock_qty,
-            low_stock_threshold: variant.low_stock_threshold || 5,
-            is_active: variant.is_active,
-            version: variant.version
+
+    const handleDeleteVariant = async (index: number) => {
+        if (!selectedProduct.value?.variants) return
+        const variant = selectedProduct.value.variants[index]
+        if (!variant) return
+
+        const confirmed = await uiStore.confirm({
+            title: 'Xóa biến thể',
+            message: `Bạn có chắc muốn xóa biến thể ${variant.sku || ''}?`,
+            confirmLabel: 'Xóa',
+            variant: 'danger',
         })
-        uiStore.success('Cập nhật biến thể thành công!')
-        fetchProducts()
-    } catch (error: any) {
-        if (error.response?.status === 409) {
-            uiStore.warning('Dữ liệu đã bị thay đổi bởi người khác, vui lòng tải lại trang!')
-        } else {
-            console.error('Lỗi cập nhật biến thể:', error)
-            uiStore.error('Không thể cập nhật biến thể.')
+        if (!confirmed) return
+
+        selectedProduct.value.variants.splice(index, 1)
+        if (editingVariantIndex.value === index) {
+            editingVariantIndex.value = null
+            newVariant.value = createVariantDraft(selectedProduct.value.base_price)
+            isVariantFormOpen.value = false
         }
     }
-}
 
-const handleSoftDelete = async (product_id: number) => {
-    const confirmed = await uiStore.confirm({
-        title: 'Xóa sản phẩm',
-        message: 'Bạn có chắc muốn xóa tạm sản phẩm này?',
-        confirmLabel: 'Xóa',
-        variant: 'danger',
-    })
-    if (!confirmed) return
-    try {
-        await axiosClient.delete(`/api/v1/products/${product_id}`)
-        uiStore.success('Đã chuyển sản phẩm vào thùng rác.')
-        fetchProducts()
-    } catch (error) {
-        uiStore.error('Lỗi khi xóa sản phẩm.')
+    const handleCancelVariantForm = () => {
+        if (!selectedProduct.value) return
+        newVariant.value = createVariantDraft(selectedProduct.value.base_price)
+        editingVariantIndex.value = null
+        isVariantFormOpen.value = false
+        if (variantImageInput.value) {
+            variantImageInput.value.value = ''
+        }
     }
-}
 
-onMounted(() => {
-    fetchProducts()
-    fetchMetaData()
-})
+    const handleSoftDelete = async (product_id: number) => {
+        const confirmed = await uiStore.confirm({
+            title: 'Xóa sản phẩm',
+            message: 'Bạn có chắc muốn xóa tạm sản phẩm này?',
+            confirmLabel: 'Xóa',
+            variant: 'danger',
+        })
+        if (!confirmed) return
+        try {
+            await axiosClient.delete(`/api/v1/products/${product_id}`)
+            uiStore.success('Đã chuyển sản phẩm vào thùng rác.')
+            fetchProducts()
+        } catch (error) {
+            uiStore.error('Lỗi khi xóa sản phẩm.')
+        }
+    }
 
-const formatPrice = (price: number) => {
-    return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(price)
-}
+    onMounted(() => {
+        fetchProducts()
+        fetchMetaData()
+    })
+
+    const formatPrice = (price: number) => {
+        return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(price)
+    }
 </script>
 
 <template>
@@ -456,11 +565,56 @@ const formatPrice = (price: number) => {
                     </section>
 
                     <!-- SECTION 3: BIẾN THỂ -->
-                    <section v-if="selectedProduct.product_id">
+                    <section v-if="selectedProduct">
                         <h3 class="text-xs font-bold text-slate-500 uppercase tracking-wider mb-4">Biến thể sản phẩm</h3>
-                        <div class="bg-indigo-50 border border-indigo-100 rounded-xl p-4 mb-4">
-                            <p class="text-xs font-semibold text-indigo-700 mb-3">Thêm biến thể mới</p>
-                            <div class="grid grid-cols-3 gap-3">
+
+                        <div v-if="selectedProduct.variants?.length" class="space-y-2">
+                            <div v-for="(v, index) in selectedProduct.variants" :key="v.variant_id || index" class="bg-white border border-slate-100 rounded-xl p-3">
+                                <div class="flex items-center justify-between gap-3">
+                                    <div class="flex items-center gap-3 min-w-0">
+                                        <div class="w-8 h-8 rounded-lg bg-slate-100 border border-slate-200 flex items-center justify-center text-xs font-bold text-slate-600 shrink-0">
+                                            {{ v.size?.name || '—' }}
+                                        </div>
+                                        <div class="w-4 h-4 rounded-full border border-slate-200 shrink-0" :style="{ backgroundColor: v.color?.hex_code || '#ccc' }"></div>
+                                        <div class="min-w-0">
+                                            <p class="text-xs font-semibold text-slate-800 truncate">{{ v.sku || 'Biến thể mới' }}</p>
+                                            <p class="text-[10px] text-slate-400">{{ v.variant_id ? `#${v.variant_id}` : 'Bản nháp' }}</p>
+                                        </div>
+                                    </div>
+
+                                    <div class="flex items-center gap-1.5 shrink-0">
+                                        <button @click="openVariantForm(v, Number(index))" class="p-2 hover:bg-indigo-50 rounded-lg transition-colors text-slate-400 hover:text-indigo-600" title="Chỉnh sửa biến thể">
+                                            <span class="material-symbols-outlined text-[18px]">edit</span>
+                                        </button>
+                                        <button @click="handleDeleteVariant(Number(index))" class="p-2 hover:bg-red-50 rounded-lg transition-colors text-slate-400 hover:text-red-500" title="Xóa biến thể">
+                                            <span class="material-symbols-outlined text-[18px]">delete</span>
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div v-else class="rounded-xl border border-dashed border-slate-200 bg-slate-50 px-4 py-5 text-sm text-slate-500">
+                            Chưa có biến thể nào cho sản phẩm này.
+                        </div>
+
+                        <button
+                            @click="openVariantForm()"
+                            class="mt-3 w-full border border-dashed border-indigo-200 text-indigo-600 bg-indigo-50/60 py-3 rounded-xl text-sm font-semibold hover:bg-indigo-50 transition-colors flex items-center justify-center gap-2"
+                        >
+                            <span class="material-symbols-outlined text-[18px]">add</span>
+                            Thêm biến thể mới
+                        </button>
+
+                        <div v-if="isVariantFormOpen" class="mt-4 bg-indigo-50 border border-indigo-100 rounded-xl p-4 space-y-4">
+                            <div class="flex items-center justify-between gap-3">
+                                <p class="text-xs font-semibold text-indigo-700">
+                                    {{ editingVariantIndex !== null ? 'Chỉnh sửa biến thể' : 'Thêm biến thể mới' }}
+                                </p>
+                                <button @click="handleCancelVariantForm" class="text-[10px] font-semibold uppercase tracking-widest text-slate-500 hover:text-slate-700">Đóng</button>
+                            </div>
+
+                            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
                                 <div>
                                     <label class="text-[10px] font-semibold text-slate-500 block mb-1">Màu sắc</label>
                                     <select v-model="newVariant.color_id" class="w-full border border-slate-200 rounded-lg px-3 py-2 text-xs outline-none focus:border-indigo-400 bg-white">
@@ -476,7 +630,7 @@ const formatPrice = (price: number) => {
                                     </select>
                                 </div>
                                 <div>
-                                    <label class="text-[10px] font-semibold text-slate-500 block mb-1">SKU</label>
+                                    <label class="text-[10px] font-semibold text-slate-500 block mb-1">Mã sản phẩm</label>
                                     <input v-model="newVariant.sku" placeholder="VD: SMT-RED-M" class="w-full border border-slate-200 rounded-lg px-3 py-2 text-xs outline-none focus:border-indigo-400" />
                                 </div>
                                 <div>
@@ -484,25 +638,31 @@ const formatPrice = (price: number) => {
                                     <input v-model.number="newVariant.price" type="number" class="w-full border border-slate-200 rounded-lg px-3 py-2 text-xs outline-none focus:border-indigo-400" />
                                 </div>
                                 <div>
+                                    <label class="text-[10px] font-semibold text-slate-500 block mb-1">Giá so sánh (₫)</label>
+                                    <input v-model.number="newVariant.compare_price" type="number" class="w-full border border-slate-200 rounded-lg px-3 py-2 text-xs outline-none focus:border-indigo-400" placeholder="Tuỳ chọn" />
+                                </div>
+                                <div>
                                     <label class="text-[10px] font-semibold text-slate-500 block mb-1">Tồn kho</label>
                                     <input v-model.number="newVariant.stock_qty" type="number" class="w-full border border-slate-200 rounded-lg px-3 py-2 text-xs outline-none focus:border-indigo-400" />
                                 </div>
+                                <div>
+                                    <label class="text-[10px] font-semibold text-slate-500 block mb-1">Ngưỡng thấp</label>
+                                    <input v-model.number="newVariant.low_stock_threshold" type="number" class="w-full border border-slate-200 rounded-lg px-3 py-2 text-xs outline-none focus:border-indigo-400" />
+                                </div>
                                 <div class="flex items-end">
-                                    <button @click="handleAddVariant" class="w-full bg-indigo-600 text-white py-2 text-xs font-semibold rounded-lg hover:bg-indigo-700 transition-colors">+ Thêm</button>
+                                    <button @click="newVariant.is_active = !newVariant.is_active"
+                                        :class="['w-full px-3 py-2 rounded-lg border text-xs font-semibold transition-all flex items-center justify-center gap-2', newVariant.is_active ? 'border-emerald-200 bg-emerald-50 text-emerald-700' : 'border-slate-200 bg-slate-50 text-slate-500']">
+                                        <span class="w-3 h-3 rounded-full" :class="newVariant.is_active ? 'bg-emerald-500' : 'bg-slate-300'"></span>
+                                        {{ newVariant.is_active ? 'Đang bán' : 'Tạm ẩn' }}
+                                    </button>
                                 </div>
                             </div>
-                        </div>
-                        <div class="space-y-2">
-                            <div v-for="v in selectedProduct.variants" :key="v.variant_id" class="flex items-center gap-3 p-3 bg-slate-50 rounded-xl border border-slate-100">
-                                <div class="w-8 h-8 rounded-lg bg-white border border-slate-200 flex items-center justify-center text-xs font-bold text-slate-600 shrink-0">{{ v.size?.name }}</div>
-                                <div class="w-4 h-4 rounded-full border border-slate-200 shrink-0" :style="{ backgroundColor: v.color?.hex_code || '#ccc' }"></div>
-                                <span class="text-[10px] text-slate-400 font-mono shrink-0 hidden sm:block">{{ v.sku }}</span>
-                                <div class="flex items-center gap-2 ml-auto">
-                                    <div><p class="text-[9px] text-slate-400 mb-0.5">Giá</p><input v-model.number="v.price" type="number" class="w-20 bg-white border border-slate-200 rounded-lg px-2 py-1 text-xs outline-none focus:border-indigo-400" /></div>
-                                    <div><p class="text-[9px] text-slate-400 mb-0.5">Kho</p><input v-model.number="v.stock_qty" type="number" min="0" class="w-14 bg-white border border-slate-200 rounded-lg px-2 py-1 text-xs outline-none focus:border-indigo-400" /></div>
-                                    <div><p class="text-[9px] text-slate-400 mb-0.5">Ngưỡng</p><input v-model.number="v.low_stock_threshold" type="number" class="w-12 bg-white border border-slate-200 rounded-lg px-2 py-1 text-xs outline-none focus:border-indigo-400" /></div>
-                                    <button @click="handleUpdateVariant(v)" class="p-2 hover:bg-indigo-50 rounded-lg transition-colors text-slate-400 hover:text-indigo-600 mt-3"><span class="material-symbols-outlined text-[18px]">save</span></button>
-                                </div>
+
+                            <div class="flex justify-end gap-3">
+                                <button @click="handleCancelVariantForm" class="px-4 py-2 rounded-lg border border-slate-200 text-sm font-semibold text-slate-600 hover:bg-white transition-colors">Hủy</button>
+                                <button @click="handleAddVariant" class="px-4 py-2 rounded-lg bg-indigo-600 text-white text-sm font-semibold hover:bg-indigo-700 transition-colors">
+                                    {{ editingVariantIndex !== null ? 'Cập nhật biến thể' : 'Thêm biến thể' }}
+                                </button>
                             </div>
                         </div>
                     </section>

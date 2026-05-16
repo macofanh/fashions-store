@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onMounted } from 'vue'
+import { computed, onMounted } from 'vue'
 import { checkoutHandler } from './checkoutHandler'
 
 import ShippingForm    from './components/ShippingForm.vue'
@@ -19,6 +19,8 @@ const {
     submitLabel,
     init, toggleVoucher, submitOrder, formatPrice, applyAddress,
 } = checkoutHandler()
+
+const isQrWaiting = computed(() => qrStatus.value === 'waiting' && !!qrSession.value)
 
 onMounted(init)
 </script>
@@ -89,6 +91,7 @@ onMounted(init)
                     :total="total"
                     :selected-voucher="selectedVoucher"
                     :is-submitting="isSubmitting"
+                    :is-qr-waiting="isQrWaiting"
                     :format-price="formatPrice"
                     :distance-km="distanceKm"
                     :shipping-result="shippingResult"

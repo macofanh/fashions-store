@@ -10,6 +10,7 @@ defineProps<{
     total: number
     selectedVoucher: UserVoucher | null
     isSubmitting: boolean
+    isQrWaiting: boolean
     formatPrice: (n: number) => string
     distanceKm: number | null
     shippingResult: { fee: number; isFree: boolean; outOfRange: boolean; hasCoords: boolean }
@@ -91,12 +92,12 @@ const emit = defineEmits<{ submit: [] }>()
             <div class="px-6 pb-6 space-y-3">
                 <button
                     @click="emit('submit')"
-                    :disabled="isSubmitting"
+                    :disabled="isSubmitting || isQrWaiting"
                     class="w-full bg-primary text-white py-4 text-sm font-bold tracking-widest uppercase rounded-lg hover:bg-primary-dark transition-all active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 shadow-md shadow-primary/20 font-display"
                 >
-                    <span v-if="isSubmitting" class="animate-spin h-4 w-4 border-2 border-white border-t-transparent rounded-full"></span>
+                    <span v-if="isSubmitting || isQrWaiting" class="animate-spin h-4 w-4 border-2 border-white border-t-transparent rounded-full"></span>
                     <span v-else class="material-symbols-outlined text-[18px]">lock</span>
-                    {{ isSubmitting ? 'Đang xử lý...' : (submitLabel ?? 'Xác nhận đặt hàng') }}
+                    {{ isSubmitting ? 'Đang xử lý...' : isQrWaiting ? 'Đang chờ thanh toán' : (submitLabel ?? 'Xác nhận đặt hàng') }}
                 </button>
 
                 <!-- Trust -->

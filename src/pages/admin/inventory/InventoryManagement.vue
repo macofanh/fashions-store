@@ -5,6 +5,10 @@ import { useUIStore } from '@/stores/useUIStore'
 
 const uiStore = useUIStore()
 
+const STOCK_CACHE_KEY = 'admin_inventory_stock_cache'
+const STOCK_CACHE_TS_KEY = 'admin_inventory_stock_cache_ts'
+const STOCK_CACHE_TTL = 60 * 1000
+
 interface VariantStock {
     variant_id: number; product_name: string; sku: string
     color_name: string; size_name: string; stock_qty: number
@@ -19,12 +23,42 @@ const activeTab = ref<'stock' | 'logs'>('stock')
 const stockList = ref<VariantStock[]>([])
 const logs = ref<InventoryLog[]>([])
 const isLoading = ref(true)
+const isRefreshingStock = ref(false)
 const isDrawerOpen = ref(false)
 const isSubmitting = ref(false)
 const searchQuery = ref('')
 const filterStock = ref<'all' | 'low' | 'out'>('all')
 
 const form = ref({ variant_id: '', change_type: 'IN', quantity: 1, note: '' })
+
+const hydrateStockCache = () => {
+    try {
+        const cached = localStorage.getItem(STOCK_CACHE_KEY)
+        if (!cached) return false
+
+        const cachedAt = Number(localStorage.getItem(STOCK_CACHE_TS_KEY) || 0)
+        if (!cachedAt || Date.now() - cachedAt > STOCK_CACHE_TTL) return false
+
+        const parsed = JSON.parse(cached)
+        if (!Array.isArray(parsed)) return false
+
+        stockList.value = parsed
+        isLoading.value = false
+        return true
+    } catch (error) {
+        console.error('Lỗi đọc cache kho hàng:', error)
+        return false
+    }
+}
+
+const persistStockCache = (items: VariantStock[]) => {
+    try {
+        localStorage.setItem(STOCK_CACHE_KEY, JSON.stringify(items))
+        localStorage.setItem(STOCK_CACHE_TS_KEY, String(Date.now()))
+    } catch (error) {
+        console.error('Lỗi lưu cache kho hàng:', error)
+    }
+}
 
 const filteredStock = computed(() => {
     let list = stockList.value
@@ -43,11 +77,16 @@ const stockStats = computed(() => ({
     out:   stockList.value.filter(v => v.stock_qty <= 0).length,
 }))
 
-const fetchStock = async () => {
-    isLoading.value = true
+const fetchStock = async (options?: { background?: boolean }) => {
+    const background = options?.background ?? false
+    if (background) {
+        isRefreshingStock.value = true
+    } else {
+        isLoading.value = true
+    }
     try {
         const res = await axiosClient.get('/api/v1/products/variants')
-        stockList.value = res.data.map((v: any) => ({
+        const items = res.data.map((v: any) => ({
             variant_id: v.variant_id,
             product_name: v.product?.name || 'N/A',
             sku: v.sku,
@@ -58,8 +97,13 @@ const fetchStock = async () => {
             low_stock_threshold: v.low_stock_threshold || 5,
             image_url: v.image_url || v.product?.images?.[0]?.image_url,
         }))
+        stockList.value = items
+        persistStockCache(items)
     } catch (e) { console.error(e) }
-    finally { isLoading.value = false }
+    finally {
+        isLoading.value = false
+        isRefreshingStock.value = false
+    }
 }
 
 const fetchLogs = async () => {
@@ -108,7 +152,10 @@ const changeTypeConfig: Record<string, { label: string; bg: string; text: string
     ADJUST: { label: 'Điều chỉnh',bg: 'bg-amber-50',   text: 'text-amber-700'   },
 }
 
-onMounted(fetchStock)
+onMounted(() => {
+    const hasCache = hydrateStockCache()
+    void fetchStock({ background: hasCache })
+})
 </script>
 
 <template>

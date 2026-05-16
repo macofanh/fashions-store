@@ -36,6 +36,10 @@ class ProductService {
         return axiosClient.get<ProductListResponse>(apiEndpoints.products.list, { params })
     }
 
+    public getProductById(productId: number) {
+        return axiosClient.get(apiEndpoints.products.detail(productId))
+    }
+
     public getProductBySlug(slug: string) {
         return axiosClient.get(apiEndpoints.products.slug(slug))
     }

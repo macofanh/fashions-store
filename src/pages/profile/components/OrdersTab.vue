@@ -6,6 +6,8 @@ defineProps<{
     formatDate: (s: string) => string
     getStatus: (s: string) => { label: string; classes: string; dot: string }
 }>()
+
+const emit = defineEmits<{ 'open-detail': [order: any] }>()
 </script>
 
 <template>
@@ -48,7 +50,10 @@ defineProps<{
                             </td>
                             <td class="px-6 py-4 text-sm font-bold text-fashion-black font-display">{{ formatPrice(order.total_amount) }}</td>
                             <td class="px-6 py-4 text-right">
-                                <button class="inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-widest text-primary hover:text-primary-dark transition-colors font-display">
+                                <button
+                                    @click="emit('open-detail', order)"
+                                    class="inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-widest text-primary hover:text-primary-dark transition-colors font-display"
+                                >
                                     Chi tiết
                                     <span class="material-symbols-outlined text-[14px]">arrow_forward</span>
                                 </button>

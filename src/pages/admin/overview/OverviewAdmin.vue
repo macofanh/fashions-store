@@ -123,7 +123,8 @@ watch([revenueMode, selectedYear, selectedMonth], fetchRevenue)
 // ── Lifecycle ─────────────────────────────────────────────────────
 onMounted(async () => {
     isLoading.value = true
-    await Promise.all([fetchSummary(), fetchRevenue()])
+    void fetchRevenue()
+    await fetchSummary()
     isLoading.value = false
 })
 

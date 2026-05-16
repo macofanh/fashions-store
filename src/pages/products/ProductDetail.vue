@@ -19,19 +19,20 @@ const cartStore = useCartStore()
 const uiStore   = useUIStore()
 
 // ── State ──────────────────────────────────────────────────────────
-const product        = ref<any>(null)
-const reviews        = ref<any[]>([])
-const isLoading      = ref(true)
-const isAddingToCart = ref(false)
-const isBuyingNow    = ref(false)
-const selectedColor  = ref<any>(null)
-const selectedSize   = ref<any>(null)
-const quantity       = ref(1)
-const showModal      = ref(false)
+const product          = ref<any>(null)
+const reviews          = ref<any[]>([])
+const isProductLoading  = ref(true)
+const isReviewsLoading  = ref(true)
+const isAddingToCart    = ref(false)
+const isBuyingNow       = ref(false)
+const selectedColor     = ref<any>(null)
+const selectedSize      = ref<any>(null)
+const quantity          = ref(1)
+const showModal         = ref(false)
 
 // ── Fetch ──────────────────────────────────────────────────────────
 const fetchProduct = async () => {
-    isLoading.value = true
+    isProductLoading.value = true
     try {
         const res = await productService.getProductBySlug(route.params.slug as string)
         product.value = res.data
@@ -41,12 +42,23 @@ const fetchProduct = async () => {
             selectedSize.value  = product.value.variants[0].size
         }
 
-        const reviewsRes = await productService.getReviews(product.value.product_id)
-        reviews.value = reviewsRes.data
+        void fetchReviews(product.value.product_id)
     } catch (e) {
         console.error('Lỗi lấy chi tiết sản phẩm:', e)
     } finally {
-        isLoading.value = false
+        isProductLoading.value = false
+    }
+}
+
+const fetchReviews = async (productId: number) => {
+    isReviewsLoading.value = true
+    try {
+        const reviewsRes = await productService.getReviews(productId)
+        reviews.value = reviewsRes.data
+    } catch (e) {
+        console.error('Lỗi lấy đánh giá:', e)
+    } finally {
+        isReviewsLoading.value = false
     }
 }
 
@@ -148,7 +160,7 @@ const handleSubmitReview = async (data: { rating: number; title: string; content
 
 <template>
     <!-- Loading -->
-    <div v-if="isLoading" class="min-h-screen flex items-center justify-center bg-background-light">
+    <div v-if="isProductLoading" class="min-h-screen flex items-center justify-center bg-background-light">
         <div class="animate-spin h-8 w-8 border-2 border-primary border-t-transparent rounded-full"></div>
     </div>
 
@@ -192,6 +204,7 @@ const handleSubmitReview = async (data: { rating: number; title: string; content
             <ProductReviews
                 :reviews="reviews"
                 :avg-rating="product.avg_rating"
+                :is-loading="isReviewsLoading"
                 @open-modal="showModal = true"
             />
         </div>

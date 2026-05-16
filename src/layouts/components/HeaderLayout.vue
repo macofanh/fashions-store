@@ -18,14 +18,24 @@ const isMobileMenuOpen = ref(false)
 const totalPoints = ref(0)
 
 // Fetch điểm khi đã đăng nhập
-onMounted(async () => {
+const loadRewardHistory = async () => {
+    if (!authStore.isAuthenticated) return
+    try {
+        const res = await membershipService.getRewardHistory()
+        totalPoints.value = res.data.reduce((sum, item) => sum + item.points_delta, 0)
+    } catch { /* silent */ }
+}
+
+onMounted(() => {
     window.addEventListener('scroll', handleScroll, { passive: true })
-    if (authStore.isAuthenticated) {
-        try {
-            const res = await membershipService.getRewardHistory()
-            totalPoints.value = res.data.reduce((sum, item) => sum + item.points_delta, 0)
-        } catch { /* silent */ }
-    }
+
+    const schedule = window.requestIdleCallback
+        ? window.requestIdleCallback
+        : (cb: () => void) => window.setTimeout(cb, 0)
+
+    schedule(() => {
+        void loadRewardHistory()
+    })
 })
 
 const currentTier = computed(() => getTierByPoints(totalPoints.value))

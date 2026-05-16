@@ -1,8 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted, computed, watch } from 'vue'
-import { useRouter } from 'vue-router'
-import { orderService } from '@/pages/cart/orderService'
-import { addressService, type Address } from '@/pages/profile/addressService'
+import { computed, onMounted } from 'vue'
 import { useAuthStore } from '@/stores/useAuthStore'
 import { profileHandler } from './profileHandler'
 import { getTierByPoints } from './membershipService'
@@ -13,17 +10,21 @@ import AddressesTab   from './components/AddressesTab.vue'
 import ProfileInfoTab from './components/ProfileInfoTab.vue'
 import AddressModal   from './components/AddressModal.vue'
 import MembershipCard from './components/MembershipCard.vue'
+import OrderDetailDrawer from './components/OrderDetailDrawer.vue'
 
 const authStore = useAuthStore()
 
 const {
     activeTab, orders, addresses, isLoading,
+    isOrderDetailLoading, isOrderDetailOpen,
+    selectedOrder, orderQrSession, orderQrStatusMessage,
     isAddressModalOpen, modalMode, isSubmitting,
     totalPoints, isMembershipLoading,
     provinces, districts, wards,
     selectedProvinceCode, selectedDistrictCode,
     addressForm,
     init,
+    openOrderDetail, closeOrderDetail,
     openAddressModal, openEditModal,
     handleAddAddress, handleDeleteAddress, handleSetDefault,
     handleLogout,
@@ -61,6 +62,7 @@ onMounted(init)
                     :format-price="formatPrice"
                     :format-date="formatDate"
                     :get-status="getStatus"
+                    @open-detail="openOrderDetail"
                 />
 
                 <div v-if="activeTab === 'membership'">
@@ -102,6 +104,18 @@ onMounted(init)
             @submit="handleAddAddress"
             @update:selected-province-code="selectedProvinceCode = $event"
             @update:selected-district-code="selectedDistrictCode = $event"
+        />
+
+        <OrderDetailDrawer
+            :is-open="isOrderDetailOpen"
+            :is-loading="isOrderDetailLoading"
+            :order="selectedOrder"
+            :qr-session="orderQrSession"
+            :qr-status-message="orderQrStatusMessage"
+            :format-price="formatPrice"
+            :format-date="formatDate"
+            :get-status="getStatus"
+            @close="closeOrderDetail"
         />
     </div>
 </template>

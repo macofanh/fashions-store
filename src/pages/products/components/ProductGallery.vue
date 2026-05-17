@@ -14,7 +14,9 @@ watch(
     (imgs) => {
         if (imgs?.length > 0) {
             const primary = imgs.find(i => i.is_primary) || imgs[0]
-            activeImage.value = getImageUrl(primary.image_url)
+            if (primary) {
+                activeImage.value = getImageUrl(primary.image_url)
+            }
         }
     },
     { immediate: true }

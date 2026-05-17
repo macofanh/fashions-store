@@ -47,9 +47,9 @@ function parseVietnameseAddress(formatted: string): { province: string; district
     // Lấy 3 phần cuối: ward, district, province
     const len = parts.length
     return {
-        province: len >= 1 ? parts[len - 1] : '',
-        district: len >= 2 ? parts[len - 2] : '',
-        ward:     len >= 3 ? parts[len - 3] : '',
+        province: len >= 1 ? (parts[len - 1] ?? '') : '',
+        district: len >= 2 ? (parts[len - 2] ?? '') : '',
+        ward:     len >= 3 ? (parts[len - 3] ?? '') : '',
     }
 }
 

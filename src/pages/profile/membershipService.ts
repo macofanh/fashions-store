@@ -72,16 +72,19 @@ export const MEMBERSHIP_TIERS = [
 ] as const
 
 export type TierKey = (typeof MEMBERSHIP_TIERS)[number]['key']
+export type MembershipTier = (typeof MEMBERSHIP_TIERS)[number]
 
-export function getTierByPoints(points: number) {
-    return MEMBERSHIP_TIERS.find(t => points >= t.minPoints) ?? MEMBERSHIP_TIERS[MEMBERSHIP_TIERS.length - 1]
+const DEFAULT_MEMBERSHIP_TIER: MembershipTier = MEMBERSHIP_TIERS[MEMBERSHIP_TIERS.length - 1]!
+
+export function getTierByPoints(points: number): MembershipTier {
+    return MEMBERSHIP_TIERS.find(t => points >= t.minPoints) ?? DEFAULT_MEMBERSHIP_TIER
 }
 
 /** Điểm cần để lên tier tiếp theo (null nếu đã max) */
-export function getNextTier(points: number) {
+export function getNextTier(points: number): MembershipTier | null {
     const idx = MEMBERSHIP_TIERS.findIndex(t => points >= t.minPoints)
     if (idx <= 0) return null
-    return MEMBERSHIP_TIERS[idx - 1]
+    return MEMBERSHIP_TIERS[idx - 1] ?? null
 }
 
 export const membershipService = {

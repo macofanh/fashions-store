@@ -1,137 +1,36 @@
 <script setup lang="ts">
-import { ref, reactive, computed, onMounted } from 'vue'
-import axiosClient from '@/lib/axiosClient'
-import { useAuthStore } from '@/stores/useAuthStore'
+import { useUserManagement } from './useUserManagement'
 
-const authStore = useAuthStore()
-
-const users = ref<any[]>([])
-const isLoading = ref(true)
-const searchQuery = ref('')
-
-const isDrawerOpen = ref(false)
-const activeTab = ref<'info' | 'points'>('info')
-const isSaving = ref(false)
-const saveError = ref('')
-
-const editForm = reactive({
-    user_id: 0,
-    full_name: '',
-    phone: '',
-    email: '',
-    role: '',
-    is_active: true,
-    total_points: 0,
-    created_at: '',
-    account_type: '',
-})
-
-const pointsForm = reactive({ points_delta: 0, reason: '' })
-const isAdjustingPoints = ref(false)
-const pointsError = ref('')
-const pointsSuccess = ref('')
-
-const filteredUsers = computed(() => {
-    const q = searchQuery.value.toLowerCase().trim()
-    if (!q) return users.value
-    return users.value.filter(u =>
-        u.full_name?.toLowerCase().includes(q) ||
-        u.email?.toLowerCase().includes(q) ||
-        u.phone?.includes(q)
-    )
-})
-
-const isCurrentUser = computed(() => editForm.user_id === authStore.user?.user_id)
-
-const fetchUsers = async () => {
-    isLoading.value = true
-    try {
-        const res = await axiosClient.get('/api/v1/users')
-        users.value = res.data
-    } catch (e) {
-        console.error('Lỗi lấy danh sách người dùng:', e)
-    } finally {
-        isLoading.value = false
-    }
-}
-
-const openDrawer = (user: any) => {
-    Object.assign(editForm, {
-        user_id:      user.user_id,
-        full_name:    user.full_name,
-        phone:        user.phone || '',
-        email:        user.email,
-        role:         user.role,
-        is_active:    user.is_active,
-        total_points: user.total_points,
-        created_at:   user.created_at,
-        account_type: user.account_type,
-    })
-    pointsForm.points_delta = 0
-    pointsForm.reason = ''
-    pointsError.value = ''
-    pointsSuccess.value = ''
-    saveError.value = ''
-    activeTab.value = 'info'
-    isDrawerOpen.value = true
-}
-
-const closeDrawer = () => { isDrawerOpen.value = false }
-
-const handleSave = async () => {
-    isSaving.value = true
-    saveError.value = ''
-    try {
-        const res = await axiosClient.put(`/api/v1/users/${editForm.user_id}`, {
-            full_name: editForm.full_name,
-            phone:     editForm.phone || null,
-            role:      editForm.role,
-            is_active: editForm.is_active,
-        })
-        const idx = users.value.findIndex(u => u.user_id === editForm.user_id)
-        if (idx !== -1) users.value[idx] = { ...users.value[idx], ...res.data }
-        closeDrawer()
-    } catch (e: any) {
-        saveError.value = e.response?.data?.detail || 'Có lỗi xảy ra khi lưu.'
-    } finally {
-        isSaving.value = false
-    }
-}
-
-const handleAdjustPoints = async () => {
-    if (!pointsForm.points_delta || !pointsForm.reason.trim()) {
-        pointsError.value = 'Vui lòng nhập số điểm và lý do.'
-        return
-    }
-    isAdjustingPoints.value = true
-    pointsError.value = ''
-    pointsSuccess.value = ''
-    try {
-        await axiosClient.post(`/api/v1/users/${editForm.user_id}/reward-adjust`, {
-            points_delta: Number(pointsForm.points_delta),
-            reason: pointsForm.reason.trim(),
-        })
-        editForm.total_points += Number(pointsForm.points_delta)
-        const idx = users.value.findIndex(u => u.user_id === editForm.user_id)
-        if (idx !== -1) users.value[idx].total_points = editForm.total_points
-        pointsSuccess.value = `Đã ${Number(pointsForm.points_delta) > 0 ? 'cộng' : 'trừ'} ${Math.abs(Number(pointsForm.points_delta))} điểm thành công.`
-        pointsForm.points_delta = 0
-        pointsForm.reason = ''
-    } catch (e: any) {
-        pointsError.value = e.response?.data?.detail || 'Có lỗi xảy ra.'
-    } finally {
-        isAdjustingPoints.value = false
-    }
-}
-
-const formatDate = (dateStr: string) => {
-    if (!dateStr) return 'N/A'
-    return new Date(dateStr).toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric' })
-}
-
-const roleLabel: Record<string, string> = { admin: 'Admin', staff: 'Staff', customer: 'Khách hàng' }
-
-onMounted(fetchUsers)
+const {
+    authStore,
+    users,
+    isLoading,
+    searchQuery,
+    currentPage,
+    pageSize,
+    totalUsers,
+    totalPages,
+    isDrawerOpen,
+    activeTab,
+    isSaving,
+    saveError,
+    editForm,
+    pointsForm,
+    isAdjustingPoints,
+    pointsError,
+    pointsSuccess,
+    filteredUsers,
+    paginationItems,
+    isCurrentUser,
+    fetchUsers,
+    goToPage,
+    openDrawer,
+    closeDrawer,
+    handleSave,
+    handleAdjustPoints,
+    formatDate,
+    roleLabel
+} = useUserManagement()
 </script>
 
 <template>
@@ -141,7 +40,7 @@ onMounted(fetchUsers)
             <div>
                 <h1 class="text-2xl font-bold text-slate-900">Quản lý Người dùng</h1>
                 <p class="text-sm text-slate-500 mt-1">
-                    {{ isLoading ? 'Đang tải...' : `${filteredUsers.length} / ${users.length} tài khoản` }}
+                    {{ isLoading ? 'Đang tải...' : `${filteredUsers.length} / ${totalUsers} tài khoản` }}
                 </p>
             </div>
             <div class="relative w-full sm:w-80">
@@ -236,8 +135,51 @@ onMounted(fetchUsers)
                 </tbody>
             </table>
             <!-- Footer -->
-            <div class="px-5 py-3 border-t border-slate-50 text-xs text-slate-400">
-                Hiển thị {{ filteredUsers.length }} / {{ users.length }} người dùng
+            <div class="px-5 py-3 border-t border-slate-50 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <p class="text-xs text-slate-400">
+                    Hiển thị {{ filteredUsers.length }} / {{ totalUsers }} người dùng
+                </p>
+
+                <div v-if="totalPages > 1" class="flex items-center gap-1.5">
+                    <button
+                        @click="goToPage(currentPage - 1)"
+                        :disabled="currentPage === 1"
+                        class="w-8 h-8 inline-flex items-center justify-center rounded-lg border border-slate-200 text-slate-500 disabled:opacity-40 disabled:cursor-not-allowed hover:bg-slate-50"
+                        title="Trang trước"
+                    >
+                        <span class="material-symbols-outlined text-[18px]">chevron_left</span>
+                    </button>
+
+                    <template v-for="(page, index) in paginationItems" :key="`${page}-${index}`">
+                        <span
+                            v-if="page === '...'"
+                            class="w-8 h-8 inline-flex items-center justify-center text-xs text-slate-400"
+                        >
+                            ...
+                        </span>
+                        <button
+                            v-else
+                            @click="goToPage(Number(page))"
+                            :class="[
+                                'w-8 h-8 rounded-lg text-xs font-semibold border transition-colors',
+                                page === currentPage
+                                    ? 'bg-indigo-600 border-indigo-600 text-white'
+                                    : 'border-slate-200 text-slate-500 hover:bg-slate-50'
+                            ]"
+                        >
+                            {{ page }}
+                        </button>
+                    </template>
+
+                    <button
+                        @click="goToPage(currentPage + 1)"
+                        :disabled="currentPage === totalPages"
+                        class="w-8 h-8 inline-flex items-center justify-center rounded-lg border border-slate-200 text-slate-500 disabled:opacity-40 disabled:cursor-not-allowed hover:bg-slate-50"
+                        title="Trang sau"
+                    >
+                        <span class="material-symbols-outlined text-[18px]">chevron_right</span>
+                    </button>
+                </div>
             </div>
         </div>
 

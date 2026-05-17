@@ -180,11 +180,6 @@ const formatPrice = (price: number) =>
                     <span v-else class="material-symbols-outlined text-[17px]">shopping_bag</span>
                     {{ isOutOfStock ? 'Hết hàng' : 'Thêm vào giỏ' }}
                 </button>
-
-                <button class="w-full border border-border-light text-text-muted py-2.5 text-sm font-medium rounded-lg hover:border-red-300 hover:text-red-500 transition-all flex items-center justify-center gap-1.5 bg-white">
-                    <span class="material-symbols-outlined text-[17px]">favorite</span>
-                    Yêu thích
-                </button>
             </div>
 
             <!-- Trust badges -->

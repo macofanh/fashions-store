@@ -8,9 +8,15 @@ const {
     isModalOpen,
     isEditing,
     currentVoucher,
+    fieldErrors,
+    formatMoneyInput,
     fetchVouchers,
     openCreateModal,
     openEditModal,
+    handleDiscountTypeChange,
+    clearFieldError,
+    updateMoneyField,
+    updateDiscountValue,
     handleSubmit,
     deleteVoucher,
     formatPrice
@@ -177,7 +183,7 @@ const {
                                 </div>
                                 <div>
                                     <label class="text-xs font-semibold text-slate-500 block mb-1.5">Loại giảm giá</label>
-                                    <select v-model="currentVoucher.discount_type"
+                                    <select v-model="currentVoucher.discount_type" @change="handleDiscountTypeChange"
                                         class="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-sm outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100 transition-all bg-white">
                                         <option value="PERCENT">Phần trăm (%)</option>
                                         <option value="FIXED_AMOUNT">Số tiền cố định (VND)</option>
@@ -186,20 +192,37 @@ const {
                                 </div>
                                 <div>
                                     <label class="text-xs font-semibold text-slate-500 block mb-1.5">Giá trị giảm</label>
-                                    <input v-model="currentVoucher.discount_value" type="number" required
+                                    <input
+                                        :value="currentVoucher.discount_type === 'PERCENT' ? String(currentVoucher.discount_value ?? 0) : formatMoneyInput(currentVoucher.discount_value)"
+                                        @input="updateDiscountValue"
+                                        type="text"
+                                        inputmode="numeric"
+                                        required
                                         :disabled="currentVoucher.discount_type === 'FREE_SHIP'"
-                                        class="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-sm outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100 transition-all disabled:opacity-40 disabled:cursor-not-allowed" />
+                                        :class="['w-full border rounded-xl px-4 py-2.5 text-sm outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100 transition-all disabled:opacity-40 disabled:cursor-not-allowed', fieldErrors.discount_value ? 'border-red-300 focus:ring-red-100 focus:border-red-400' : 'border-slate-200']"
+                                        :placeholder="currentVoucher.discount_type === 'PERCENT' ? '0 - 100' : '0'" />
+                                    <p v-if="fieldErrors.discount_value" class="mt-1 text-xs text-red-500">{{ fieldErrors.discount_value }}</p>
                                 </div>
                                 <div>
                                     <label class="text-xs font-semibold text-slate-500 block mb-1.5">Đơn tối thiểu (₫)</label>
-                                    <input v-model="currentVoucher.min_order_value" type="number"
-                                        class="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-sm outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100 transition-all" />
+                                    <input
+                                        :value="formatMoneyInput(currentVoucher.min_order_value)"
+                                        @input="updateMoneyField('min_order_value', $event)"
+                                        type="text"
+                                        inputmode="numeric"
+                                        :class="['w-full border rounded-xl px-4 py-2.5 text-sm outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100 transition-all', fieldErrors.min_order_value ? 'border-red-300 focus:ring-red-100 focus:border-red-400' : 'border-slate-200']" />
+                                    <p v-if="fieldErrors.min_order_value" class="mt-1 text-xs text-red-500">{{ fieldErrors.min_order_value }}</p>
                                 </div>
                                 <div>
                                     <label class="text-xs font-semibold text-slate-500 block mb-1.5">Giảm tối đa (₫, nếu là %)</label>
-                                    <input v-model="currentVoucher.max_discount" type="number"
+                                    <input
+                                        :value="formatMoneyInput(currentVoucher.max_discount)"
+                                        @input="updateMoneyField('max_discount', $event)"
+                                        type="text"
+                                        inputmode="numeric"
                                         :disabled="currentVoucher.discount_type !== 'PERCENT'"
-                                        class="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-sm outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100 transition-all disabled:opacity-40 disabled:cursor-not-allowed" />
+                                        :class="['w-full border rounded-xl px-4 py-2.5 text-sm outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100 transition-all disabled:opacity-40 disabled:cursor-not-allowed', fieldErrors.max_discount ? 'border-red-300 focus:ring-red-100 focus:border-red-400' : 'border-slate-200']" />
+                                    <p v-if="fieldErrors.max_discount" class="mt-1 text-xs text-red-500">{{ fieldErrors.max_discount }}</p>
                                 </div>
                                 <div>
                                     <label class="text-xs font-semibold text-slate-500 block mb-1.5">Ngày bắt đầu <span class="text-red-400">*</span></label>
@@ -226,41 +249,12 @@ const {
                                 </div>
                             </div>
 
-                            <!-- Banner -->
-                            <div class="pt-4 border-t border-slate-100">
-                                <p class="text-xs font-bold text-slate-500 uppercase tracking-wider mb-4">Tùy chỉnh Banner</p>
-                                <div class="grid grid-cols-2 gap-4">
-                                    <div>
-                                        <label class="text-xs font-semibold text-slate-500 block mb-1.5">Màu nền</label>
-                                        <div class="flex gap-2 items-center">
-                                            <input v-model="currentVoucher.bg_color" type="color"
-                                                class="w-10 h-10 border border-slate-200 rounded-xl cursor-pointer p-1" />
-                                            <input v-model="currentVoucher.bg_color" type="text"
-                                                class="flex-grow border border-slate-200 rounded-xl px-3 py-2.5 text-sm outline-none focus:border-indigo-400 transition-all"
-                                                placeholder="#17b0cf" />
-                                        </div>
-                                    </div>
-                                    <div>
-                                        <label class="text-xs font-semibold text-slate-500 block mb-1.5">Thứ tự ưu tiên</label>
-                                        <input v-model="currentVoucher.sort_order" type="number" min="0"
-                                            class="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-sm outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100 transition-all"
-                                            placeholder="0" />
-                                    </div>
-                                    <div class="col-span-2">
-                                        <label class="text-xs font-semibold text-slate-500 block mb-1.5">URL ảnh banner</label>
-                                        <input v-model="currentVoucher.banner_image" type="text"
-                                            class="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-sm outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100 transition-all"
-                                            placeholder="https://..." />
-                                        <div v-if="currentVoucher.banner_image" class="mt-2 h-20 rounded-xl overflow-hidden border border-slate-100">
-                                            <img :src="currentVoucher.banner_image" class="w-full h-full object-cover" alt="Banner preview" />
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-
                             <!-- Toggle active -->
-                            <button type="button" @click="currentVoucher.is_active = !currentVoucher.is_active"
-                                :class="['flex items-center justify-between w-full p-4 rounded-xl border-2 transition-all', currentVoucher.is_active ? 'border-emerald-200 bg-emerald-50' : 'border-slate-200 bg-slate-50']">
+                            <button
+                                type="button"
+                                @click="currentVoucher.is_active = !currentVoucher.is_active"
+                                :class="['flex items-center justify-between w-full p-4 rounded-xl border-2 transition-all', currentVoucher.is_active ? 'border-emerald-200 bg-emerald-50' : 'border-slate-200 bg-slate-50']"
+                            >
                                 <div class="flex items-center gap-3">
                                     <div :class="['w-9 h-9 rounded-full flex items-center justify-center', currentVoucher.is_active ? 'bg-emerald-100' : 'bg-slate-100']">
                                         <span :class="['material-symbols-outlined text-[20px]', currentVoucher.is_active ? 'text-emerald-600' : 'text-slate-400']">
@@ -268,25 +262,28 @@ const {
                                         </span>
                                     </div>
                                     <div class="text-left">
-                                        <p :class="['text-sm font-semibold', currentVoucher.is_active ? 'text-emerald-700' : 'text-slate-500']">
-                                            {{ currentVoucher.is_active ? 'Voucher đang hoạt động' : 'Voucher đã tắt' }}
-                                        </p>
-                                        <p class="text-[10px] text-slate-400">Nhấn để {{ currentVoucher.is_active ? 'tắt' : 'bật' }}</p>
+                                        <p class="text-sm font-semibold text-slate-900">Trạng thái hoạt động</p>
+                                        <p class="text-xs text-slate-500">Voucher đang {{ currentVoucher.is_active ? 'bật' : 'tắt' }}</p>
                                     </div>
                                 </div>
-                                <div :class="['w-11 h-6 rounded-full transition-colors relative shrink-0', currentVoucher.is_active ? 'bg-emerald-500' : 'bg-slate-300']">
-                                    <div :class="['absolute top-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform', currentVoucher.is_active ? 'translate-x-5' : 'translate-x-0.5']"></div>
-                                </div>
+                                <span :class="['text-xs font-semibold px-2.5 py-1 rounded-full', currentVoucher.is_active ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-500']">
+                                    {{ currentVoucher.is_active ? 'Hoạt động' : 'Đã tắt' }}
+                                </span>
                             </button>
 
-                            <div class="flex gap-3 pt-2">
-                                <button type="button" @click="isModalOpen = false"
-                                    class="flex-1 py-2.5 text-sm font-semibold text-slate-500 hover:text-slate-700 border border-slate-200 rounded-xl transition-colors">
+                            <div class="flex justify-end gap-3 pt-2">
+                                <button
+                                    type="button"
+                                    @click="isModalOpen = false"
+                                    class="px-4 py-2.5 rounded-xl border border-slate-200 text-slate-600 text-sm font-semibold hover:bg-slate-50 transition-colors"
+                                >
                                     Hủy
                                 </button>
-                                <button type="submit"
-                                    class="flex-1 bg-indigo-600 text-white py-2.5 text-sm font-semibold rounded-xl hover:bg-indigo-700 transition-colors">
-                                    {{ isEditing ? 'Cập nhật' : 'Tạo Voucher' }}
+                                <button
+                                    type="submit"
+                                    class="px-5 py-2.5 rounded-xl bg-indigo-600 text-white text-sm font-semibold hover:bg-indigo-700 transition-colors"
+                                >
+                                    {{ isEditing ? 'Lưu thay đổi' : 'Tạo voucher' }}
                                 </button>
                             </div>
                         </form>

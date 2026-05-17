@@ -87,7 +87,7 @@ const profileMenuItems = computed<ProfileMenuItem[]>(() => [
         key: 'profile',
         label: 'Hồ sơ của tôi',
         icon: 'person',
-        to: '/profile',
+        to: '/profile?tab=profile',
     },
     {
         key: 'cart',
@@ -105,7 +105,7 @@ const profileMenuItems = computed<ProfileMenuItem[]>(() => [
         key: 'orders',
         label: 'Đơn hàng của tôi',
         icon: 'package_2',
-        to: '/orders',
+        to: '/profile?tab=orders',
     },
     {
         key: 'logout',

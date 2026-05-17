@@ -53,6 +53,17 @@ function parseVietnameseAddress(formatted: string): { province: string; district
     }
 }
 
+function extractStreetAddress(formatted: string): string {
+    const cleaned = formatted.replace(/,?\s*Việt Nam\s*$/i, '').trim()
+    const parts = cleaned.split(',').map(s => s.trim()).filter(Boolean)
+
+    if (parts.length <= 3) {
+        return parts[0] ?? cleaned
+    }
+
+    return parts.slice(0, parts.length - 3).join(', ')
+}
+
 // Khi user chọn địa chỉ từ Goong
 const handleGoongSelected = (detail: GoongAddressDetail | null) => {
     if (!detail) return
@@ -61,8 +72,10 @@ const handleGoongSelected = (detail: GoongAddressDetail | null) => {
     if (!addr) return
 
     const parsed = parseVietnameseAddress(addr)
+    const streetAddress = extractStreetAddress(addr)
 
     if (parsed.province) {
+        props.form.street_address = streetAddress || addr
         props.form.province  = parsed.province
         props.form.district  = parsed.district
         props.form.ward      = parsed.ward
@@ -218,7 +231,8 @@ watch(() => props.form.street_address, (val) => {
                         <div class="flex items-center gap-2.5 min-w-0">
                             <span class="material-symbols-outlined text-primary text-[18px] shrink-0" style="font-variation-settings:'FILL' 1">location_on</span>
                             <p class="text-sm text-fashion-black font-display truncate">
-                                {{ form.ward }}, {{ form.district }}, {{ form.province }}
+                                {{ form.street_address }}
+                                <span v-if="form.ward || form.district || form.province">, {{ form.ward }}, {{ form.district }}, {{ form.province }}</span>
                             </p>
                         </div>
                         <button

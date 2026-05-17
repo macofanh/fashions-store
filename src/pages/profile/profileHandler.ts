@@ -1,5 +1,5 @@
 import { ref, watch } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/useAuthStore'
 import { useUIStore } from '@/stores/useUIStore'
 import { orderService } from '@/pages/cart/orderService'
@@ -65,13 +65,40 @@ function isOrderPaid(orderData: any) {
     return false
 }
 
+function normalizeAddressName(value: string) {
+    return value
+        .trim()
+        .toLowerCase()
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .replace(/^(tp\.?|thanh pho|tinh|quan|huyen|phuong|xa|thi tran)\s+/g, '')
+        .replace(/^(thanh pho|thành phố|quận|huyện|phường|xã|thị trấn)\s+/g, '')
+        .replace(/[.(),]/g, ' ')
+        .replace(/\s+/g, ' ')
+        .trim()
+}
+
+function findAddressCodeByName<T extends { code: number; name: string }>(items: T[], name: string) {
+    const normalizedName = normalizeAddressName(name)
+    return items.find(item => normalizeAddressName(item.name) === normalizedName)?.code ?? ''
+}
+
 export function profileHandler() {
+    const route    = useRoute()
     const router    = useRouter()
     const authStore = useAuthStore()
     const uiStore   = useUIStore()
 
+    const resolveProfileTab = (value: unknown): ProfileTab => {
+        const tab = Array.isArray(value) ? value[0] : value
+        if (tab === 'membership' || tab === 'addresses' || tab === 'profile' || tab === 'orders') {
+            return tab
+        }
+        return 'orders'
+    }
+
     // ── State ──────────────────────────────────────────────────────
-    const activeTab           = ref<ProfileTab>('orders')
+    const activeTab           = ref<ProfileTab>(resolveProfileTab(route.query.tab))
     const orders              = ref<any[]>([])
     const addresses           = ref<Address[]>([])
     const isLoading           = ref(true)
@@ -249,6 +276,24 @@ export function profileHandler() {
         loadTab(tab)
     })
 
+    watch(
+        () => route.query.tab,
+        (tab) => {
+            const resolvedTab = resolveProfileTab(tab)
+            if (resolvedTab !== activeTab.value) {
+                activeTab.value = resolvedTab
+            }
+        },
+        { immediate: true }
+    )
+
+    watch(activeTab, (tab) => {
+        const currentTab = resolveProfileTab(route.query.tab)
+        if (currentTab !== tab) {
+            router.replace({ query: { ...route.query, tab } })
+        }
+    })
+
     const refreshAddresses = async () => {
         const res = await profileServices.getMyAddresses()
         addresses.value = res.data
@@ -328,7 +373,7 @@ export function profileHandler() {
     }
 
     // ── Mở modal sửa ──────────────────────────────────────────────
-    const openEditModal = (addr: Address) => {
+    const openEditModal = async (addr: Address) => {
         modalMode.value = 'edit'
         editingAddressId.value = addr.address_id
         addressForm.value = {
@@ -342,10 +387,32 @@ export function profileHandler() {
             latitude:       addr.latitude ?? null,
             longitude:      addr.longitude ?? null,
         }
-        selectedProvinceCode.value = ''
-        selectedDistrictCode.value = ''
-        districts.value = []
-        wards.value = []
+
+        selectedProvinceCode.value = findAddressCodeByName(provinces.value, addr.province)
+        if (selectedProvinceCode.value !== '') {
+            try {
+                const districtRes = await profileServices.getDistricts(selectedProvinceCode.value as number)
+                districts.value = districtRes.data.districts || []
+                selectedDistrictCode.value = findAddressCodeByName(districts.value, addr.district)
+
+                if (selectedDistrictCode.value !== '') {
+                    const wardRes = await profileServices.getWards(selectedDistrictCode.value as number)
+                    wards.value = wardRes.data.wards || []
+                    addressForm.value.ward = wards.value.find(ward => normalizeAddressName(ward.name) === normalizeAddressName(addr.ward))?.name || addr.ward
+                } else {
+                    wards.value = []
+                }
+            } catch (error) {
+                console.error('Lỗi đồng bộ địa chỉ khi sửa:', error)
+                selectedDistrictCode.value = ''
+                districts.value = []
+                wards.value = []
+            }
+        } else {
+            selectedDistrictCode.value = ''
+            districts.value = []
+            wards.value = []
+        }
         isAddressModalOpen.value = true
     }
 

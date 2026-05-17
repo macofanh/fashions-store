@@ -1,6 +1,7 @@
 import { ref, computed, onMounted } from 'vue'
 import axiosClient from '@/lib/axiosClient'
 import { useUIStore } from '@/stores/useUIStore'
+import { notificationService } from '@/pages/notifications/notificationService'
 
 export function useOrderManagement() {
     const uiStore = useUIStore()
@@ -61,6 +62,34 @@ export function useOrderManagement() {
         return list
     })
 
+    const getOrderForNotification = async (orderId: number) => {
+        const existingOrder = orders.value.find(o => o.order_id === orderId)
+        if (existingOrder?.user_id) return existingOrder
+        if (selectedOrder.value?.order_id === orderId && selectedOrder.value.user_id) {
+            return selectedOrder.value
+        }
+
+        const response = await axiosClient.get(`/api/v1/orders/${orderId}?mine_only=false`)
+        return response.data
+    }
+
+    const createOrderStatusNotification = async (orderId: number, newStatus: string) => {
+        const order = await getOrderForNotification(orderId)
+        if (!order?.user_id) {
+            throw new Error('Không tìm thấy user của đơn hàng.')
+        }
+
+        const statusLabel = statusConfig[newStatus]?.label || newStatus
+        await notificationService.createNotification({
+            user_id: order.user_id,
+            type: 'ORDER_STATUS_UPDATED',
+            title: 'Cập nhật trạng thái đơn hàng',
+            body: `Đơn hàng ${order.order_code || `#${order.order_id}`} đã chuyển sang trạng thái "${statusLabel}".`,
+            ref_type: 'order',
+            ref_id: order.order_id,
+        })
+    }
+
     const handleUpdateStatus = async (orderId: number, newStatus: string) => {
         try {
             await axiosClient.put(`/api/v1/orders/${orderId}/status`, {
@@ -74,6 +103,13 @@ export function useOrderManagement() {
                 selectedOrder.value.status = newStatus
             }
             uiStore.success('Cập nhật trạng thái thành công.')
+
+            try {
+                await createOrderStatusNotification(orderId, newStatus)
+            } catch (notificationError) {
+                console.error('Lỗi tạo thông báo trạng thái đơn hàng:', notificationError)
+                uiStore.error('Đã cập nhật trạng thái, nhưng chưa tạo được thông báo cho khách hàng.')
+            }
         } catch (error: any) {
             uiStore.error(error.response?.data?.detail || 'Cập nhật thất bại.')
         }

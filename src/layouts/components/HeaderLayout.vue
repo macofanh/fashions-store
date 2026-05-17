@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/useAuthStore'
 import { useCartStore } from '@/stores/useCartStore'
@@ -7,6 +7,10 @@ import { useUIStore } from '@/stores/useUIStore'
 import { APP_NAME } from '@/lib/appConfig'
 import type { NavLink, ProfileMenuItem } from './headerTypes'
 import { membershipService, getTierByPoints } from '@/pages/profile/membershipService'
+import {
+    notificationService,
+    type NotificationItem,
+} from '@/pages/notifications/notificationService'
 
 const authStore = useAuthStore()
 const cartStore = useCartStore()
@@ -15,7 +19,17 @@ const router = useRouter()
 
 const isScrolled = ref(false)
 const isMobileMenuOpen = ref(false)
+const isNotificationOpen = ref(false)
+const notificationRoot = ref<HTMLElement | null>(null)
 const totalPoints = ref(0)
+const notifications = ref<NotificationItem[]>([])
+const unreadCount = ref(0)
+const isLoadingNotifications = ref(false)
+const isMarkingAllRead = ref(false)
+const knownNotificationKeys = ref(new Set<string>())
+const hasInitializedNotifications = ref(false)
+let notificationPollingTimer: number | null = null
+const NOTIFICATION_POLLING_INTERVAL = 7000
 
 // Fetch điểm khi đã đăng nhập
 const loadRewardHistory = async () => {
@@ -26,8 +40,134 @@ const loadRewardHistory = async () => {
     } catch { /* silent */ }
 }
 
+const getNotificationId = (notification: NotificationItem) =>
+    notification.notification_id ?? notification.id
+
+const getNotificationKey = (notification: NotificationItem) =>
+    String(getNotificationId(notification) ?? `${notification.created_at}-${notification.title}`)
+
+const syncKnownNotifications = (items: NotificationItem[]) => {
+    knownNotificationKeys.value = new Set(items.map(getNotificationKey))
+}
+
+const showNewNotificationToasts = (items: NotificationItem[]) => {
+    if (!hasInitializedNotifications.value) return
+
+    const newNotifications = items.filter(
+        notification => !knownNotificationKeys.value.has(getNotificationKey(notification))
+    )
+
+    newNotifications
+        .slice()
+        .reverse()
+        .forEach((notification) => {
+            uiStore.info(`${notification.title}: ${notification.body}`)
+        })
+}
+
+const loadNotifications = async (options?: { detectNew?: boolean }) => {
+    if (!authStore.isAuthenticated) return
+
+    const shouldShowLoading = !options?.detectNew
+    if (shouldShowLoading) {
+        isLoadingNotifications.value = true
+    }
+    try {
+        const [notificationsResponse, unreadResponse] = await Promise.all([
+            notificationService.getMyNotifications({ page: 1, page_size: 8 }),
+            notificationService.getUnreadCount(),
+        ])
+
+        if (options?.detectNew) {
+            showNewNotificationToasts(notificationsResponse.data.items)
+        }
+
+        notifications.value = notificationsResponse.data.items
+        unreadCount.value = unreadResponse.data.unread_count
+        syncKnownNotifications(notificationsResponse.data.items)
+        hasInitializedNotifications.value = true
+    } catch { /* silent */ }
+    finally {
+        if (shouldShowLoading) {
+            isLoadingNotifications.value = false
+        }
+    }
+}
+
+const startNotificationPolling = () => {
+    if (notificationPollingTimer !== null) return
+
+    notificationPollingTimer = window.setInterval(() => {
+        void loadNotifications({ detectNew: true })
+    }, NOTIFICATION_POLLING_INTERVAL)
+}
+
+const stopNotificationPolling = () => {
+    if (notificationPollingTimer === null) return
+
+    window.clearInterval(notificationPollingTimer)
+    notificationPollingTimer = null
+}
+
+const toggleNotifications = async () => {
+    isNotificationOpen.value = !isNotificationOpen.value
+
+    if (isNotificationOpen.value) {
+        await loadNotifications()
+    }
+}
+
+const markNotificationAsRead = async (notification: NotificationItem) => {
+    if (notification.is_read) return
+
+    const notificationId = getNotificationId(notification)
+    if (!notificationId) return
+
+    try {
+        await notificationService.markAsRead(notificationId)
+        notification.is_read = true
+        unreadCount.value = Math.max(0, unreadCount.value - 1)
+    } catch { /* silent */ }
+}
+
+const markAllNotificationsAsRead = async () => {
+    if (!unreadCount.value || isMarkingAllRead.value) return
+
+    isMarkingAllRead.value = true
+    try {
+        await notificationService.markAllAsRead()
+        notifications.value = notifications.value.map((notification) => ({
+            ...notification,
+            is_read: true,
+        }))
+        unreadCount.value = 0
+    } catch { /* silent */ }
+    finally {
+        isMarkingAllRead.value = false
+    }
+}
+
+const formatNotificationTime = (createdAt: string) => {
+    const createdDate = new Date(createdAt)
+    if (Number.isNaN(createdDate.getTime())) return ''
+
+    return new Intl.DateTimeFormat('vi-VN', {
+        day: '2-digit',
+        month: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit',
+    }).format(createdDate)
+}
+
+const handleDocumentClick = (event: MouseEvent) => {
+    if (!notificationRoot.value?.contains(event.target as Node)) {
+        isNotificationOpen.value = false
+    }
+}
+
 onMounted(() => {
     window.addEventListener('scroll', handleScroll, { passive: true })
+    document.addEventListener('click', handleDocumentClick)
 
     const schedule = window.requestIdleCallback
         ? window.requestIdleCallback
@@ -35,6 +175,10 @@ onMounted(() => {
 
     schedule(() => {
         void loadRewardHistory()
+        void loadNotifications()
+        if (authStore.isAuthenticated) {
+            startNotificationPolling()
+        }
     })
 })
 
@@ -45,7 +189,28 @@ const handleScroll = () => {
     isScrolled.value = window.scrollY > 60
 }
 
-onUnmounted(() => window.removeEventListener('scroll', handleScroll))
+onUnmounted(() => {
+    window.removeEventListener('scroll', handleScroll)
+    document.removeEventListener('click', handleDocumentClick)
+    stopNotificationPolling()
+})
+
+watch(
+    () => authStore.isAuthenticated,
+    async (isAuthenticated) => {
+        if (isAuthenticated) {
+            await loadNotifications()
+            startNotificationPolling()
+            return
+        }
+
+        stopNotificationPolling()
+        notifications.value = []
+        unreadCount.value = 0
+        knownNotificationKeys.value = new Set()
+        hasInitializedNotifications.value = false
+    }
+)
 
 // ─── Actions ──────────────────────────────────────────────────────────────────
 const handleLogout = async () => {
@@ -62,6 +227,12 @@ const handleLogout = async () => {
     authStore.logout()
     cartStore.clearGuestCart()
     isMobileMenuOpen.value = false
+    isNotificationOpen.value = false
+    notifications.value = []
+    unreadCount.value = 0
+    knownNotificationKeys.value = new Set()
+    hasInitializedNotifications.value = false
+    stopNotificationPolling()
     router.push({ name: 'login' })
 }
 
@@ -179,6 +350,93 @@ const profileMenuItems = computed<ProfileMenuItem[]>(() => [
 
                     <!-- Auth: logged in -->
                     <template v-if="authStore.isAuthenticated">
+                        <!-- Notifications -->
+                        <div ref="notificationRoot" class="relative">
+                            <button
+                                class="icon-btn"
+                                aria-label="Thông báo"
+                                @click.stop="toggleNotifications"
+                            >
+                                <span class="material-symbols-outlined text-[24px]">notifications</span>
+                                <span
+                                    v-if="unreadCount > 0"
+                                    class="absolute -top-1 -right-1 min-w-4 h-4 px-1 bg-primary text-white text-[8px] rounded-full flex items-center  font-bold leading-none"
+                                >{{ unreadCount > 99 ? '99+' : unreadCount }}</span>
+                            </button>
+
+                            <Transition name="notification-panel">
+                                <div
+                                    v-if="isNotificationOpen"
+                                    class="absolute right-0 top-full pt-3 z-20"
+                                >
+                                    <div class="w-[360px] max-w-[calc(100vw-2rem)] overflow-hidden rounded-lg border border-border-light bg-white shadow-xl">
+                                        <div class="flex items-center justify-between gap-4 border-b border-border-light px-4 py-3">
+                                            <div>
+                                                <p class="text-sm font-bold text-fashion-black">Thông báo</p>
+                                                <p class="text-xs text-text-muted">{{ unreadCount }} chưa đọc</p>
+                                            </div>
+                                            <button
+                                                class="text-xs font-medium text-primary transition-colors hover:text-primary-dark disabled:cursor-not-allowed disabled:text-zinc-300"
+                                                :disabled="!unreadCount || isMarkingAllRead"
+                                                @click="markAllNotificationsAsRead"
+                                            >
+                                                Đánh dấu tất cả đã đọc
+                                            </button>
+                                        </div>
+
+                                        <div class="max-h-[420px] overflow-y-auto">
+                                            <div
+                                                v-if="isLoadingNotifications"
+                                                class="px-4 py-8 text-center text-sm text-text-muted"
+                                            >
+                                                Đang tải thông báo...
+                                            </div>
+
+                                            <div
+                                                v-else-if="notifications.length === 0"
+                                                class="px-4 py-8 text-center text-sm text-text-muted"
+                                            >
+                                                Chưa có thông báo nào
+                                            </div>
+
+                                            <button
+                                                v-for="notification in notifications"
+                                                v-else
+                                                :key="getNotificationId(notification) ?? `${notification.created_at}-${notification.title}`"
+                                                class="notification-item"
+                                                @click="markNotificationAsRead(notification)"
+                                            >
+                                                <img
+                                                    v-if="notification.image_url"
+                                                    :src="notification.image_url"
+                                                    :alt="notification.title"
+                                                    class="h-10 w-10 shrink-0 rounded object-cover"
+                                                />
+                                                <span
+                                                    v-else
+                                                    class="flex h-10 w-10 shrink-0 items-center justify-center rounded bg-primary-light text-primary"
+                                                >
+                                                    <span class="material-symbols-outlined text-[20px] leading-none">notifications</span>
+                                                </span>
+
+                                                <span class="min-w-0 flex-1 text-left">
+                                                    <span class="flex items-start justify-between gap-3">
+                                                        <span class="text-sm font-medium leading-snug text-fashion-black">{{ notification.title }}</span>
+                                                        <span
+                                                            v-if="!notification.is_read"
+                                                            class="mt-1 h-2 w-2 shrink-0 rounded-full bg-primary"
+                                                        ></span>
+                                                    </span>
+                                                    <span class="mt-1 block text-xs leading-relaxed text-zinc-500">{{ notification.body }}</span>
+                                                    <span class="mt-1 block text-[11px] text-text-muted">{{ formatNotificationTime(notification.created_at) }}</span>
+                                                </span>
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </Transition>
+                        </div>
+
                         <div class="relative group">
                             <button class="icon-btn">
                                 <span class="material-symbols-outlined text-[24px]">person</span>
@@ -329,6 +587,21 @@ const profileMenuItems = computed<ProfileMenuItem[]>(() => [
 
 .mobile-nav-link {
     @apply text-lg font-medium text-fashion-black hover:text-primary transition-colors;
+}
+
+.notification-item {
+    @apply flex w-full items-center gap-3 border-b border-border-light px-4 py-3 text-center transition-colors last:border-b-0 hover:bg-border-light/60;
+}
+
+.notification-panel-enter-active,
+.notification-panel-leave-active {
+    transition: opacity 0.2s ease, transform 0.2s ease;
+}
+
+.notification-panel-enter-from,
+.notification-panel-leave-to {
+    opacity: 0;
+    transform: translateY(-6px);
 }
 
 .mobile-menu-enter-active,

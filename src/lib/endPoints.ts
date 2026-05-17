@@ -47,4 +47,11 @@ export const apiEndpoints = {
         claim: (id: number) => `${basePrefix}/promotions/vouchers/${id}/claim`,
         myVouchers: `${basePrefix}/promotions/my-vouchers`,
     },
+    notifications: {
+        create: `${basePrefix}/notifications`,
+        my: `${basePrefix}/notifications/my`,
+        unreadCount: `${basePrefix}/notifications/my/unread-count`,
+        markAsRead: (id: number) => `${basePrefix}/notifications/${id}/read`,
+        markAllAsRead: `${basePrefix}/notifications/my/read-all`,
+    },
 } as const

@@ -106,6 +106,11 @@ const routes: Array<RouteRecordRaw> = [
                 component: () => import('@/pages/admin/orders/OrderManagement.vue'),
             },
             {
+                name: 'admin-chat',
+                path: 'chat',
+                component: () => import('@/pages/admin/chat/ChatManagement.vue'),
+            },
+            {
                 name: 'admin-inventory',
                 path: 'inventory',
                 component: () => import('@/pages/admin/inventory/InventoryManagement.vue'),

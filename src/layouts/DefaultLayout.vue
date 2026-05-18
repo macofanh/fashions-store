@@ -3,6 +3,7 @@ import { RouterView } from 'vue-router'
 import HeaderLayout from './components/HeaderLayout.vue'
 import FooterLayout from './components/FooterLayout.vue'
 import ChatAIWidget from '@/pages/chat-ai/ChatAIWidget.vue'
+import CustomerChatWidget from '@/pages/chat/CustomerChatWidget.vue'
 </script>
 
 <template>
@@ -16,6 +17,7 @@ import ChatAIWidget from '@/pages/chat-ai/ChatAIWidget.vue'
         <FooterLayout />
 
         <!-- Chat AI Widget — góc phải dưới -->
+        <CustomerChatWidget />
         <ChatAIWidget />
     </div>
 </template>

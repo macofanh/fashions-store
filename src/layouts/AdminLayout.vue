@@ -1,12 +1,16 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, onBeforeUnmount } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useAuthStore } from '@/stores/useAuthStore'
+import { isFirebaseConfigured } from '@/lib/firebase'
+import { isConversationUnreadForStaff, subscribeToConversations } from '@/pages/chat/chatService'
 
 const authStore = useAuthStore()
 const router = useRouter()
 const route = useRoute()
 const isMobileMenuOpen = ref(false)
+const unreadChatCustomerCount = ref(0)
+let unsubscribeConversations: (() => void) | null = null
 
 const allMenuItems = [
     { name: 'Tổng quan',           icon: 'dashboard',           routeName: 'admin-overview',  adminOnly: true  },
@@ -41,6 +45,24 @@ const handleLogout = () => {
     authStore.logout()
     router.push({ name: 'login' })
 }
+
+if (isFirebaseConfigured) {
+    unsubscribeConversations = subscribeToConversations(conversations => {
+        unreadChatCustomerCount.value = conversations.filter(isConversationUnreadForStaff).length
+    })
+}
+
+function getMenuBadgeCount(routeName: string) {
+    if (routeName === 'admin-chat') {
+        return unreadChatCustomerCount.value
+    }
+
+    return 0
+}
+
+onBeforeUnmount(() => {
+    unsubscribeConversations?.()
+})
 </script>
 
 <template>
@@ -81,7 +103,13 @@ const handleLogout = () => {
                     <span :class="['material-symbols-outlined text-[20px] transition-colors', route.name === item.routeName ? 'text-white' : 'text-slate-400 group-hover:text-slate-700']">
                         {{ item.icon }}
                     </span>
-                    <span class="text-[11px] font-semibold tracking-wide">{{ item.name }}</span>
+                    <span class="min-w-0 flex-1 truncate text-[11px] font-semibold tracking-wide">{{ item.name }}</span>
+                    <span
+                        v-if="getMenuBadgeCount(item.routeName) > 0"
+                        class="ml-auto min-w-5 h-5 rounded-full bg-red-500 px-1.5 text-center text-[11px] font-bold leading-5 text-white shadow-sm"
+                    >
+                        {{ getMenuBadgeCount(item.routeName) > 99 ? '99+' : getMenuBadgeCount(item.routeName) }}
+                    </span>
                 </router-link>
             </nav>
 

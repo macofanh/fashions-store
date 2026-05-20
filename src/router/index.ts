@@ -78,6 +78,11 @@ const routes: Array<RouteRecordRaw> = [
                 path: 'vouchers',
                 component: () => import('@/pages/promotions/VoucherCenter.vue'),
             },
+            {
+                name: 'payment-return',
+                path: 'payment/:gateway/return',
+                component: () => import('@/pages/cart/PaymentReturnPage.vue'),
+            },
         ],
     },
 

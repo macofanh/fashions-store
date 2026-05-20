@@ -7,6 +7,7 @@ const {
     isLoading,
     searchQuery,
     filterStatus,
+    filterPaymentMethod,
     selectedOrder,
     isDrawerOpen,
     isLoadingDetail,
@@ -17,6 +18,7 @@ const {
     handleUpdateStatus,
     statusConfig,
     paymentStatusConfig,
+    paymentMethodConfig,
     statusFlow,
     formatPrice,
     formatDate,
@@ -37,12 +39,14 @@ const {
 
         <!-- Stats mini -->
         <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
-            <div v-for="(item, key) in [
-                { label: 'Tổng đơn',    value: stats.total,     icon: 'receipt_long',  color: 'text-slate-600',   bg: 'bg-slate-100'   },
-                { label: 'Chờ xử lý',   value: stats.pending,   icon: 'pending',       color: 'text-amber-600',   bg: 'bg-amber-50'    },
-                { label: 'Đang giao',   value: stats.shipping,  icon: 'local_shipping',color: 'text-indigo-600',  bg: 'bg-indigo-50'   },
-                { label: 'Đã giao',     value: stats.delivered, icon: 'check_circle',  color: 'text-emerald-600', bg: 'bg-emerald-50'  },
-            ]" :key="key"
+            <!-- Stats đơn hàng -->
+            <div
+                v-for="(item, key) in [
+                    { label: 'Tổng đơn',  value: stats.total,     icon: 'receipt_long',  color: 'text-slate-600',  bg: 'bg-slate-100',  filter: null },
+                    { label: 'Chờ xử lý', value: stats.pending,   icon: 'pending',       color: 'text-amber-600',  bg: 'bg-amber-50',   filter: null },
+                    { label: 'Đang giao', value: stats.shipping,  icon: 'local_shipping',color: 'text-indigo-600', bg: 'bg-indigo-50',  filter: null },
+                    { label: 'Đã giao',   value: stats.delivered, icon: 'check_circle',  color: 'text-emerald-600',bg: 'bg-emerald-50', filter: null },
+                ]" :key="key"
                 class="bg-white rounded-2xl border border-slate-200 p-5 flex items-center gap-4 shadow-sm"
             >
                 <div :class="['w-10 h-10 rounded-xl flex items-center justify-center shrink-0', item.bg]">
@@ -55,32 +59,79 @@ const {
             </div>
         </div>
 
+        <!-- Stats thanh toán — click để lọc nhanh -->
+        <div class="grid grid-cols-2 gap-3">
+            <button
+                @click="filterPaymentMethod = filterPaymentMethod === 'COD' ? '' : 'COD'"
+                :class="['bg-white rounded-2xl border p-4 flex items-center gap-3 shadow-sm transition-all text-left',
+                    filterPaymentMethod === 'COD' ? 'border-slate-900 ring-2 ring-slate-900/10' : 'border-slate-200 hover:border-slate-400']"
+            >
+                <div class="w-9 h-9 bg-slate-100 rounded-xl flex items-center justify-center shrink-0">
+                    <span class="material-symbols-outlined text-slate-600 text-[18px]">payments</span>
+                </div>
+                <div>
+                    <p class="text-xl font-bold text-slate-900">{{ stats.cod }}</p>
+                    <p class="text-[10px] text-slate-500 uppercase tracking-wider">COD</p>
+                </div>
+                <span v-if="filterPaymentMethod === 'COD'" class="ml-auto material-symbols-outlined text-slate-900 text-[16px]">check_circle</span>
+            </button>
+
+            <button
+                @click="filterPaymentMethod = filterPaymentMethod === 'ONLINE' ? '' : 'ONLINE'"
+                :class="['bg-white rounded-2xl border p-4 flex items-center gap-3 shadow-sm transition-all text-left',
+                    filterPaymentMethod === 'ONLINE' ? 'border-indigo-600 ring-2 ring-indigo-600/10' : 'border-slate-200 hover:border-indigo-400']"
+            >
+                <div class="w-9 h-9 bg-indigo-50 rounded-xl flex items-center justify-center shrink-0">
+                    <span class="material-symbols-outlined text-indigo-600 text-[18px]">account_balance_wallet</span>
+                </div>
+                <div>
+                    <p class="text-xl font-bold text-slate-900">{{ stats.online }}</p>
+                    <p class="text-[10px] text-slate-500 uppercase tracking-wider">Ví / Chuyển khoản</p>
+                </div>
+                <span v-if="filterPaymentMethod === 'ONLINE'" class="ml-auto material-symbols-outlined text-indigo-600 text-[16px]">check_circle</span>
+            </button>
+        </div>
+
         <!-- Filters -->
-        <div class="bg-white rounded-2xl border border-slate-200 p-4 shadow-sm flex flex-wrap gap-3 items-center">
-            <!-- Search -->
-            <div class="relative flex-grow min-w-[200px] max-w-sm">
-                <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-[18px] pointer-events-none">search</span>
-                <input
-                    v-model="searchQuery"
-                    type="text"
-                    placeholder="Tìm mã đơn, tên khách..."
-                    class="w-full pl-9 pr-4 py-2 rounded-xl border border-slate-200 text-sm outline-none focus:border-slate-400 focus:ring-2 focus:ring-slate-100 transition-all bg-slate-50"
-                />
+        <div class="bg-white rounded-2xl border border-slate-200 p-4 shadow-sm space-y-3">
+            <div class="flex flex-wrap gap-3 items-center">
+                <!-- Search -->
+                <div class="relative flex-grow min-w-[200px] max-w-sm">
+                    <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-[18px] pointer-events-none">search</span>
+                    <input
+                        v-model="searchQuery"
+                        type="text"
+                        placeholder="Tìm mã đơn, tên khách..."
+                        class="w-full pl-9 pr-4 py-2 rounded-xl border border-slate-200 text-sm outline-none focus:border-slate-400 focus:ring-2 focus:ring-slate-100 transition-all bg-slate-50"
+                    />
+                </div>
+                <!-- Status filter -->
+                <div class="flex flex-wrap gap-2">
+                    <button
+                        @click="filterStatus = ''"
+                        :class="['px-3 py-1.5 rounded-full text-[11px] font-semibold transition-all', filterStatus === '' ? 'bg-slate-900 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200']"
+                    >Tất cả</button>
+                    <button
+                        v-for="(cfg, key) in statusConfig" :key="key"
+                        @click="filterStatus = key"
+                        :class="['px-3 py-1.5 rounded-full text-[11px] font-semibold transition-all flex items-center gap-1.5',
+                            filterStatus === key ? `${cfg.bg} ${cfg.text} ring-2 ring-offset-1 ring-current` : 'bg-slate-100 text-slate-600 hover:bg-slate-200']"
+                    >
+                        <span :class="['w-1.5 h-1.5 rounded-full', cfg.dot]"></span>
+                        {{ cfg.label }}
+                    </button>
+                </div>
             </div>
-            <!-- Status filter -->
-            <div class="flex flex-wrap gap-2">
-                <button
-                    @click="filterStatus = ''"
-                    :class="['px-3 py-1.5 rounded-full text-[11px] font-semibold transition-all', filterStatus === '' ? 'bg-slate-900 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200']"
-                >Tất cả</button>
-                <button
-                    v-for="(cfg, key) in statusConfig" :key="key"
-                    @click="filterStatus = key"
-                    :class="['px-3 py-1.5 rounded-full text-[11px] font-semibold transition-all flex items-center gap-1.5',
-                        filterStatus === key ? `${cfg.bg} ${cfg.text} ring-2 ring-offset-1 ring-current` : 'bg-slate-100 text-slate-600 hover:bg-slate-200']"
-                >
-                    <span :class="['w-1.5 h-1.5 rounded-full', cfg.dot]"></span>
-                    {{ cfg.label }}
+
+            <!-- Active filter indicator -->
+            <div v-if="filterPaymentMethod" class="flex items-center gap-2 text-xs text-slate-500">
+                <span class="material-symbols-outlined text-[14px]">filter_alt</span>
+                Đang lọc:
+                <span class="font-semibold text-slate-700">
+                    {{ filterPaymentMethod === 'COD' ? 'Thanh toán COD' : 'Ví điện tử / Chuyển khoản' }}
+                </span>
+                <button @click="filterPaymentMethod = ''" class="ml-1 text-slate-400 hover:text-slate-700 transition-colors">
+                    <span class="material-symbols-outlined text-[14px]">close</span>
                 </button>
             </div>
         </div>
@@ -95,23 +146,24 @@ const {
                             <th class="px-6 py-4 text-[11px] uppercase tracking-wider font-semibold text-slate-500">Khách hàng</th>
                             <th class="px-6 py-4 text-[11px] uppercase tracking-wider font-semibold text-slate-500 hidden md:table-cell">Ngày đặt</th>
                             <th class="px-6 py-4 text-[11px] uppercase tracking-wider font-semibold text-slate-500 text-right">Tổng tiền</th>
+                            <th class="px-6 py-4 text-[11px] uppercase tracking-wider font-semibold text-slate-500 text-center hidden md:table-cell">Thanh toán</th>
                             <th class="px-6 py-4 text-[11px] uppercase tracking-wider font-semibold text-slate-500 text-center">Trạng thái</th>
                             <th class="px-6 py-4 text-[11px] uppercase tracking-wider font-semibold text-slate-500 text-right">Thao tác</th>
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-slate-100">
                         <tr v-if="isLoading">
-                            <td colspan="6" class="py-20 text-center">
+                            <td colspan="7" class="py-20 text-center">
                                 <div class="animate-spin h-8 w-8 border-3 border-slate-900 border-t-transparent rounded-full mx-auto"></div>
                             </td>
                         </tr>
                         <tr v-else-if="filteredOrders.length === 0">
-                            <td colspan="6" class="py-20 text-center">
+                            <td colspan="7" class="py-20 text-center">
                                 <span class="material-symbols-outlined text-4xl text-slate-200 block mb-3">inbox</span>
                                 <p class="text-slate-400 text-sm">Không tìm thấy đơn hàng nào</p>
                             </td>
                         </tr>
-                        <tr v-for="o in filteredOrders" :key="o.order_id" class="hover:bg-slate-50/60 transition-colors">
+                        <tr v-for="o in filteredOrders" :key="o.order_id" @click="openDetail(o)" class="hover:bg-slate-50/60 transition-colors cursor-pointer">
                             <td class="px-6 py-4">
                                 <span class="text-sm font-bold text-slate-800">{{ o.order_code }}</span>
                             </td>
@@ -125,8 +177,28 @@ const {
                             <td class="px-6 py-4 text-right">
                                 <span class="text-sm font-bold text-slate-800">{{ formatPrice(o.total_amount) }}</span>
                             </td>
+                            <!-- Badge phương thức + trạng thái thanh toán -->
+                            <td class="px-6 py-4 text-center hidden md:table-cell">
+                                <div class="flex flex-col items-center gap-1">
+                                    <span :class="['inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full',
+                                        paymentMethodConfig[o.payment_method]?.bg || 'bg-slate-100',
+                                        paymentMethodConfig[o.payment_method]?.text || 'text-slate-600']">
+                                        <span class="material-symbols-outlined text-[11px]">{{ paymentMethodConfig[o.payment_method]?.icon || 'payments' }}</span>
+                                        {{ paymentMethodConfig[o.payment_method]?.label || o.payment_method }}
+                                    </span>
+                                    <!-- Cảnh báo COD chưa thu tiền -->
+                                    <span v-if="o.payment_method === 'COD' && o.payment_status === 'PENDING' && o.status !== 'CANCELLED'"
+                                        class="text-[9px] font-semibold text-amber-600 bg-amber-50 px-1.5 py-0.5 rounded-full">
+                                        Chưa thu tiền
+                                    </span>
+                                    <span v-else-if="o.payment_status === 'PAID'"
+                                        class="text-[9px] font-semibold text-emerald-600 bg-emerald-50 px-1.5 py-0.5 rounded-full">
+                                        Đã thanh toán
+                                    </span>
+                                </div>
+                            </td>
                             <td class="px-6 py-4 text-center">
-                                <div class="relative inline-block">
+                                <div class="relative inline-block" @click.stop>
                                     <select
                                         :value="o.status"
                                         @change="(e) => handleUpdateStatus(o.order_id, (e.target as HTMLSelectElement).value)"
@@ -141,7 +213,6 @@ const {
                             </td>
                             <td class="px-6 py-4 text-right">
                                 <button
-                                    @click="openDetail(o)"
                                     class="text-xs font-semibold text-indigo-600 hover:text-indigo-800 transition-colors px-3 py-1.5 rounded-lg hover:bg-indigo-50 flex items-center gap-1 ml-auto"
                                 >
                                     <span class="material-symbols-outlined text-[14px]">open_in_new</span>

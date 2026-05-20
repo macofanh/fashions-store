@@ -27,7 +27,21 @@ const methods = [
         value: 'QR_CODE',
         icon: 'qr_code',
         label: 'Chuyển khoản QR',
-        desc: 'Quét mã QR để thanh toán ngay',
+        desc: 'Quét mã QR SePay để thanh toán ngay',
+    },
+    {
+        value: 'MOMO',
+        icon: 'account_balance_wallet',
+        label: 'Ví MoMo',
+        desc: 'Thanh toán qua ví điện tử MoMo',
+        logo: 'https://upload.wikimedia.org/wikipedia/vi/f/fe/MoMo_Logo.png',
+    },
+    {
+        value: 'VNPAY',
+        icon: 'credit_card',
+        label: 'VNPay',
+        desc: 'Thanh toán qua cổng VNPay (ATM/Visa/QR)',
+        logo: 'https://cdn.haitrieu.com/wp-content/uploads/2022/10/Logo-VNPAY-QR-1.png',
     },
 ]
 </script>
@@ -61,7 +75,10 @@ const methods = [
                     <div v-if="modelValue === m.value" class="w-2.5 h-2.5 rounded-full bg-primary"></div>
                 </div>
 
-                <span :class="['material-symbols-outlined text-[22px]', modelValue === m.value ? 'text-primary' : 'text-text-muted']">
+                <!-- Logo hoặc icon -->
+                <img v-if="(m as any).logo" :src="(m as any).logo" :alt="m.label"
+                    class="w-8 h-8 object-contain rounded shrink-0" />
+                <span v-else :class="['material-symbols-outlined text-[22px]', modelValue === m.value ? 'text-primary' : 'text-text-muted']">
                     {{ m.icon }}
                 </span>
 

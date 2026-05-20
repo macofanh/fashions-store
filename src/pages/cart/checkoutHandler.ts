@@ -7,6 +7,8 @@ import { useShippingConfigStore } from '@/stores/useShippingConfigStore'
 import { haversineDistance, calcShippingFee } from '@/lib/distanceHelper'
 import type { UserVoucher } from '@/pages/promotions/promotionService'
 import type { Address } from '@/pages/profile/addressService'
+import axiosClient from '@/lib/axiosClient'
+import { apiEndpoints } from '@/lib/endPoints'
 
 interface SePayQrSession {
     orderId: number
@@ -325,6 +327,8 @@ export function checkoutHandler() {
     const submitLabel = computed(() => {
         if (qrStatus.value === 'waiting' && qrSession.value) return 'Đang chờ thanh toán'
         if (form.value.payment_method === 'QR_CODE') return 'Mở QR thanh toán'
+        if (form.value.payment_method === 'MOMO')   return 'Thanh toán qua MoMo'
+        if (form.value.payment_method === 'VNPAY')  return 'Thanh toán qua VNPay'
         return 'Xác nhận đặt hàng'
     })
 
@@ -378,10 +382,50 @@ export function checkoutHandler() {
                 return
             }
 
+            // ── MoMo ──────────────────────────────────────────────
+            if (form.value.payment_method === 'MOMO') {
+                const payload = unwrapOrderPayload(response)
+                const orderId = extractOrderId(payload)
+                console.log('[MoMo] orderId:', orderId, 'payload:', payload)
+                if (!orderId) throw new Error('Không lấy được order_id từ đơn hàng.')
+
+                const momoUrl = apiEndpoints.payments.momoCreate(orderId)
+                console.log('[MoMo] calling:', momoUrl)
+                const momoRes = await axiosClient.post(momoUrl)
+                const payUrl = momoRes.data?.pay_url
+                if (!payUrl) throw new Error('MoMo không trả về pay_url.')
+
+                uiStore.info('Đang chuyển sang trang thanh toán MoMo...')
+                window.location.href = payUrl
+                return
+            }
+
+            // ── VNPay ─────────────────────────────────────────────
+            if (form.value.payment_method === 'VNPAY') {
+                const payload = unwrapOrderPayload(response)
+                const orderId = extractOrderId(payload)
+                console.log('[VNPay] orderId:', orderId, 'payload:', payload)
+                if (!orderId) throw new Error('Không lấy được order_id từ đơn hàng.')
+
+                const vnpayUrl = apiEndpoints.payments.vnpayCreate(orderId)
+                console.log('[VNPay] calling:', vnpayUrl)
+                const vnpayRes = await axiosClient.post(vnpayUrl)
+                const payUrl = vnpayRes.data?.pay_url
+                if (!payUrl) throw new Error('VNPay không trả về pay_url.')
+
+                uiStore.info('Đang chuyển sang trang thanh toán VNPay...')
+                window.location.href = payUrl
+                return
+            }
+
             uiStore.success('Đặt hàng thành công!')
-            router.push({ name: 'profile' })
-        } catch (e: any) {
-            uiStore.error(e.response?.data?.detail || 'Có lỗi xảy ra khi đặt hàng.')
+            router.push({ name: 'profile' })        } catch (e: any) {
+            console.error('[checkout error]', e)
+            const msg = e.response?.data?.detail
+                || e.response?.data?.message
+                || e.message
+                || 'Có lỗi xảy ra khi đặt hàng.'
+            uiStore.error(msg)
         } finally {
             isSubmitting.value = false
         }

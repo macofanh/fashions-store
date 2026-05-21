@@ -10,7 +10,9 @@ const {
     isSaving,
     isUploading,
     fileInput,
-    showDeleted,
+    searchQuery,
+    selectedCategoryId,
+    handleSearch,
     allColors,
     allSizes,
     allCategories,
@@ -53,11 +55,30 @@ const {
                 <p class="text-sm text-slate-400 mt-1">Danh sách toàn bộ kho hàng của bạn</p>
             </div>
             <div class="flex items-center gap-3">
-                <label class="flex items-center gap-2 cursor-pointer select-none">
-                    <input type="checkbox" v-model="showDeleted" class="w-4 h-4 rounded accent-indigo-600" />
-                    <span class="text-sm text-slate-500">Hiện đã xóa</span>
-                </label>
-                <button @click="openCreate" class="bg-indigo-600 text-white px-5 py-2.5 text-sm font-semibold rounded-xl hover:bg-indigo-700 transition-colors flex items-center gap-2 shadow-sm">
+                <div class="relative group">
+                    <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-indigo-500 transition-colors">search</span>
+                    <input 
+                        v-model="searchQuery" 
+                        @input="handleSearch"
+                        type="text" 
+                        placeholder="Tìm sản phẩm..." 
+                        class="pl-10 pr-4 py-2.5 bg-white border border-slate-200 rounded-xl text-sm outline-none focus:border-indigo-400 focus:ring-4 focus:ring-indigo-50/50 transition-all w-[240px] shadow-sm"
+                    />
+                </div>
+
+                <select 
+                    v-model="selectedCategoryId" 
+                    @change="fetchProducts"
+                    class="pl-4 pr-10 py-2.5 bg-white border border-slate-200 rounded-xl text-sm outline-none focus:border-indigo-400 focus:ring-4 focus:ring-indigo-50/50 transition-all shadow-sm bg-no-repeat bg-[right_1rem_center] appearance-none min-w-[160px]"
+                    style="background-image: url('data:image/svg+xml;charset=utf-8,%3Csvg xmlns=%27http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%27 fill=%27none%27 viewBox=%270 0 20 20%27%3E%3Cpath stroke=%27%2364748b%27 stroke-linecap=%27round%27 stroke-linejoin=%27round%27 stroke-width=%271.5%27 d=%27m6 8 4 4 4-4%27%2F%3E%3C%2Fsvg%3E');"
+                >
+                    <option :value="null">Tất cả danh mục</option>
+                    <option v-for="cat in allCategories" :key="cat.category_id" :value="cat.category_id">
+                        {{ cat.name }}
+                    </option>
+                </select>
+
+                <button @click="openCreate" class="bg-indigo-600 text-white px-5 py-2.5 text-sm font-semibold rounded-xl hover:bg-indigo-700 transition-colors flex items-center gap-2 shadow-sm shrink-0">
                     <span class="material-symbols-outlined text-[18px]">add</span>
                     Thêm sản phẩm
                 </button>
@@ -82,6 +103,14 @@ const {
                             <div class="animate-spin h-7 w-7 border-4 border-indigo-500 border-t-transparent rounded-full mx-auto"></div>
                         </td>
                     </tr>
+                    <tr v-else-if="filteredProducts.length === 0">
+                        <td colspan="5" class="px-5 py-20 text-center">
+                            <div class="flex flex-col items-center gap-2 text-slate-400">
+                                <span class="material-symbols-outlined text-4xl">search_off</span>
+                                <p class="text-sm font-medium">Không tìm thấy sản phẩm nào</p>
+                            </div>
+                        </td>
+                    </tr>
                     <tr v-for="p in filteredProducts" :key="p.product_id" :class="['hover:bg-slate-50/60 transition-colors group', p.deleted_at ? 'opacity-50' : '']">
                         <td class="px-5 py-4 cursor-pointer" @click="openDetail(p)">
                             <div class="flex items-center gap-3">
@@ -101,7 +130,7 @@ const {
                         </td>
                         <td class="px-5 py-4 hidden md:table-cell">
                             <span class="text-xs text-slate-500 bg-slate-100 px-2.5 py-1 rounded-full">
-                                {{ allCategories.find(c => c.category_id === p.category_id)?.name || '—' }}
+                                {{ p.category?.name || '—' }}
                             </span>
                         </td>
                         <td class="px-5 py-4 text-sm font-semibold text-slate-800 hidden lg:table-cell">

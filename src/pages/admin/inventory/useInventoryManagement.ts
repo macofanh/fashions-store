@@ -29,6 +29,12 @@ export function useInventoryManagement() {
     const searchQuery = ref('')
     const filterStock = ref<'all' | 'low' | 'out'>('all')
 
+    // Pagination
+    const currentPage = ref(1)
+    const pageSize = ref(20)
+    const totalItems = ref(0)
+    const totalPages = ref(0)
+
     const form = ref({ variant_id: '', change_type: 'IN', quantity: 1, note: '' })
 
     const hydrateStockCache = () => {
@@ -64,16 +70,12 @@ export function useInventoryManagement() {
         let list = stockList.value
         if (filterStock.value === 'low') list = list.filter(v => v.stock_qty > 0 && v.stock_qty <= (v.low_stock_threshold || 5))
         if (filterStock.value === 'out') list = list.filter(v => v.stock_qty <= 0)
-        if (searchQuery.value.trim()) {
-            const q = searchQuery.value.toLowerCase()
-            list = list.filter(v => v.product_name.toLowerCase().includes(q) || v.sku.toLowerCase().includes(q))
-        }
         return list
     })
 
     const stockStats = computed(() => ({
-        total: stockList.value.length,
-        low:   stockList.value.filter(v => v.stock_qty > 0 && v.stock_qty <= (v.low_stock_threshold || 5)).length,
+        total: totalItems.value, // Dùng tổng số từ server
+        low:   stockList.value.filter(v => v.stock_qty > 0 && v.stock_qty <= (v.low_stock_threshold || 5)).length, // Stats này tạm thời vẫn là local trên trang hiện tại hoặc cần API riêng
         out:   stockList.value.filter(v => v.stock_qty <= 0).length,
     }))
 
@@ -85,8 +87,15 @@ export function useInventoryManagement() {
             isLoading.value = true
         }
         try {
-            const res = await axiosClient.get('/api/v1/products/variants')
-            const items = res.data.map((v: any) => ({
+            const res = await axiosClient.get('/api/v1/products/variants', {
+                params: {
+                    page: currentPage.value,
+                    page_size: pageSize.value,
+                    search: searchQuery.value || undefined
+                }
+            })
+            
+            const items = res.data.items.map((v: any) => ({
                 variant_id: v.variant_id,
                 product_name: v.product?.name || 'N/A',
                 sku: v.sku,
@@ -97,13 +106,34 @@ export function useInventoryManagement() {
                 low_stock_threshold: v.low_stock_threshold || 5,
                 image_url: v.image_url || v.product?.images?.[0]?.image_url,
             }))
+            
             stockList.value = items
-            persistStockCache(items)
+            totalItems.value = res.data.total
+            totalPages.value = res.data.total_pages
+            
+            if (!searchQuery.value) {
+                persistStockCache(items)
+            }
         } catch (e) { console.error(e) }
         finally {
             isLoading.value = false
             isRefreshingStock.value = false
         }
+    }
+
+    // Debounce search
+    let searchTimeout: any = null
+    const handleSearch = () => {
+        if (searchTimeout) clearTimeout(searchTimeout)
+        searchTimeout = setTimeout(() => {
+            currentPage.value = 1
+            fetchStock()
+        }, 500)
+    }
+
+    const handlePageChange = (page: number) => {
+        currentPage.value = page
+        fetchStock()
     }
 
     const fetchLogs = async () => {
@@ -171,6 +201,10 @@ export function useInventoryManagement() {
         isSubmitting,
         searchQuery,
         filterStock,
+        currentPage,
+        pageSize,
+        totalItems,
+        totalPages,
         form,
         hydrateStockCache,
         persistStockCache,
@@ -178,6 +212,8 @@ export function useInventoryManagement() {
         stockStats,
         fetchStock,
         fetchLogs,
+        handleSearch,
+        handlePageChange,
         handleTabChange,
         openAdjustDrawer,
         handleAdjustStock,

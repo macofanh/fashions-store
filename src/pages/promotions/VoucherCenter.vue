@@ -141,18 +141,35 @@ const isLightColor = (hex: string) => {
 
 <template>
     <div class="bg-background-light min-h-screen pb-24">
-        <!-- Hero -->
-        <div class="bg-fashion-black text-white py-20 px-6 text-center">
-            <h1 class="text-5xl md:text-6xl font-serif italic mb-4">Voucher Center</h1>
-            <p class="text-[10px] uppercase tracking-[0.4em] text-zinc-400">Khám phá các ưu đãi đặc biệt dành riêng cho bạn</p>
-            <!-- Hạng hiện tại của user -->
-            <div v-if="userTier" class="mt-6 inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/10 text-white text-xs font-semibold">
-                <span class="material-symbols-outlined text-[16px]">{{ userTier.icon }}</span>
-                Hạng của bạn: {{ userTier.label }}
-            </div>
-        </div>
+        <section class="border-b border-border-light bg-white">
+            <div class="mx-auto max-w-[1400px] px-6 py-5 md:px-12">
+                <nav class="mb-4 flex items-center gap-2 text-[10px] uppercase tracking-widest text-text-muted font-display">
+                    <router-link to="/" class="transition-colors hover:text-primary">Trang chủ</router-link>
+                    <span>/</span>
+                    <span class="text-fashion-black">Ưu đãi</span>
+                </nav>
 
-        <div class="max-w-[1400px] mx-auto px-6 py-16">
+                <div class="flex flex-wrap items-center justify-start gap-3 md:justify-center">
+                    <div v-if="userTier" class="inline-flex items-center gap-2 rounded-lg border border-border-light bg-background-light px-4 py-3 text-xs font-semibold text-fashion-black font-display">
+                        <span class="flex h-7 w-7 items-center justify-center rounded-full bg-white text-primary shadow-sm">
+                            <span class="material-symbols-outlined text-[16px]">{{ userTier.icon }}</span>
+                        </span>
+                        <span>Hạng {{ userTier.label }}</span>
+                    </div>
+
+                    <router-link
+                        v-if="authStore.isAuthenticated"
+                        to="/my-vouchers"
+                        class="inline-flex items-center gap-2 rounded-lg bg-fashion-black px-4 py-3 text-xs font-bold uppercase tracking-widest text-white transition-colors hover:bg-primary font-display"
+                    >
+                        <span class="material-symbols-outlined text-[16px]">local_offer</span>
+                        Voucher của tôi
+                    </router-link>
+                </div>
+            </div>
+        </section>
+
+        <div class="max-w-[1400px] mx-auto px-6 py-10 md:px-12">
 
             <!-- Loading -->
             <div v-if="isLoading" class="flex justify-center py-20">
@@ -161,29 +178,22 @@ const isLightColor = (hex: string) => {
 
             <!-- Empty -->
             <div v-else-if="availableVouchers.length === 0"
-                class="text-center py-20 text-text-muted italic border border-dashed border-border-light">
+                class="rounded-xl bg-white text-center py-20 text-text-muted italic border border-dashed border-border-light">
                 Hiện tại không có chương trình khuyến mãi nào.
             </div>
 
             <!-- Voucher Grid -->
-            <div v-else class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+            <div v-else class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
                 <div
                     v-for="(v, idx) in availableVouchers"
                     :key="v.voucher_id"
-                    class="relative overflow-hidden shadow-lg transition-all duration-300 group"
-                    :class="getStatus(v) === 'locked' ? 'opacity-70' : 'hover:shadow-xl hover:-translate-y-1'"
-                    :style="{ backgroundColor: getCardBg(v, idx) }"
+                    class="relative overflow-hidden rounded-xl border border-border-light bg-white shadow-sm transition-all duration-300 group"
+                    :class="getStatus(v) === 'locked' ? 'opacity-75' : 'hover:shadow-md hover:-translate-y-0.5'"
                 >
-                    <!-- Banner image -->
-                    <div v-if="v.banner_image" class="h-32 overflow-hidden">
-                        <img :src="v.banner_image" :alt="v.name"
-                            class="w-full h-full object-cover opacity-60 group-hover:opacity-80 transition-opacity" />
-                    </div>
-
                     <!-- Ribbon trạng thái -->
                     <div
                         v-if="getStatus(v) !== 'available' && getStatus(v) !== 'guest'"
-                        class="absolute top-4 left-0 z-10 px-3 py-1 text-[9px] font-bold uppercase tracking-widest flex items-center gap-1"
+                        class="absolute right-4 top-4 z-10 rounded-full px-3 py-1 text-[9px] font-bold uppercase tracking-widest flex items-center gap-1"
                         :class="{
                             'bg-emerald-500 text-white': getStatus(v) === 'claimed',
                             'bg-zinc-500 text-white':    getStatus(v) === 'used_up',
@@ -198,44 +208,55 @@ const isLightColor = (hex: string) => {
 
                     <!-- Lock overlay khi chưa đủ hạng -->
                     <div v-if="getStatus(v) === 'locked'"
-                        class="absolute inset-0 bg-black/20 backdrop-blur-[1px] z-[5]"></div>
+                        class="absolute inset-0 bg-white/50 backdrop-blur-[1px] z-[5]"></div>
+
+                    <div
+                        class="h-2 w-full"
+                        :style="{ backgroundColor: getCardBg(v, idx) }"
+                    ></div>
 
                     <!-- Content -->
-                    <div class="p-8 relative z-[6]" :class="isLightColor(getCardBg(v, idx)) ? 'text-fashion-black' : 'text-white'">
+                    <div class="p-5 relative z-[6]">
                         <!-- Discount + code -->
-                        <div class="flex justify-between items-start mb-4">
-                            <span class="text-3xl font-serif italic font-bold">
-                                {{ getDiscountLabel(v) }}
-                            </span>
-                            <span class="text-[9px] font-bold uppercase tracking-widest px-3 py-1 border"
-                                :class="isLightColor(getCardBg(v, idx))
-                                    ? 'border-fashion-black/30 text-fashion-black'
-                                    : 'border-white/30 text-white'">
-                                {{ v.code }}
-                            </span>
+                        <div class="mb-4 flex items-start gap-4">
+                            <div
+                                class="flex h-20 w-24 shrink-0 flex-col items-center justify-center rounded-lg text-center"
+                                :style="{ backgroundColor: getCardBg(v, idx) }"
+                                :class="isLightColor(getCardBg(v, idx)) ? 'text-fashion-black' : 'text-white'"
+                            >
+                                <span class="text-2xl font-serif italic font-bold leading-none">{{ getDiscountLabel(v) }}</span>
+                                <span class="mt-1 text-[9px] uppercase tracking-widest opacity-70">Offer</span>
+                            </div>
+
+                            <div class="min-w-0 flex-1 pt-1">
+                                <span class="inline-flex max-w-full rounded-full border border-border-light bg-background-light px-3 py-1 text-[9px] font-bold uppercase tracking-widest text-fashion-black">
+                                    {{ v.code }}
+                                </span>
+                                <h3 class="mt-3 line-clamp-2 text-base font-bold leading-snug text-fashion-black font-display">{{ v.name }}</h3>
+                            </div>
                         </div>
 
                         <!-- Name & Subtitle -->
-                        <h3 class="text-lg font-serif italic mb-1">{{ v.name }}</h3>
-                        <p v-if="v.subtitle" class="text-[11px] mb-4 font-light opacity-60">{{ v.subtitle }}</p>
+                        <p v-if="v.subtitle" class="mb-4 min-h-10 text-[12px] text-text-muted font-display leading-relaxed">{{ v.subtitle }}</p>
+                        <p v-else class="mb-4 min-h-10 text-[12px] text-text-muted font-display leading-relaxed">Ưu đãi có thể dùng trong bước thanh toán khi đủ điều kiện.</p>
 
                         <!-- Conditions -->
-                        <div class="space-y-1.5 mb-5 text-[10px] opacity-70">
-                            <div class="flex items-center gap-2">
-                                <span class="material-symbols-outlined text-[14px]">shopping_bag</span>
-                                <span>Đơn tối thiểu: {{ formatPrice(v.min_order_value) }}</span>
+                        <div class="mb-5 grid grid-cols-2 gap-2 text-[11px] text-text-muted font-display">
+                            <div class="rounded-lg bg-background-light px-3 py-2">
+                                <span class="block text-[9px] uppercase tracking-wider text-text-muted">Tối thiểu</span>
+                                <span class="mt-0.5 block truncate font-semibold text-fashion-black">{{ formatPrice(v.min_order_value) }}</span>
                             </div>
-                            <div v-if="v.max_discount" class="flex items-center gap-2">
-                                <span class="material-symbols-outlined text-[14px]">price_check</span>
-                                <span>Giảm tối đa: {{ formatPrice(v.max_discount) }}</span>
+                            <div class="rounded-lg bg-background-light px-3 py-2">
+                                <span class="block text-[9px] uppercase tracking-wider text-text-muted">Hạn dùng</span>
+                                <span class="mt-0.5 block font-semibold text-fashion-black">{{ new Date(v.end_date).toLocaleDateString('vi-VN') }}</span>
                             </div>
-                            <div class="flex items-center gap-2">
-                                <span class="material-symbols-outlined text-[14px]">event</span>
-                                <span>HSD: {{ new Date(v.end_date).toLocaleDateString('vi-VN') }}</span>
+                            <div v-if="v.max_discount" class="rounded-lg bg-background-light px-3 py-2">
+                                <span class="block text-[9px] uppercase tracking-wider text-text-muted">Tối đa</span>
+                                <span class="mt-0.5 block truncate font-semibold text-fashion-black">{{ formatPrice(v.max_discount) }}</span>
                             </div>
-                            <div class="flex items-center gap-2">
-                                <span class="material-symbols-outlined text-[14px]">person</span>
-                                <span>Mỗi người dùng {{ v.usage_per_user }} lần</span>
+                            <div class="rounded-lg bg-background-light px-3 py-2">
+                                <span class="block text-[9px] uppercase tracking-wider text-text-muted">Lượt dùng</span>
+                                <span class="mt-0.5 block font-semibold text-fashion-black">{{ v.usage_per_user }} lần/người</span>
                             </div>
                         </div>
 
@@ -243,9 +264,7 @@ const isLightColor = (hex: string) => {
                         <div v-if="v.required_tier" class="mb-4">
                             <span :class="[
                                 'inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold border',
-                                isLightColor(getCardBg(v, idx))
-                                    ? `${TIER_CONFIG[v.required_tier].color} ${TIER_CONFIG[v.required_tier].bg} ${TIER_CONFIG[v.required_tier].border}`
-                                    : 'text-white border-white/40 bg-white/10'
+                                `${TIER_CONFIG[v.required_tier].color} ${TIER_CONFIG[v.required_tier].bg} ${TIER_CONFIG[v.required_tier].border}`
                             ]">
                                 <span class="material-symbols-outlined text-[13px]" style="font-variation-settings:'FILL' 1">
                                     {{ TIER_CONFIG[v.required_tier].icon }}
@@ -257,20 +276,14 @@ const isLightColor = (hex: string) => {
                         <!-- CTA -->
                         <!-- Locked -->
                         <div v-if="getStatus(v) === 'locked'"
-                            class="w-full py-3 text-[10px] uppercase tracking-[0.3em] font-bold border text-center cursor-not-allowed opacity-60 flex items-center justify-center gap-2"
-                            :class="isLightColor(getCardBg(v, idx))
-                                ? 'border-fashion-black/30 text-fashion-black'
-                                : 'border-white/30 text-white'">
+                            class="w-full py-3 rounded-lg text-[10px] uppercase tracking-[0.2em] font-bold border border-border-light text-text-muted text-center cursor-not-allowed opacity-70 flex items-center justify-center gap-2 font-display">
                             <span class="material-symbols-outlined text-[15px]">lock</span>
                             Nâng hạng để mở khóa
                         </div>
 
                         <!-- Đã dùng hết -->
                         <div v-else-if="getStatus(v) === 'used_up'"
-                            class="w-full py-3 text-[10px] uppercase tracking-[0.3em] font-bold border text-center opacity-50 cursor-not-allowed"
-                            :class="isLightColor(getCardBg(v, idx))
-                                ? 'border-fashion-black/30 text-fashion-black'
-                                : 'border-white/30 text-white'">
+                            class="w-full py-3 rounded-lg text-[10px] uppercase tracking-[0.2em] font-bold border border-border-light text-text-muted text-center opacity-60 cursor-not-allowed font-display">
                             Đã sử dụng
                         </div>
 
@@ -278,10 +291,8 @@ const isLightColor = (hex: string) => {
                         <button v-else-if="getStatus(v) === 'claimed'"
                             @click="claimVoucher(v)"
                             :class="[
-                                'btn-radius w-full py-3 text-[10px] uppercase tracking-[0.3em] font-bold border transition-all flex items-center justify-center gap-2',
-                                isLightColor(getCardBg(v, idx))
-                                    ? 'border-emerald-600 text-emerald-700 bg-emerald-50/60'
-                                    : 'border-emerald-400 text-emerald-300 bg-emerald-900/20'
+                                'w-full rounded-lg py-3 text-[10px] uppercase tracking-[0.2em] font-bold border transition-all flex items-center justify-center gap-2 font-display',
+                                'border-emerald-600 text-emerald-700 bg-emerald-50/60'
                             ]">
                             <span class="material-symbols-outlined text-[16px]" style="font-variation-settings:'FILL' 1">bookmark</span>
                             Đã lưu · Dùng khi thanh toán
@@ -292,10 +303,8 @@ const isLightColor = (hex: string) => {
                             @click="claimVoucher(v)"
                             :disabled="claimingId === v.voucher_id"
                             :class="[
-                                'btn-radius w-full py-3 text-[10px] uppercase tracking-[0.3em] font-bold border transition-all active:scale-[0.98] disabled:opacity-50 flex items-center justify-center gap-2',
-                                isLightColor(getCardBg(v, idx))
-                                    ? 'border-fashion-black text-fashion-black hover:bg-fashion-black hover:text-white'
-                                    : 'border-white text-white hover:bg-white hover:text-fashion-black'
+                                'w-full rounded-lg py-3 text-[10px] uppercase tracking-[0.2em] font-bold border transition-all active:scale-[0.98] disabled:opacity-50 flex items-center justify-center gap-2 font-display',
+                                'border-fashion-black text-fashion-black hover:bg-fashion-black hover:text-white'
                             ]">
                             <span v-if="claimingId === v.voucher_id"
                                 class="animate-spin h-3 w-3 border-2 border-current border-t-transparent rounded-full"></span>

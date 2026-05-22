@@ -225,6 +225,8 @@ export function checkoutHandler() {
     const init = async () => {
         isLoading.value = true
         try {
+            shippingStore.reload()
+
             const [cartRes, vouchersRes, provincesRes, addressesRes] = await Promise.all([
                 checkoutServices.getCart(),
                 checkoutServices.getMyVouchers(),
@@ -338,7 +340,36 @@ export function checkoutHandler() {
         selectedVoucher.value = selectedVoucher.value?.id === uv.id ? null : uv
     }
 
+    const validateShippingInfo = () => {
+        const missingRequiredInfo =
+            !form.value.recipient_name.trim()
+            || !form.value.phone.trim()
+            || !form.value.street_address.trim()
+            || !form.value.province
+            || !form.value.district
+            || !form.value.ward
+
+        if (missingRequiredInfo) {
+            uiStore.warning('Vui lòng chọn địa chỉ giao hàng từ gợi ý Goong.')
+            return false
+        }
+
+        if (selectedAddressId.value === null && (form.value.latitude === null || form.value.longitude === null)) {
+            uiStore.warning('Vui lòng chọn địa chỉ từ gợi ý Goong để tính phí vận chuyển chính xác.')
+            return false
+        }
+
+        if (shippingResult.value.outOfRange) {
+            uiStore.warning('Địa chỉ này nằm ngoài vùng hỗ trợ giao hàng.')
+            return false
+        }
+
+        return true
+    }
+
     const submitOrder = async () => {
+        if (!validateShippingInfo()) return
+
         isSubmitting.value = true
         try {
             const response = await checkoutServices.createOrder({

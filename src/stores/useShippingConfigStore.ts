@@ -27,9 +27,31 @@ const defaultConfig: ShippingConfig = {
     note: '',
 }
 
+function readSavedConfig(): ShippingConfig {
+    try {
+        const saved = localStorage.getItem(STORAGE_KEY)
+        return saved ? { ...defaultConfig, ...JSON.parse(saved) } : { ...defaultConfig }
+    } catch {
+        return { ...defaultConfig }
+    }
+}
+
+function normalizeConfig(value: ShippingConfig): ShippingConfig {
+    return {
+        ...value,
+        store_address: value.store_address?.trim() || defaultConfig.store_address,
+        price_per_km: Number(value.price_per_km) || 0,
+        free_shipping_threshold: Number(value.free_shipping_threshold) || 0,
+        base_fee: Number(value.base_fee) || 0,
+        max_distance_km: Number(value.max_distance_km) || defaultConfig.max_distance_km,
+        estimated_days: value.estimated_days?.trim() || defaultConfig.estimated_days,
+        phone_support: value.phone_support?.trim() || defaultConfig.phone_support,
+        note: value.note?.trim() || '',
+    }
+}
+
 export const useShippingConfigStore = defineStore('shippingConfig', () => {
-    const saved = localStorage.getItem(STORAGE_KEY)
-    const config = ref<ShippingConfig>(saved ? { ...defaultConfig, ...JSON.parse(saved) } : { ...defaultConfig })
+    const config = ref<ShippingConfig>(readSavedConfig())
 
     // Cache tọa độ cửa hàng để không geocode lại mỗi lần
     const savedCoords = localStorage.getItem(COORDS_KEY)
@@ -38,19 +60,27 @@ export const useShippingConfigStore = defineStore('shippingConfig', () => {
     )
     const isFetchingCoords = ref(false)
 
-    watch(config, (val) => {
+    watch(config, (val, oldVal) => {
         localStorage.setItem(STORAGE_KEY, JSON.stringify(val))
-        // Khi địa chỉ thay đổi → xóa cache tọa độ cũ
-        storeCoords.value = null
-        localStorage.removeItem(COORDS_KEY)
+
+        if (val.store_address !== oldVal?.store_address) {
+            storeCoords.value = null
+            localStorage.removeItem(COORDS_KEY)
+        }
     }, { deep: true })
 
     const save = (newConfig: ShippingConfig) => {
-        config.value = { ...newConfig }
+        config.value = normalizeConfig(newConfig)
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(config.value))
     }
 
     const reset = () => {
         config.value = { ...defaultConfig }
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(config.value))
+    }
+
+    const reload = () => {
+        config.value = readSavedConfig()
     }
 
     /**
@@ -85,5 +115,5 @@ export const useShippingConfigStore = defineStore('shippingConfig', () => {
         }
     }
 
-    return { config, storeCoords, isFetchingCoords, save, reset, fetchStoreCoords }
+    return { config, storeCoords, isFetchingCoords, save, reset, reload, fetchStoreCoords }
 })

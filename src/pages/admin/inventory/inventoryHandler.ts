@@ -105,10 +105,6 @@ export function useInventoryManagement() {
         out: stockList.value.filter(item => item.stock_qty <= 0).length,
     }))
 
-    const handleSearch = () => {
-        currentPage.value = 1
-    }
-
     const handlePageChange = (page: number) => {
         currentPage.value = Math.min(Math.max(page, 1), totalPages.value)
     }
@@ -243,7 +239,6 @@ export function useInventoryManagement() {
         stockStats,
         fetchStock,
         fetchLogs,
-        handleSearch,
         handlePageChange,
         handleTabChange,
         selectStockFilter,

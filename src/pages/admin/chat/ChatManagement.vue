@@ -2,7 +2,13 @@
 import { computed, nextTick, onBeforeUnmount, ref, watch } from 'vue'
 import { useAuthStore } from '@/stores/useAuthStore'
 import { isFirebaseConfigured } from '@/lib/firebase'
-import { sendChatMessage, subscribeToConversationMessages, subscribeToConversations } from '@/pages/chat/chatService'
+import {
+    isConversationUnreadForStaff,
+    markConversationReadByStaff,
+    sendChatMessage,
+    subscribeToConversationMessages,
+    subscribeToConversations,
+} from '@/pages/chat/chatService'
 import { playChatNotification } from '@/pages/chat/chatSound'
 import type { ChatConversation, ChatMessage } from '@/pages/chat/chat.types'
 
@@ -44,11 +50,23 @@ function scrollToBottom() {
 
 function selectConversation(conversationId: string) {
     selectedConversationId.value = conversationId
-    unreadCounts.value[conversationId] = 0
 }
 
 function getUnreadCount(conversationId: string) {
     return unreadCounts.value[conversationId] ?? 0
+}
+
+async function markSelectedConversationAsRead(conversationId: string) {
+    const conversation = conversations.value.find(item => item.id === conversationId)
+    if (!conversation || !isConversationUnreadForStaff(conversation)) return
+
+    unreadCounts.value[conversationId] = 0
+
+    try {
+        await markConversationReadByStaff(conversation.customerId)
+    } catch (error) {
+        console.error('Không thể đánh dấu đã đọc cuộc trò chuyện:', error)
+    }
 }
 
 async function sendMessage() {
@@ -91,7 +109,7 @@ if (isFirebaseConfigured) {
                     nextTime > previousTime
 
                 if (isNewCustomerMessage && conversation.id !== selectedConversationId.value) {
-                    unreadCounts.value[conversation.id] = (unreadCounts.value[conversation.id] ?? 0) + 1
+                    unreadCounts.value[conversation.id] = isConversationUnreadForStaff(conversation) ? 1 : 0
                     hasNewCustomerMessage = true
                 }
             })
@@ -102,9 +120,19 @@ if (isFirebaseConfigured) {
         }
 
         conversations.value = nextConversations
+        unreadCounts.value = nextConversations.reduce<Record<string, number>>((counts, conversation) => {
+            counts[conversation.id] = isConversationUnreadForStaff(conversation) ? 1 : 0
+            return counts
+        }, {})
+
         if (!selectedConversationId.value && nextConversations[0]) {
             selectedConversationId.value = nextConversations[0].id
         }
+
+        if (selectedConversationId.value) {
+            void markSelectedConversationAsRead(selectedConversationId.value)
+        }
+
         hasLoadedConversations = true
     })
 }
@@ -116,6 +144,8 @@ watch(
         messages.value = []
 
         if (!conversationId) return
+
+        void markSelectedConversationAsRead(conversationId)
 
         unsubscribeMessages = subscribeToConversationMessages(conversationId, async nextMessages => {
             messages.value = nextMessages

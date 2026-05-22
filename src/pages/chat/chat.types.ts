@@ -11,6 +11,7 @@ export interface ChatConversation {
     lastSenderRole: ChatSenderRole
     lastMessageAt: Timestamp | null
     updatedAt: Timestamp | null
+    staffLastReadAt?: Timestamp | null
 }
 
 export interface ChatMessage {

@@ -63,6 +63,28 @@ export function subscribeToConversations(
     })
 }
 
+export function isConversationUnreadForStaff(conversation: ChatConversation) {
+    if (conversation.lastSenderRole !== 'customer') return false
+
+    const latestCustomerMessageTime =
+        conversation.lastMessageAt?.toMillis() ??
+        conversation.updatedAt?.toMillis() ??
+        0
+    const staffLastReadTime = conversation.staffLastReadAt?.toMillis() ?? 0
+
+    return latestCustomerMessageTime > staffLastReadTime
+}
+
+export async function markConversationReadByStaff(customerId: string) {
+    await setDoc(
+        conversationRef(customerId),
+        {
+            staffLastReadAt: serverTimestamp(),
+        },
+        { merge: true },
+    )
+}
+
 export async function sendChatMessage(input: {
     customerId: string
     customerName: string

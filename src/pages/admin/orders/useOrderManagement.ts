@@ -1,4 +1,4 @@
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import axiosClient from '@/lib/axiosClient'
 import { useUIStore } from '@/stores/useUIStore'
 import { notificationService } from '@/pages/notifications/notificationService'
@@ -10,6 +10,7 @@ export function useOrderManagement() {
     const isLoading = ref(true)
     const searchQuery = ref('')
     const filterStatus = ref('')
+    const filterPaymentMethod = ref('')  // '' | 'COD' | 'ONLINE'
 
     // ── Chi tiết đơn hàng ─────────────────────────────────────────
     const selectedOrder = ref<any>(null)
@@ -39,7 +40,12 @@ export function useOrderManagement() {
     const fetchAllOrders = async () => {
         isLoading.value = true
         try {
-            const response = await axiosClient.get('/api/v1/orders/my?mine_only=false')
+            const params: any = { mine_only: false }
+            if (filterStatus.value) params.status = filterStatus.value
+            if (filterPaymentMethod.value) params.payment_method = filterPaymentMethod.value
+            if (searchQuery.value.trim()) params.search = searchQuery.value.trim()
+
+            const response = await axiosClient.get('/api/v1/orders/my', { params })
             orders.value = response.data
         } catch (error) {
             console.error('Lỗi lấy danh sách đơn hàng:', error)
@@ -48,18 +54,20 @@ export function useOrderManagement() {
         }
     }
 
-    const filteredOrders = computed(() => {
-        let list = orders.value
-        if (filterStatus.value) list = list.filter(o => o.status === filterStatus.value)
-        if (searchQuery.value.trim()) {
-            const q = searchQuery.value.toLowerCase()
-            list = list.filter(o =>
-                o.order_code?.toLowerCase().includes(q) ||
-                o.address_snapshot?.recipient_name?.toLowerCase().includes(q) ||
-                o.address_snapshot?.phone?.includes(q)
-            )
-        }
-        return list
+    // Với Server-side filtering, filteredOrders chỉ đơn giản trả về orders
+    // nhưng ta giữ lại để tránh break template hiện tại.
+    const filteredOrders = computed(() => orders.value)
+
+    // Tự động tải lại khi filter thay đổi (Debounce search để tránh gọi API quá nhiều)
+    let searchTimeout: any = null
+    watch([filterStatus, filterPaymentMethod], () => {
+        fetchAllOrders()
+    })
+    watch(searchQuery, () => {
+        if (searchTimeout) clearTimeout(searchTimeout)
+        searchTimeout = setTimeout(() => {
+            fetchAllOrders()
+        }, 500) // Đợi 500ms sau khi ngừng gõ mới gọi API
     })
 
     const getOrderForNotification = async (orderId: number) => {
@@ -92,15 +100,18 @@ export function useOrderManagement() {
 
     const handleUpdateStatus = async (orderId: number, newStatus: string) => {
         try {
-            await axiosClient.put(`/api/v1/orders/${orderId}/status`, {
+            const res = await axiosClient.put(`/api/v1/orders/${orderId}/status`, {
                 to_status: newStatus,
                 note: 'Cập nhật bởi Admin'
             })
-            // Cập nhật cả list và drawer
-            const order = orders.value.find(o => o.order_id === orderId)
-            if (order) order.status = newStatus
+            // Dùng response trả về (đã có payment_status mới) để cập nhật local state
+            const updatedOrder = res.data
+            const idx = orders.value.findIndex(o => o.order_id === orderId)
+            if (idx !== -1) {
+                orders.value[idx] = { ...orders.value[idx], ...updatedOrder }
+            }
             if (selectedOrder.value?.order_id === orderId) {
-                selectedOrder.value.status = newStatus
+                selectedOrder.value = { ...selectedOrder.value, ...updatedOrder }
             }
             uiStore.success('Cập nhật trạng thái thành công.')
 
@@ -124,6 +135,16 @@ export function useOrderManagement() {
         REFUNDED:  { label: 'Hoàn tiền',   bg: 'bg-slate-100',  text: 'text-slate-600',  dot: 'bg-slate-400'  },
     }
 
+    // Config hiển thị phương thức thanh toán
+    const paymentMethodConfig: Record<string, { label: string; icon: string; bg: string; text: string }> = {
+        COD:         { label: 'COD',     icon: 'payments',               bg: 'bg-slate-100',   text: 'text-slate-600'  },
+        QR_CODE:     { label: 'QR',      icon: 'qr_code',                bg: 'bg-cyan-50',     text: 'text-cyan-700'   },
+        MOMO:        { label: 'MoMo',    icon: 'account_balance_wallet', bg: 'bg-pink-50',     text: 'text-pink-600'   },
+        VNPAY:       { label: 'VNPay',   icon: 'credit_card',            bg: 'bg-blue-50',     text: 'text-blue-600'   },
+        SEPAY:       { label: 'SePay',   icon: 'qr_code_2',              bg: 'bg-indigo-50',   text: 'text-indigo-600' },
+        CREDIT_CARD: { label: 'Thẻ',     icon: 'credit_card',            bg: 'bg-violet-50',   text: 'text-violet-600' },
+    }
+
     const paymentStatusConfig: Record<string, { label: string; cls: string }> = {
         PENDING:  { label: 'Chờ thanh toán', cls: 'bg-amber-50 text-amber-700'   },
         PAID:     { label: 'Đã thanh toán',  cls: 'bg-emerald-50 text-emerald-700'},
@@ -142,12 +163,15 @@ export function useOrderManagement() {
     const formatDateShort = (dateStr: string) =>
         new Date(dateStr).toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric' })
 
-    // Stats
+    // Stats — thêm đếm theo nhóm thanh toán
     const stats = computed(() => ({
         total:     orders.value.length,
         pending:   orders.value.filter(o => o.status === 'PENDING').length,
         shipping:  orders.value.filter(o => o.status === 'SHIPPING').length,
         delivered: orders.value.filter(o => o.status === 'DELIVERED').length,
+        cod:       orders.value.filter(o => o.payment_method === 'COD').length,
+        online:    orders.value.filter(o => o.payment_method !== 'COD').length,
+        unpaid:    orders.value.filter(o => o.payment_method === 'COD' && o.payment_status === 'PENDING' && o.status !== 'CANCELLED').length,
     }))
 
     onMounted(fetchAllOrders)
@@ -158,6 +182,7 @@ export function useOrderManagement() {
         isLoading,
         searchQuery,
         filterStatus,
+        filterPaymentMethod,
         selectedOrder,
         isDrawerOpen,
         isLoadingDetail,
@@ -168,6 +193,7 @@ export function useOrderManagement() {
         handleUpdateStatus,
         statusConfig,
         paymentStatusConfig,
+        paymentMethodConfig,
         statusFlow,
         formatPrice,
         formatDate,

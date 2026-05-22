@@ -31,11 +31,7 @@ const emit = defineEmits<{
     'update:selectedDistrictCode': [val: number | '']
 }>()
 
-// Khi đã có địa chỉ Goong → ẩn dropdown
-// Khi edit và đã có province/district/ward → cũng ẩn dropdown ban đầu
-const showDropdowns = ref(
-    props.mode === 'add' || !props.form.province
-)
+const acceptedStreetAddress = ref(props.form.street_address)
 
 // Parse địa chỉ Việt Nam từ formatted_address của Goong
 // Format thường: "Số nhà Đường, Phường, Quận, Tỉnh, Việt Nam"
@@ -66,7 +62,17 @@ function extractStreetAddress(formatted: string): string {
 
 // Khi user chọn địa chỉ từ Goong
 const handleGoongSelected = (detail: GoongAddressDetail | null) => {
-    if (!detail) return
+    if (!detail) {
+        acceptedStreetAddress.value = ''
+        props.form.province  = ''
+        props.form.district  = ''
+        props.form.ward      = ''
+        props.form.latitude  = null
+        props.form.longitude = null
+        emit('update:selectedProvinceCode', '')
+        emit('update:selectedDistrictCode', '')
+        return
+    }
 
     const addr = detail.formatted_address || ''
     if (!addr) return
@@ -75,6 +81,7 @@ const handleGoongSelected = (detail: GoongAddressDetail | null) => {
     const streetAddress = extractStreetAddress(addr)
 
     if (parsed.province) {
+        acceptedStreetAddress.value = streetAddress || addr
         props.form.street_address = streetAddress || addr
         props.form.province  = parsed.province
         props.form.district  = parsed.district
@@ -85,21 +92,25 @@ const handleGoongSelected = (detail: GoongAddressDetail | null) => {
         // Reset cascading selects vì không cần dùng nữa
         emit('update:selectedProvinceCode', '')
         emit('update:selectedDistrictCode', '')
-        // Ẩn dropdown
-        showDropdowns.value = false
     }
 }
 
-// Khi user xóa địa chỉ (gõ lại) → hiện lại dropdown
-watch(() => props.form.street_address, (val) => {
-    if (!val) {
-        showDropdowns.value = true
-        props.form.province  = ''
-        props.form.district  = ''
-        props.form.ward      = ''
-        props.form.latitude  = null
-        props.form.longitude = null
+watch(() => props.form.street_address, (value) => {
+    if (!value) {
+        acceptedStreetAddress.value = ''
     }
+
+    if (value === acceptedStreetAddress.value) {
+        return
+    }
+
+    props.form.province  = ''
+    props.form.district  = ''
+    props.form.ward      = ''
+    props.form.latitude  = null
+    props.form.longitude = null
+    emit('update:selectedProvinceCode', '')
+    emit('update:selectedDistrictCode', '')
 })
 </script>
 
@@ -168,80 +179,23 @@ watch(() => props.form.street_address, (val) => {
                     <!-- Địa chỉ chi tiết — Goong autocomplete -->
                     <GoongAddressInput
                         v-model="form.street_address"
-                        label="Địa chỉ chi tiết"
-                        placeholder="Nhập số nhà, tên đường hoặc địa điểm..."
-                        helper-text="Chọn gợi ý để tự động điền tỉnh/quận/phường."
+                        label="Địa chỉ giao hàng"
+                        placeholder="Nhập số nhà, tên đường hoặc tên địa điểm..."
+                        helper-text="Chọn địa chỉ từ gợi ý Goong để hệ thống tự điền khu vực giao hàng."
                         :required="true"
                         @selected="handleGoongSelected"
                     />
 
-                    <!-- Tỉnh/Quận/Phường: hiện khi chưa có địa chỉ Goong hoặc user muốn chỉnh -->
-                    <div v-if="showDropdowns" class="space-y-5">
-                        <!-- Tỉnh -->
-                        <div class="space-y-1.5">
-                            <label class="text-[10px] uppercase tracking-widest font-bold text-text-muted font-display">
-                                Tỉnh / Thành phố <span class="text-red-400">*</span>
-                            </label>
-                            <select
-                                :value="selectedProvinceCode"
-                                @change="emit('update:selectedProvinceCode', Number(($event.target as HTMLSelectElement).value) || '')"
-                                class="w-full border border-border-light rounded-lg px-4 py-3 text-sm outline-none focus:border-primary transition-colors bg-white font-display"
-                            >
-                                <option value="">{{ form.province || 'Chọn Tỉnh / Thành phố' }}</option>
-                                <option v-for="p in provinces" :key="p.code" :value="p.code">{{ p.name }}</option>
-                            </select>
-                        </div>
-
-                        <!-- Quận + Phường -->
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
-                            <div class="space-y-1.5">
-                                <label class="text-[10px] uppercase tracking-widest font-bold text-text-muted font-display">
-                                    Quận / Huyện <span class="text-red-400">*</span>
-                                </label>
-                                <select
-                                    :value="selectedDistrictCode"
-                                    @change="emit('update:selectedDistrictCode', Number(($event.target as HTMLSelectElement).value) || '')"
-                                    :disabled="selectedProvinceCode === '' && !form.district"
-                                    class="w-full border border-border-light rounded-lg px-4 py-3 text-sm outline-none focus:border-primary transition-colors bg-white font-display disabled:opacity-50 disabled:cursor-not-allowed"
-                                >
-                                    <option value="">{{ form.district || 'Chọn Quận / Huyện' }}</option>
-                                    <option v-for="d in districts" :key="d.code" :value="d.code">{{ d.name }}</option>
-                                </select>
-                            </div>
-
-                            <div class="space-y-1.5">
-                                <label class="text-[10px] uppercase tracking-widest font-bold text-text-muted font-display">
-                                    Phường / Xã <span class="text-red-400">*</span>
-                                </label>
-                                <select
-                                    :value="form.ward"
-                                    @change="form.ward = ($event.target as HTMLSelectElement).value"
-                                    :disabled="selectedDistrictCode === '' && !form.ward"
-                                    class="w-full border border-border-light rounded-lg px-4 py-3 text-sm outline-none focus:border-primary transition-colors bg-white font-display disabled:opacity-50 disabled:cursor-not-allowed"
-                                >
-                                    <option value="">{{ form.ward || 'Chọn Phường / Xã' }}</option>
-                                    <option v-for="w in wards" :key="w.code" :value="w.name">{{ w.name }}</option>
-                                </select>
+                    <div v-if="form.province" class="rounded-xl border border-primary/15 bg-primary/5 px-4 py-3">
+                        <div class="flex items-start gap-3">
+                            <span class="material-symbols-outlined mt-0.5 text-primary text-[19px] shrink-0" style="font-variation-settings:'FILL' 1">verified</span>
+                            <div class="min-w-0">
+                                <p class="text-[10px] uppercase tracking-widest font-bold text-primary font-display">Đã nhận diện khu vực</p>
+                                <p class="mt-1 text-sm text-fashion-black font-display leading-relaxed">
+                                    {{ [form.ward, form.district, form.province].filter(Boolean).join(', ') }}
+                                </p>
                             </div>
                         </div>
-                    </div>
-
-                    <!-- Khi đã có địa chỉ Goong: hiện tóm tắt + nút chỉnh thủ công -->
-                    <div v-else-if="form.province" class="rounded-xl border border-border-light bg-gray-50/60 px-4 py-3 flex items-center justify-between gap-3">
-                        <div class="flex items-center gap-2.5 min-w-0">
-                            <span class="material-symbols-outlined text-primary text-[18px] shrink-0" style="font-variation-settings:'FILL' 1">location_on</span>
-                            <p class="text-sm text-fashion-black font-display truncate">
-                                {{ form.street_address }}
-                                <span v-if="form.ward || form.district || form.province">, {{ form.ward }}, {{ form.district }}, {{ form.province }}</span>
-                            </p>
-                        </div>
-                        <button
-                            type="button"
-                            @click="showDropdowns = true"
-                            class="shrink-0 text-[10px] uppercase tracking-wider font-bold text-text-muted hover:text-primary transition-colors font-display"
-                        >
-                            Chỉnh sửa
-                        </button>
                     </div>
 
                     <!-- Đặt làm mặc định -->

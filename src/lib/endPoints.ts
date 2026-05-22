@@ -54,4 +54,10 @@ export const apiEndpoints = {
         markAsRead: (id: number) => `${basePrefix}/notifications/${id}/read`,
         markAllAsRead: `${basePrefix}/notifications/my/read-all`,
     },
+    payments: {
+        momoCreate:  (orderId: number) => `${basePrefix}/payments/momo/create?order_id=${orderId}`,
+        momoReturn:  `${basePrefix}/payments/momo/return`,
+        vnpayCreate: (orderId: number) => `${basePrefix}/payments/vnpay/create?order_id=${orderId}`,
+        vnpayReturn: `${basePrefix}/payments/vnpay/return`,
+    },
 } as const

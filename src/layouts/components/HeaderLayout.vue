@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/useAuthStore'
 import { useCartStore } from '@/stores/useCartStore'
 import { useUIStore } from '@/stores/useUIStore'
@@ -16,6 +16,7 @@ const authStore = useAuthStore()
 const cartStore = useCartStore()
 const uiStore = useUIStore()
 const router = useRouter()
+const route = useRoute()
 
 const isScrolled = ref(false)
 const isMobileMenuOpen = ref(false)
@@ -240,6 +241,29 @@ const closeMobileMenu = () => {
     isMobileMenuOpen.value = false
 }
 
+const isRouteActive = (to: string) => {
+    const resolved = router.resolve(to)
+
+    if (resolved.path === '/products') {
+        return route.path.startsWith('/products')
+    }
+
+    if (resolved.path === '/admin') {
+        return route.path.startsWith('/admin')
+    }
+
+    if (resolved.path !== route.path) {
+        return false
+    }
+
+    const expectedTab = resolved.query.tab
+    if (expectedTab) {
+        return route.query.tab === expectedTab
+    }
+
+    return true
+}
+
 // ─── Nav links (desktop + mobile) ─────────────────────────────────────────────
 const navLinks = computed<NavLink[]>(() => [
     { label: 'Bộ sưu tập', to: '/products' },
@@ -251,6 +275,10 @@ const navLinks = computed<NavLink[]>(() => [
         extraClass: '!text-amber-600',
     },
 ])
+
+const isProfileMenuActive = computed(() =>
+    profileMenuItems.value.some(item => item.to && isRouteActive(item.to))
+)
 
 // ─── Profile dropdown items ────────────────────────────────────────────────────
 const profileMenuItems = computed<ProfileMenuItem[]>(() => [
@@ -270,7 +298,7 @@ const profileMenuItems = computed<ProfileMenuItem[]>(() => [
         key: 'vouchers',
         label: 'Voucher của tôi',
         icon: 'local_offer',
-        to: '/vouchers',
+        to: '/my-vouchers',
     },
     {
         key: 'orders',
@@ -317,30 +345,21 @@ const profileMenuItems = computed<ProfileMenuItem[]>(() => [
                         <router-link
                             v-if="link.condition !== false"
                             :to="link.to"
-                            :class="['nav-link', link.extraClass]"
+                            :class="['nav-link', isRouteActive(link.to) ? 'nav-link-active' : '', link.extraClass]"
                         >{{ link.label }}</router-link>
                     </template>
                 </nav>
             </div>
 
-            <!-- RIGHT: Search + Icons -->
+            <!-- RIGHT: Icons -->
             <div class="flex items-center gap-6">
-                <!-- Search (desktop) -->
-                <div class="hidden lg:flex relative group w-64">
-                    <div class="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted group-focus-within:text-primary transition-colors">
-                        <span class="material-symbols-outlined text-[20px]">search</span>
-                    </div>
-                    <input
-                        class="w-full bg-border-light/50 border-none rounded-full py-2 pl-10 pr-4 text-sm focus:ring-1 focus:ring-primary focus:bg-white transition-all outline-none placeholder:text-text-muted/70"
-                        placeholder="Tìm kiếm sản phẩm..."
-                        type="text"
-                    />
-                </div>
-
                 <!-- Icon buttons -->
                 <div class="flex items-center gap-1">
                     <!-- Cart -->
-                    <router-link to="/cart" class="icon-btn relative">
+                    <router-link
+                        to="/cart"
+                        :class="['icon-btn relative', isRouteActive('/cart') ? 'icon-btn-active' : '']"
+                    >
                         <span class="material-symbols-outlined text-[24px]">shopping_bag</span>
                         <span
                             v-if="cartStore.totalQuantity > 0"
@@ -438,7 +457,7 @@ const profileMenuItems = computed<ProfileMenuItem[]>(() => [
                         </div>
 
                         <div class="relative group">
-                            <button class="icon-btn">
+                            <button :class="['icon-btn', isProfileMenuActive ? 'icon-btn-active' : '']">
                                 <span class="material-symbols-outlined text-[24px]">person</span>
                             </button>
                             <!-- Dropdown -->
@@ -461,7 +480,7 @@ const profileMenuItems = computed<ProfileMenuItem[]>(() => [
                                         <router-link
                                             v-if="item.to"
                                             :to="item.to"
-                                            :class="['dropdown-item', item.extraClass]"
+                                            :class="['dropdown-item', isRouteActive(item.to) ? 'dropdown-item-active' : '', item.extraClass]"
                                         >
                                             <span class="material-symbols-outlined text-[16px]">{{ item.icon }}</span>
                                             {{ item.label }}
@@ -504,24 +523,12 @@ const profileMenuItems = computed<ProfileMenuItem[]>(() => [
             v-if="isMobileMenuOpen"
             class="fixed inset-0 top-[65px] bg-background-light z-[90] md:hidden flex flex-col p-8 gap-6 border-t border-border-light overflow-y-auto"
         >
-            <!-- Search mobile -->
-            <div class="relative">
-                <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-text-muted text-[20px]">search</span>
-                <input
-                    class="w-full bg-white border border-border-light rounded-full py-2.5 pl-10 pr-4 text-sm outline-none focus:ring-1 focus:ring-primary placeholder:text-text-muted/70"
-                    placeholder="Tìm kiếm sản phẩm..."
-                    type="text"
-                />
-            </div>
-
-            <hr class="border-border-light" />
-
             <template v-for="link in navLinks" :key="link.to">
                 <router-link
                     v-if="link.condition !== false"
                     :to="link.to"
                     @click="closeMobileMenu"
-                    :class="['mobile-nav-link', link.extraClass]"
+                    :class="['mobile-nav-link', isRouteActive(link.to) ? 'mobile-nav-link-active' : '', link.extraClass]"
                 >{{ link.label }}</router-link>
             </template>
 
@@ -543,7 +550,12 @@ const profileMenuItems = computed<ProfileMenuItem[]>(() => [
                             v-if="item.to"
                             :to="item.to"
                             @click="closeMobileMenu"
-                            :class="['flex items-center gap-2 py-2 text-sm font-medium hover:text-primary transition-colors', item.extraClass ?? 'text-fashion-black']"
+                            :class="[
+                                'flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium transition-colors',
+                                isRouteActive(item.to)
+                                    ? 'bg-primary/10 text-primary'
+                                    : (item.extraClass ?? 'text-fashion-black hover:text-primary')
+                            ]"
                         >
                             <span class="material-symbols-outlined text-[18px]">{{ item.icon }}</span>
                             {{ item.label }}
@@ -574,19 +586,35 @@ const profileMenuItems = computed<ProfileMenuItem[]>(() => [
 @reference "../../assets/main.css";
 
 .nav-link {
-    @apply text-sm font-medium text-fashion-black hover:text-primary transition-colors;
+    @apply relative rounded-full px-3 py-2 text-sm font-medium text-fashion-black hover:text-primary transition-colors;
+}
+
+.nav-link-active {
+    @apply bg-primary/10 text-primary;
 }
 
 .icon-btn {
     @apply p-2 rounded-full hover:bg-border-light text-fashion-black transition-colors cursor-pointer relative;
 }
 
+.icon-btn-active {
+    @apply bg-primary/10 text-primary;
+}
+
 .dropdown-item {
     @apply flex items-center gap-2 px-4 py-2.5 text-sm text-zinc-600 hover:bg-border-light hover:text-fashion-black transition-colors;
 }
 
+.dropdown-item-active {
+    @apply bg-primary/10 text-primary hover:bg-primary/10 hover:text-primary;
+}
+
 .mobile-nav-link {
-    @apply text-lg font-medium text-fashion-black hover:text-primary transition-colors;
+    @apply rounded-lg px-3 py-2 text-lg font-medium text-fashion-black hover:text-primary transition-colors;
+}
+
+.mobile-nav-link-active {
+    @apply bg-primary/10 text-primary;
 }
 
 .notification-item {

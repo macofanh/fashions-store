@@ -78,6 +78,17 @@ const routes: Array<RouteRecordRaw> = [
                 path: 'vouchers',
                 component: () => import('@/pages/promotions/VoucherCenter.vue'),
             },
+            {
+                name: 'my-vouchers',
+                path: 'my-vouchers',
+                component: () => import('@/pages/promotions/MyVouchersPage.vue'),
+                meta: { requiresAuth: true },
+            },
+            {
+                name: 'payment-return',
+                path: 'payment/:gateway/return',
+                component: () => import('@/pages/cart/PaymentReturnPage.vue'),
+            },
         ],
     },
 

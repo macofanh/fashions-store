@@ -1,4 +1,4 @@
-import { ref, reactive, computed, onMounted } from 'vue'
+import { ref, reactive, computed, onMounted, watch } from 'vue'
 import axiosClient from '@/lib/axiosClient'
 import { useAuthStore } from '@/stores/useAuthStore'
 
@@ -35,15 +35,8 @@ export function useUserManagement() {
     const pointsError = ref('')
     const pointsSuccess = ref('')
 
-    const filteredUsers = computed(() => {
-        const q = searchQuery.value.toLowerCase().trim()
-        if (!q) return users.value
-        return users.value.filter(u =>
-            u.full_name?.toLowerCase().includes(q) ||
-            u.email?.toLowerCase().includes(q) ||
-            u.phone?.includes(q)
-        )
-    })
+    // Thay thế logic filteredUsers bằng việc trả về users từ backend
+    const filteredUsers = computed(() => users.value)
 
     const paginationItems = computed<(number | string)[]>(() => {
         if (totalPages.value <= 7) {
@@ -74,9 +67,15 @@ export function useUserManagement() {
     const fetchUsers = async (page = currentPage.value) => {
         isLoading.value = true
         try {
-            const res = await axiosClient.get('/api/v1/users', {
-                params: { page, page_size: pageSize.value },
-            })
+            const params: any = { 
+                page, 
+                page_size: pageSize.value 
+            }
+            if (searchQuery.value.trim()) {
+                params.q = searchQuery.value.trim()
+            }
+
+            const res = await axiosClient.get('/api/v1/users', { params })
             users.value = res.data.items || []
             currentPage.value = res.data.page || page
             totalUsers.value = res.data.total || 0
@@ -87,6 +86,16 @@ export function useUserManagement() {
             isLoading.value = false
         }
     }
+
+    // Xử lý debounce tìm kiếm
+    let searchTimeout: any = null
+    watch(searchQuery, () => {
+        if (searchTimeout) clearTimeout(searchTimeout)
+        searchTimeout = setTimeout(() => {
+            currentPage.value = 1
+            fetchUsers(1)
+        }, 500)
+    })
 
     const goToPage = (page: number) => {
         if (page < 1 || page > totalPages.value || page === currentPage.value) return

@@ -1,4 +1,4 @@
-import { computed, onMounted, ref } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import { useUIStore } from '@/stores/useUIStore'
 import { inventoryService } from './inventoryService'
 import type {
@@ -33,6 +33,8 @@ export function useInventoryManagement() {
     const isSubmitting = ref(false)
     const searchQuery = ref('')
     const filterStock = ref<StockFilter>('all')
+    const currentPage = ref(1)
+    const pageSize = ref(10)
     const form = ref<AdjustStockForm>(defaultForm())
 
     const hydrateStockCache = () => {
@@ -67,7 +69,7 @@ export function useInventoryManagement() {
     const isLowStock = (item: VariantStock) =>
         item.stock_qty > 0 && item.stock_qty <= (item.low_stock_threshold || 5)
 
-    const filteredStock = computed(() => {
+    const matchingStock = computed(() => {
         let list = stockList.value
 
         if (filterStock.value === 'low') {
@@ -89,11 +91,27 @@ export function useInventoryManagement() {
         return list
     })
 
+    const totalItems = computed(() => matchingStock.value.length)
+    const totalPages = computed(() => Math.max(1, Math.ceil(totalItems.value / pageSize.value)))
+
+    const filteredStock = computed(() => {
+        const start = (currentPage.value - 1) * pageSize.value
+        return matchingStock.value.slice(start, start + pageSize.value)
+    })
+
     const stockStats = computed(() => ({
         total: stockList.value.length,
         low: stockList.value.filter(isLowStock).length,
         out: stockList.value.filter(item => item.stock_qty <= 0).length,
     }))
+
+    const handleSearch = () => {
+        currentPage.value = 1
+    }
+
+    const handlePageChange = (page: number) => {
+        currentPage.value = Math.min(Math.max(page, 1), totalPages.value)
+    }
 
     const fetchStock = async (options?: { background?: boolean }) => {
         const background = options?.background ?? false
@@ -142,6 +160,7 @@ export function useInventoryManagement() {
     const selectStockFilter = (filter: StockFilter) => {
         filterStock.value = filter
         activeTab.value = 'stock'
+        currentPage.value = 1
     }
 
     const openAdjustDrawer = (variant?: VariantStock) => {
@@ -195,6 +214,16 @@ export function useInventoryManagement() {
         void fetchStock({ background: hasCache })
     })
 
+    watch([searchQuery, filterStock], () => {
+        currentPage.value = 1
+    })
+
+    watch(totalPages, pages => {
+        if (currentPage.value > pages) {
+            currentPage.value = pages
+        }
+    })
+
     return {
         activeTab,
         stockList,
@@ -205,11 +234,17 @@ export function useInventoryManagement() {
         isSubmitting,
         searchQuery,
         filterStock,
+        currentPage,
+        pageSize,
+        totalItems,
+        totalPages,
         form,
         filteredStock,
         stockStats,
         fetchStock,
         fetchLogs,
+        handleSearch,
+        handlePageChange,
         handleTabChange,
         selectStockFilter,
         openAdjustDrawer,

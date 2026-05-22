@@ -14,7 +14,8 @@ export function useProductManagement() {
         const isSaving = ref(false)
         const isUploading = ref(false)
         const fileInput = ref<HTMLInputElement | null>(null)
-        const showDeleted = ref(false)
+        const searchQuery = ref('')
+        const selectedCategoryId = ref<number | null>(null)
 
         const allColors = ref<any[]>([])
         const allSizes = ref<any[]>([])
@@ -56,7 +57,14 @@ export function useProductManagement() {
         const fetchProducts = async () => {
             isLoading.value = true
             try {
-                const response = await axiosClient.get('/api/v1/products', { params: { page_size: 100 } })
+                const response = await axiosClient.get('/api/v1/products', { 
+                    params: { 
+                        page_size: 100,
+                        is_active: null, // Lấy cả sp đang bán và sp ẩn
+                        search: searchQuery.value || undefined,
+                        category_id: selectedCategoryId.value || undefined
+                    } 
+                })
                 products.value = response.data.items
             } catch (error) {
                 console.error('Lỗi lấy danh sách sản phẩm:', error)
@@ -65,8 +73,16 @@ export function useProductManagement() {
             }
         }
 
+        // Debounce search
+        let searchTimeout: any = null
+        const handleSearch = () => {
+            if (searchTimeout) clearTimeout(searchTimeout)
+            searchTimeout = setTimeout(() => {
+                fetchProducts()
+            }, 500)
+        }
+
         const filteredProducts = computed(() => {
-            if (showDeleted.value) return products.value
             return products.value.filter(p => !p.deleted_at)
         })
 
@@ -392,7 +408,9 @@ export function useProductManagement() {
         isSaving,
         isUploading,
         fileInput,
-        showDeleted,
+        searchQuery,
+        selectedCategoryId,
+        handleSearch,
         allColors,
         allSizes,
         allCategories,

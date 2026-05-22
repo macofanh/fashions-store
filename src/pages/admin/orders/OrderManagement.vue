@@ -8,6 +8,9 @@ const {
     searchQuery,
     filterStatus,
     filterPaymentMethod,
+    filterPaymentStatus,
+    filterStartDate,
+    filterEndDate,
     selectedOrder,
     isDrawerOpen,
     isLoadingDetail,
@@ -93,8 +96,8 @@ const {
         </div>
 
         <!-- Filters -->
-        <div class="bg-white rounded-2xl border border-slate-200 p-4 shadow-sm space-y-3">
-            <div class="flex flex-wrap gap-3 items-center">
+        <div class="bg-white rounded-2xl border border-slate-200 p-4 shadow-sm space-y-4">
+            <div class="flex flex-wrap gap-4 items-center">
                 <!-- Search -->
                 <div class="relative flex-grow min-w-[200px] max-w-sm">
                     <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-[18px] pointer-events-none">search</span>
@@ -105,33 +108,85 @@ const {
                         class="w-full pl-9 pr-4 py-2 rounded-xl border border-slate-200 text-sm outline-none focus:border-slate-400 focus:ring-2 focus:ring-slate-100 transition-all bg-slate-50"
                     />
                 </div>
-                <!-- Status filter -->
-                <div class="flex flex-wrap gap-2">
-                    <button
-                        @click="filterStatus = ''"
-                        :class="['px-3 py-1.5 rounded-full text-[11px] font-semibold transition-all', filterStatus === '' ? 'bg-slate-900 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200']"
-                    >Tất cả</button>
-                    <button
-                        v-for="(cfg, key) in statusConfig" :key="key"
-                        @click="filterStatus = key"
-                        :class="['px-3 py-1.5 rounded-full text-[11px] font-semibold transition-all flex items-center gap-1.5',
-                            filterStatus === key ? `${cfg.bg} ${cfg.text} ring-2 ring-offset-1 ring-current` : 'bg-slate-100 text-slate-600 hover:bg-slate-200']"
+
+                <!-- Payment Status filter -->
+                <div class="relative min-w-[160px]">
+                    <select
+                        v-model="filterPaymentStatus"
+                        class="w-full pl-3 pr-8 py-2 rounded-xl border border-slate-200 text-sm outline-none focus:border-slate-400 focus:ring-2 focus:ring-slate-100 transition-all bg-slate-50 appearance-none"
                     >
-                        <span :class="['w-1.5 h-1.5 rounded-full', cfg.dot]"></span>
-                        {{ cfg.label }}
-                    </button>
+                        <option value="">Trạng thái thanh toán</option>
+                        <option v-for="(cfg, key) in paymentStatusConfig" :key="key" :value="key">
+                            {{ cfg.label }}
+                        </option>
+                    </select>
+                    <span class="material-symbols-outlined absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none">expand_more</span>
+                </div>
+
+                <!-- Date filters -->
+                <div class="flex items-center gap-2">
+                    <div class="relative">
+                        <input
+                            v-model="filterStartDate"
+                            type="date"
+                            class="pl-3 pr-3 py-2 rounded-xl border border-slate-200 text-xs outline-none focus:border-slate-400 transition-all bg-slate-50"
+                        />
+                    </div>
+                    <span class="text-slate-400">→</span>
+                    <div class="relative">
+                        <input
+                            v-model="filterEndDate"
+                            type="date"
+                            class="pl-3 pr-3 py-2 rounded-xl border border-slate-200 text-xs outline-none focus:border-slate-400 transition-all bg-slate-50"
+                        />
+                    </div>
                 </div>
             </div>
 
+            <!-- Status filter buttons -->
+            <div class="flex flex-wrap gap-2 pt-2 border-t border-slate-50">
+                <button
+                    @click="filterStatus = ''"
+                    :class="['px-3 py-1.5 rounded-full text-[11px] font-semibold transition-all', filterStatus === '' ? 'bg-slate-900 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200']"
+                >Tất cả trạng thái</button>
+                <button
+                    v-for="(cfg, key) in statusConfig" :key="key"
+                    @click="filterStatus = key"
+                    :class="['px-3 py-1.5 rounded-full text-[11px] font-semibold transition-all flex items-center gap-1.5',
+                        filterStatus === key ? `${cfg.bg} ${cfg.text} ring-2 ring-offset-1 ring-current` : 'bg-slate-100 text-slate-600 hover:bg-slate-200']"
+                >
+                    <span :class="['w-1.5 h-1.5 rounded-full', cfg.dot]"></span>
+                    {{ cfg.label }}
+                </button>
+            </div>
+
             <!-- Active filter indicator -->
-            <div v-if="filterPaymentMethod" class="flex items-center gap-2 text-xs text-slate-500">
-                <span class="material-symbols-outlined text-[14px]">filter_alt</span>
-                Đang lọc:
-                <span class="font-semibold text-slate-700">
+            <div v-if="filterPaymentMethod || filterPaymentStatus || filterStartDate || filterEndDate" class="flex flex-wrap items-center gap-3 text-xs text-slate-500 pt-1">
+                <div class="flex items-center gap-1.5">
+                    <span class="material-symbols-outlined text-[14px]">filter_alt</span>
+                    Đang lọc:
+                </div>
+                
+                <span v-if="filterPaymentMethod" class="flex items-center gap-1 bg-slate-100 px-2 py-0.5 rounded-md font-medium text-slate-700">
                     {{ filterPaymentMethod === 'COD' ? 'Thanh toán COD' : 'Ví điện tử / Chuyển khoản' }}
+                    <button @click="filterPaymentMethod = ''" class="hover:text-red-500 transition-colors"><span class="material-symbols-outlined text-[14px]">close</span></button>
                 </span>
-                <button @click="filterPaymentMethod = ''" class="ml-1 text-slate-400 hover:text-slate-700 transition-colors">
-                    <span class="material-symbols-outlined text-[14px]">close</span>
+
+                <span v-if="filterPaymentStatus" class="flex items-center gap-1 bg-slate-100 px-2 py-0.5 rounded-md font-medium text-slate-700">
+                    {{ paymentStatusConfig[filterPaymentStatus]?.label }}
+                    <button @click="filterPaymentStatus = ''" class="hover:text-red-500 transition-colors"><span class="material-symbols-outlined text-[14px]">close</span></button>
+                </span>
+
+                <span v-if="filterStartDate || filterEndDate" class="flex items-center gap-1 bg-slate-100 px-2 py-0.5 rounded-md font-medium text-slate-700">
+                    {{ filterStartDate || '...' }} → {{ filterEndDate || '...' }}
+                    <button @click="filterStartDate = ''; filterEndDate = ''" class="hover:text-red-500 transition-colors"><span class="material-symbols-outlined text-[14px]">close</span></button>
+                </span>
+
+                <button 
+                    @click="filterPaymentMethod = ''; filterPaymentStatus = ''; filterStartDate = ''; filterEndDate = ''; filterStatus = ''; searchQuery = ''"
+                    class="text-indigo-600 font-bold hover:underline"
+                >
+                    Xóa tất cả
                 </button>
             </div>
         </div>

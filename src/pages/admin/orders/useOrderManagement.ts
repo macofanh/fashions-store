@@ -11,6 +11,9 @@ export function useOrderManagement() {
     const searchQuery = ref('')
     const filterStatus = ref('')
     const filterPaymentMethod = ref('')  // '' | 'COD' | 'ONLINE'
+    const filterPaymentStatus = ref('')
+    const filterStartDate = ref('')
+    const filterEndDate = ref('')
 
     // ── Chi tiết đơn hàng ─────────────────────────────────────────
     const selectedOrder = ref<any>(null)
@@ -43,6 +46,9 @@ export function useOrderManagement() {
             const params: any = { mine_only: false }
             if (filterStatus.value) params.status = filterStatus.value
             if (filterPaymentMethod.value) params.payment_method = filterPaymentMethod.value
+            if (filterPaymentStatus.value) params.payment_status = filterPaymentStatus.value
+            if (filterStartDate.value) params.start_date = filterStartDate.value
+            if (filterEndDate.value) params.end_date = filterEndDate.value
             if (searchQuery.value.trim()) params.search = searchQuery.value.trim()
 
             const response = await axiosClient.get('/api/v1/orders/my', { params })
@@ -60,7 +66,7 @@ export function useOrderManagement() {
 
     // Tự động tải lại khi filter thay đổi (Debounce search để tránh gọi API quá nhiều)
     let searchTimeout: any = null
-    watch([filterStatus, filterPaymentMethod], () => {
+    watch([filterStatus, filterPaymentMethod, filterPaymentStatus, filterStartDate, filterEndDate], () => {
         fetchAllOrders()
     })
     watch(searchQuery, () => {
@@ -183,6 +189,9 @@ export function useOrderManagement() {
         searchQuery,
         filterStatus,
         filterPaymentMethod,
+        filterPaymentStatus,
+        filterStartDate,
+        filterEndDate,
         selectedOrder,
         isDrawerOpen,
         isLoadingDetail,

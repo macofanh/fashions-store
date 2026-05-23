@@ -110,7 +110,7 @@ function scrollToBottom() {
                                     <span class="thinking-dot"></span>
                                     <span class="thinking-dot"></span>
                                 </span>
-                                <span>Đang nghĩ...</span>
+                                <span>...</span>
                             </div>
                         </div>
                     </div>

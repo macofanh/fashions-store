@@ -1,55 +1,29 @@
 <script setup lang="ts">
-import { ref, nextTick } from 'vue'
-
-interface Message {
-    id: number
-    role: 'user' | 'assistant'
-    content: string
-    time: string
-}
+import { ref } from 'vue'
+import { chatAIHandler } from './chatAIHandler'
 
 const isOpen = ref(false)
-const inputText = ref('')
-const messages = ref<Message[]>([
-    {
-        id: 1,
-        role: 'assistant',
-        content: 'Xin chào! Tôi là trợ lý thời trang của LUXU. Tôi có thể giúp bạn tìm kiếm sản phẩm, tư vấn phong cách hoặc giải đáp thắc mắc. 👗',
-        time: now(),
-    }
-])
 const messagesContainer = ref<HTMLElement | null>(null)
-let msgCounter = 2
 
-function now() {
-    return new Date().toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })
-}
+const {
+    inputText,
+    isSending,
+    error,
+    messages,
+    sendMessage,
+    retryLastMessage,
+} = chatAIHandler()
 
 function toggleChat() {
     isOpen.value = !isOpen.value
 }
 
-async function sendMessage() {
-    const text = inputText.value.trim()
-    if (!text) return
+async function handleSendMessage() {
+    await sendMessage(scrollToBottom)
+}
 
-    messages.value.push({ id: msgCounter++, role: 'user', content: text, time: now() })
-    inputText.value = ''
-
-    await nextTick()
-    scrollToBottom()
-
-    // Giả lập phản hồi AI (placeholder)
-    setTimeout(async () => {
-        messages.value.push({
-            id: msgCounter++,
-            role: 'assistant',
-            content: 'Cảm ơn bạn đã nhắn tin! Tính năng AI đang được phát triển. Vui lòng liên hệ hotline để được hỗ trợ trực tiếp. 😊',
-            time: now(),
-        })
-        await nextTick()
-        scrollToBottom()
-    }, 800)
+async function handleRetryMessage() {
+    await retryLastMessage(scrollToBottom)
 }
 
 function scrollToBottom() {
@@ -93,36 +67,63 @@ function scrollToBottom() {
                     class="flex-grow overflow-y-auto p-4 space-y-4 bg-background-light"
                 >
                     <div
-                        v-for="msg in messages"
-                        :key="msg.id"
-                        :class="['flex gap-2', msg.role === 'user' ? 'flex-row-reverse' : 'flex-row']"
+                        v-for="message in messages"
+                        :key="message.id"
+                        :class="['flex gap-2', message.role === 'user' ? 'flex-row-reverse' : 'flex-row']"
                     >
                         <!-- Avatar -->
                         <div
                             :class="[
                                 'w-7 h-7 rounded-full flex items-center justify-center shrink-0 mt-1',
-                                msg.role === 'assistant' ? 'bg-primary' : 'bg-fashion-black'
+                                message.role === 'assistant' ? 'bg-primary' : 'bg-fashion-black'
                             ]"
                         >
                             <span class="material-symbols-outlined text-white text-[14px]" style="font-variation-settings:'FILL' 1">
-                                {{ msg.role === 'assistant' ? 'smart_toy' : 'person' }}
+                                {{ message.role === 'assistant' ? 'smart_toy' : 'person' }}
                             </span>
                         </div>
 
                         <!-- Bubble -->
-                        <div :class="['max-w-[75%]', msg.role === 'user' ? 'items-end' : 'items-start', 'flex flex-col gap-1']">
+                        <div :class="['max-w-[75%]', message.role === 'user' ? 'items-end' : 'items-start', 'flex flex-col gap-1']">
                             <div
                                 :class="[
-                                    'px-4 py-3 text-[12px] leading-relaxed',
-                                    msg.role === 'assistant'
+                                    'px-4 py-3 text-[12px] leading-relaxed whitespace-pre-wrap',
+                                    message.role === 'assistant'
                                         ? 'bg-white border border-border-light text-fashion-black'
                                         : 'bg-fashion-black text-white'
                                 ]"
                             >
-                                {{ msg.content }}
+                                {{ message.content }}
                             </div>
-                            <span class="text-[9px] text-zinc-400 px-1">{{ msg.time }}</span>
+                            <span class="text-[9px] text-zinc-400 px-1">{{ message.time }}</span>
                         </div>
+                    </div>
+
+                    <div v-if="isSending" class="flex gap-2">
+                        <div class="w-7 h-7 rounded-full flex items-center justify-center shrink-0 mt-1 bg-primary">
+                            <span class="material-symbols-outlined text-white text-[14px] ai-thinking-icon" style="font-variation-settings:'FILL' 1">progress_activity</span>
+                        </div>
+                        <div class="max-w-[75%] flex flex-col gap-1 items-start">
+                            <div class="px-4 py-3 text-[12px] leading-relaxed bg-white border border-border-light text-text-muted flex items-center gap-2">
+                                <span class="inline-flex gap-1">
+                                    <span class="thinking-dot"></span>
+                                    <span class="thinking-dot"></span>
+                                    <span class="thinking-dot"></span>
+                                </span>
+                                <span>Đang nghĩ...</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div v-if="error" class="flex justify-start">
+                        <button
+                            type="button"
+                            class="ml-9 text-[10px] font-bold uppercase tracking-widest text-red-600 hover:text-red-700 disabled:opacity-50"
+                            :disabled="isSending"
+                            @click="handleRetryMessage"
+                        >
+                            Gửi lại tin nhắn cuối
+                        </button>
                     </div>
                 </div>
 
@@ -130,17 +131,19 @@ function scrollToBottom() {
                 <div class="border-t border-border-light p-3 flex gap-2 shrink-0 bg-white">
                     <input
                         v-model="inputText"
-                        @keyup.enter="sendMessage"
+                        @keyup.enter="handleSendMessage"
                         type="text"
                         placeholder="Nhập tin nhắn..."
+                        :disabled="isSending"
                         class="flex-grow border border-zinc-200 px-4 py-2.5 text-sm outline-none focus:border-primary transition-colors text-fashion-black placeholder:text-zinc-400"
                     />
                     <button
-                        @click="sendMessage"
-                        :disabled="!inputText.trim()"
+                        @click="handleSendMessage"
+                        :disabled="!inputText.trim() || isSending"
                         class="w-10 h-10 bg-primary text-white flex items-center justify-center hover:bg-primary-dark transition-colors disabled:opacity-40 disabled:cursor-not-allowed shrink-0"
                     >
-                        <span class="material-symbols-outlined text-[18px]">send</span>
+                        <span v-if="isSending" class="material-symbols-outlined text-[18px] ai-thinking-icon">progress_activity</span>
+                        <span v-else class="material-symbols-outlined text-[18px]">send</span>
                     </button>
                 </div>
             </div>
@@ -168,4 +171,33 @@ function scrollToBottom() {
 
 .icon-swap-enter-active, .icon-swap-leave-active { transition: all 0.15s ease; }
 .icon-swap-enter-from, .icon-swap-leave-to { opacity: 0; transform: scale(0.7) rotate(90deg); }
+
+.ai-thinking-icon {
+    animation: ai-spin 0.9s linear infinite;
+}
+
+.thinking-dot {
+    width: 4px;
+    height: 4px;
+    border-radius: 999px;
+    background: #17b0cf;
+    animation: ai-pulse 1s ease-in-out infinite;
+}
+
+.thinking-dot:nth-child(2) {
+    animation-delay: 0.15s;
+}
+
+.thinking-dot:nth-child(3) {
+    animation-delay: 0.3s;
+}
+
+@keyframes ai-spin {
+    to { transform: rotate(360deg); }
+}
+
+@keyframes ai-pulse {
+    0%, 80%, 100% { opacity: 0.35; transform: translateY(0); }
+    40% { opacity: 1; transform: translateY(-2px); }
+}
 </style>

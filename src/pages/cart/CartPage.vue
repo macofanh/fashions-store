@@ -3,18 +3,50 @@ import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useCartStore } from '@/stores/useCartStore'
 import { useAuthStore } from '@/stores/useAuthStore'
+import { useUIStore } from '@/stores/useUIStore'
 import { getImageUrl } from '@/lib/urlHelper'
 
 const cartStore = useCartStore()
 const authStore = useAuthStore()
+const uiStore   = useUIStore()
 const router    = useRouter()
 
 const updatingItemId = ref<number | null>(null)
 const removingItemId = ref<number | null>(null)
+const selectedItemIds = ref<number[]>([])
 
-const subtotal = computed(() =>
-    cartStore.items.reduce((sum, item) => sum + item.unit_price * item.quantity, 0)
+const selectedItems = computed(() =>
+    cartStore.items.filter(item => selectedItemIds.value.includes(item.cart_item_id))
 )
+
+const selectedQuantity = computed(() =>
+    selectedItems.value.reduce((sum, item) => sum + item.quantity, 0)
+)
+
+const selectedSubtotal = computed(() =>
+    selectedItems.value.reduce((sum, item) => sum + item.unit_price * item.quantity, 0)
+)
+
+const isAllSelected = computed(() =>
+    cartStore.items.length > 0 && selectedItemIds.value.length === cartStore.items.length
+)
+
+const syncSelectedItems = () => {
+    const currentIds = new Set(cartStore.items.map(item => item.cart_item_id))
+    selectedItemIds.value = selectedItemIds.value.filter(id => currentIds.has(id))
+}
+
+const toggleItemSelection = (itemId: number) => {
+    selectedItemIds.value = selectedItemIds.value.includes(itemId)
+        ? selectedItemIds.value.filter(id => id !== itemId)
+        : [...selectedItemIds.value, itemId]
+}
+
+const toggleSelectAll = () => {
+    selectedItemIds.value = isAllSelected.value
+        ? []
+        : cartStore.items.map(item => item.cart_item_id)
+}
 
 const handleUpdateQty = async (itemId: number, newQty: number) => {
     if (newQty < 1) return
@@ -36,15 +68,23 @@ const handleRemove = async (itemId: number) => {
         const item = cartStore.items.find(i => i.cart_item_id === itemId)
         if (item) cartStore.removeGuestItem(item.variant_id)
     }
+    syncSelectedItems()
     removingItemId.value = null
 }
 
 const goToCheckout = () => {
-    if (!authStore.isAuthenticated) {
-        router.push({ name: 'login', query: { redirect: '/checkout' } })
+    if (selectedItemIds.value.length === 0) {
+        uiStore.warning('Vui lòng chọn ít nhất một sản phẩm để thanh toán.')
         return
     }
-    router.push({ name: 'checkout' })
+
+    const cartItemIds = selectedItemIds.value.join(',')
+
+    if (!authStore.isAuthenticated) {
+        router.push({ name: 'login', query: { redirect: `/checkout?cart_item_ids=${cartItemIds}` } })
+        return
+    }
+    router.push({ name: 'checkout', query: { cart_item_ids: cartItemIds } })
 }
 
 const formatPrice = (price: number) =>
@@ -56,6 +96,7 @@ onMounted(async () => {
     } else {
         cartStore.loadGuestCart()
     }
+    selectedItemIds.value = cartStore.items.map(item => item.cart_item_id)
 })
 </script>
 
@@ -91,7 +132,19 @@ onMounted(async () => {
                 <!-- Danh sách sản phẩm -->
                 <div class="bg-white border border-border-light rounded-xl shadow-sm overflow-hidden">
                     <!-- Table header (desktop) -->
-                    <div class="hidden md:grid grid-cols-[2fr_1fr_1fr_auto] gap-4 px-6 py-3 bg-background-light border-b border-border-light">
+                    <div class="hidden md:grid grid-cols-[28px_minmax(0,2fr)_120px_128px_120px] gap-4 px-6 py-3 bg-background-light border-b border-border-light items-center">
+                        <button
+                            @click="toggleSelectAll"
+                            :class="[
+                                'w-5 h-5 flex items-center justify-center rounded border transition-colors',
+                                isAllSelected
+                                    ? 'bg-primary border-primary text-white'
+                                    : 'bg-white border-border-light hover:border-primary'
+                            ]"
+                            title="Chọn tất cả"
+                        >
+                            <span v-if="isAllSelected" class="material-symbols-outlined text-[16px]">check</span>
+                        </button>
                         <span class="col-label">Sản phẩm</span>
                         <span class="col-label text-center">Đơn giá</span>
                         <span class="col-label text-center">Số lượng</span>
@@ -107,7 +160,19 @@ onMounted(async () => {
                                 removingItemId === item.cart_item_id ? 'opacity-40 pointer-events-none' : ''
                             ]"
                         >
-                            <div class="flex flex-col md:grid md:grid-cols-[2fr_1fr_1fr_auto] gap-4 items-start md:items-center">
+                            <div class="flex flex-col md:grid md:grid-cols-[28px_minmax(0,2fr)_120px_128px_120px] gap-4 items-start md:items-center">
+                                <button
+                                    @click="toggleItemSelection(item.cart_item_id)"
+                                    :class="[
+                                        'w-5 h-5 flex items-center justify-center rounded border transition-colors shrink-0',
+                                        selectedItemIds.includes(item.cart_item_id)
+                                            ? 'bg-primary border-primary text-white'
+                                            : 'bg-white border-border-light hover:border-primary'
+                                    ]"
+                                    :title="selectedItemIds.includes(item.cart_item_id) ? 'Bỏ chọn sản phẩm' : 'Chọn sản phẩm'"
+                                >
+                                    <span v-if="selectedItemIds.includes(item.cart_item_id)" class="material-symbols-outlined text-[16px]">check</span>
+                                </button>
 
                                 <!-- Sản phẩm -->
                                 <div class="flex gap-4 items-center">
@@ -130,7 +195,7 @@ onMounted(async () => {
                                 </div>
 
                                 <!-- Đơn giá (desktop) -->
-                                <p class="hidden md:block text-sm font-medium text-fashion-black text-center">
+                                <p class="hidden md:block text-sm font-medium text-fashion-black text-center tabular-nums">
                                     {{ formatPrice(item.unit_price) }}
                                 </p>
 
@@ -157,8 +222,8 @@ onMounted(async () => {
                                 </div>
 
                                 <!-- Thành tiền + Xóa -->
-                                <div class="flex items-center justify-between md:justify-end gap-4 w-full md:w-auto">
-                                    <p class="text-sm font-bold text-fashion-black">
+                                <div class="flex items-center justify-between md:justify-end gap-4 w-full md:w-full">
+                                    <p class="text-sm font-bold text-fashion-black text-right tabular-nums">
                                         {{ formatPrice(item.unit_price * item.quantity) }}
                                     </p>
                                     <button
@@ -178,13 +243,29 @@ onMounted(async () => {
                 <!-- Footer: tổng + nút checkout -->
                 <div class="bg-white border border-border-light rounded-xl shadow-sm p-6 flex flex-col sm:flex-row items-center justify-between gap-4">
                     <div>
-                        <p class="text-xs text-text-muted uppercase tracking-widest mb-1">Tạm tính ({{ cartStore.totalQuantity }} sản phẩm)</p>
-                        <p class="text-2xl font-bold text-fashion-black">{{ formatPrice(subtotal) }}</p>
+                        <div class="flex items-center gap-3 mb-2 md:hidden">
+                            <button
+                                @click="toggleSelectAll"
+                                :class="[
+                                    'w-5 h-5 flex items-center justify-center rounded border transition-colors',
+                                    isAllSelected
+                                        ? 'bg-primary border-primary text-white'
+                                        : 'bg-white border-border-light hover:border-primary'
+                                ]"
+                            >
+                                <span v-if="isAllSelected" class="material-symbols-outlined text-[16px]">check</span>
+                            </button>
+                            <span class="text-xs font-semibold text-fashion-black">Chọn tất cả</span>
+                        </div>
+                        <p class="text-xs text-text-muted uppercase tracking-widest mb-1">{{ selectedQuantity }} sản phẩm đã chọn</p>
+                        <p class="text-2xl font-bold text-fashion-black">{{ formatPrice(selectedSubtotal) }}</p>
                         <p class="text-xs text-text-muted mt-1">Phí ship & voucher sẽ được tính ở bước thanh toán</p>
                     </div>
                     <button
                         @click="goToCheckout"
+                        :disabled="selectedItemIds.length === 0"
                         class="w-full sm:w-auto bg-primary text-white px-10 py-4 text-sm font-bold uppercase tracking-widest hover:bg-primary-dark transition-all flex items-center justify-center gap-2 active:scale-[0.98] rounded-lg shadow-md shadow-primary/20"
+                        :class="selectedItemIds.length === 0 ? 'opacity-50 cursor-not-allowed hover:bg-primary' : ''"
                     >
                         <span class="material-symbols-outlined text-[18px]">lock</span>
                         Tiến hành thanh toán

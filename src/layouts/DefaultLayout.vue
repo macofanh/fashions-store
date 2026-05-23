@@ -16,7 +16,6 @@ import CustomerChatWidget from '@/pages/chat/CustomerChatWidget.vue'
 
         <FooterLayout />
 
-        <!-- Chat AI Widget — góc phải dưới -->
         <CustomerChatWidget />
         <ChatAIWidget />
     </div>

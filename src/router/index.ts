@@ -64,7 +64,7 @@ const routes: Array<RouteRecordRaw> = [
             {
                 name: 'checkout',
                 path: 'checkout',
-                component: () => import('@/pages/cart/CheckoutPage.vue'),
+                component: () => import('@/pages/checkout/CheckoutPage.vue'),
                 meta: { requiresAuth: true }
             },
             {
@@ -87,7 +87,7 @@ const routes: Array<RouteRecordRaw> = [
             {
                 name: 'payment-return',
                 path: 'payment/:gateway/return',
-                component: () => import('@/pages/cart/PaymentReturnPage.vue'),
+                component: () => import('@/pages/checkout/PaymentReturnPage.vue'),
             },
         ],
     },

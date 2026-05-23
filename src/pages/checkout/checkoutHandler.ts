@@ -78,6 +78,16 @@ function isOrderPaid(orderData: any) {
     return false
 }
 
+function parseCartItemIds(value: unknown) {
+    const raw = Array.isArray(value) ? value[0] : value
+    if (typeof raw !== 'string') return []
+
+    return raw
+        .split(',')
+        .map(id => Number(id))
+        .filter(id => Number.isInteger(id) && id > 0)
+}
+
 export function checkoutHandler() {
     const route     = useRoute()
     const router    = useRouter()
@@ -234,12 +244,22 @@ export function checkoutHandler() {
                 checkoutServices.getMyAddresses(),
             ])
 
-            cart.value         = cartRes.data
+            const requestedCartItemIds = parseCartItemIds(route.query.cart_item_ids)
+            const requestedIdSet = new Set(requestedCartItemIds)
+            cart.value = {
+                ...cartRes.data,
+                items: requestedCartItemIds.length > 0
+                    ? (cartRes.data.items || []).filter((item: any) => requestedIdSet.has(item.cart_item_id))
+                    : cartRes.data.items,
+            }
             myVouchers.value   = vouchersRes.data
             provinces.value    = provincesRes.data
             savedAddresses.value = addressesRes.data
 
             if (!cart.value.items?.length) {
+                if (requestedCartItemIds.length > 0) {
+                    uiStore.warning('Các sản phẩm đã chọn không còn trong giỏ hàng.')
+                }
                 router.push({ name: 'cart' })
                 return
             }
@@ -374,6 +394,7 @@ export function checkoutHandler() {
         try {
             const response = await checkoutServices.createOrder({
                 payment_method: form.value.payment_method,
+                cart_item_ids: cart.value.items.map((item: any) => item.cart_item_id),
                 address_snapshot: {
                     recipient_name: form.value.recipient_name,
                     phone:          form.value.phone,

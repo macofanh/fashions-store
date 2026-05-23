@@ -3,6 +3,7 @@ import { apiEndpoints } from '@/lib/endPoints'
 
 export interface OrderCreateData {
     payment_method: string
+    cart_item_ids?: number[]
     address_snapshot: {
         recipient_name: string
         phone: string

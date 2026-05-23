@@ -2,12 +2,13 @@
 import { ref, reactive, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { productService, type Product } from '@/pages/products/productService'
-import { getImageUrl } from '@/lib/urlHelper'
 import { useCartStore } from '@/stores/useCartStore'
 import { useAuthStore } from '@/stores/useAuthStore'
 import { useUIStore } from '@/stores/useUIStore'
 import { cartService } from '@/pages/cart/cartService'
 import FilterSidebar from './FilterSidebar.vue'
+import ProductListCard from './components/ProductListCard.vue'
+import { formatPrice, getPrimaryImage } from './productDisplay'
 
 const route = useRoute()
 const router = useRouter()
@@ -92,14 +93,6 @@ const syncToUrl = () => {
     router.replace({ query: q })
 }
 
-const getPrimaryImage = (product: Product) => {
-    if (!product.images?.length) return null
-    return product.images.find(img => img.is_primary) || product.images[0]
-}
-
-const formatPrice = (price: number) =>
-    new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(price)
-
 // ── Actions ───────────────────────────────────────────────────────
 const fetchProducts = async () => {
     isLoading.value = true
@@ -164,33 +157,40 @@ const goToPage = (page: number) => {
 }
 
 // Quick Add — thêm variant đầu tiên vào giỏ không cần chọn
-const handleQuickAdd = async (e: Event, product: Product) => {
-    e.preventDefault()
-    e.stopPropagation()
+const handleQuickAdd = async (product: Product) => {
     if (quickAddingId.value === product.product_id) return
-
-    const firstVariant = product.variants?.[0]
-    if (!firstVariant) {
-        router.push({ name: 'product-detail', params: { slug: product.slug } })
-        return
-    }
 
     quickAddingId.value = product.product_id
     try {
+        const productForCart = product.variants?.length
+            ? product
+            : (await productService.getProductBySlug(product.slug)).data
+
+        const firstVariant = productForCart.variants?.[0]
+        if (!firstVariant) {
+            uiStore.warning('Sản phẩm này chưa có phân loại để thêm vào giỏ.')
+            return
+        }
+
+        if (firstVariant.stock_qty <= 0) {
+            uiStore.error('Sản phẩm này đã hết hàng.')
+            return
+        }
+
         if (authStore.isAuthenticated) {
             await cartService.addToCart(firstVariant.variant_id, 1)
             await cartStore.fetchCart()
         } else {
             cartStore.addGuestItem({
                 variant_id: firstVariant.variant_id,
-                product_name: product.name,
+                product_name: productForCart.name,
                 variant_info: `${firstVariant.color?.name || ''} / ${firstVariant.size?.name || ''}`,
-                image_url: getPrimaryImage(product)?.image_url || '',
-                unit_price: firstVariant.price || product.base_price,
+                image_url: getPrimaryImage(productForCart)?.image_url || '',
+                unit_price: firstVariant.price || productForCart.base_price,
                 quantity: 1,
             })
         }
-        uiStore.success(`Đã thêm "${product.name}" vào giỏ!`)
+        uiStore.success(`Đã thêm "${productForCart.name}" vào giỏ!`)
     } catch {
         uiStore.error('Có lỗi xảy ra. Vui lòng thử lại.')
     } finally {
@@ -355,71 +355,13 @@ onMounted(() => { fetchProducts(); fetchCategories() })
 
                     <!-- Product Grid -->
                     <div v-else-if="products.length > 0" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-x-6 gap-y-10">
-                        <router-link
+                        <ProductListCard
                             v-for="product in products"
                             :key="product.product_id"
-                            :to="{ name: 'product-detail', params: { slug: product.slug } }"
-                            class="group flex flex-col gap-3"
-                        >
-                            <!-- Image container -->
-                            <div class="relative aspect-[3/4] overflow-hidden rounded-lg bg-gray-100">
-                                <!-- Product image -->
-                                <img
-                                    v-if="getPrimaryImage(product)"
-                                    :src="getImageUrl(getPrimaryImage(product)!.image_url)"
-                                    :alt="product.name"
-                                    class="h-full w-full object-cover object-center group-hover:scale-105 transition-transform duration-500"
-                                />
-                                <div v-else class="w-full h-full flex items-center justify-center bg-border-light">
-                                    <span class="material-symbols-outlined text-4xl text-text-muted">image_not_supported</span>
-                                </div>
-
-                                <!-- Quick Add button (hover) -->
-                                <div class="absolute bottom-4 left-4 right-4 translate-y-4 opacity-0 group-hover:translate-y-0 group-hover:opacity-100 transition-all duration-300">
-                                    <button
-                                        @click="handleQuickAdd($event, product)"
-                                        class="btn-radius w-full bg-white/90 backdrop-blur text-fashion-black text-sm font-semibold py-3 shadow-sm hover:bg-primary hover:text-white transition-colors flex items-center justify-center gap-2"
-                                    >
-                                        <span v-if="quickAddingId === product.product_id" class="animate-spin h-4 w-4 border-2 border-current border-t-transparent rounded-full"></span>
-                                        <span v-else class="material-symbols-outlined text-[18px]">shopping_bag</span>
-                                        Thêm vào giỏ hàng
-                                    </button>
-                                </div>
-
-                                <!-- Badge: New / Sale -->
-                                <div class="absolute top-3 left-3 flex flex-col gap-1">
-                                    <span
-                                        v-if="isNewProduct(product)"
-                                        class="bg-fashion-black text-white text-[10px] font-bold px-2 py-1 uppercase tracking-wider rounded"
-                                    >Mới</span>
-                                </div>
-                            </div>
-
-                            <!-- Product info -->
-                            <div>
-                                <h3 class="text-sm text-fashion-black font-medium group-hover:text-primary transition-colors line-clamp-2">
-                                    {{ product.name }}
-                                </h3>
-                                <div class="flex items-center gap-2 mt-1">
-                                    <p class="text-sm text-text-muted font-medium">{{ formatPrice(product.base_price) }}</p>
-                                    <div v-if="product.avg_rating > 0" class="flex items-center gap-0.5 ml-auto">
-                                        <span class="material-symbols-outlined text-amber-400 text-[13px]" style="font-variation-settings:'FILL' 1">star</span>
-                                        <span class="text-[10px] text-text-muted">{{ product.avg_rating.toFixed(1) }}</span>
-                                    </div>
-                                </div>
-                                <!-- Color swatches nếu có variants -->
-                                <div v-if="getUniqueColors(product).length > 1" class="flex gap-1 mt-2">
-                                    <span
-                                        v-for="color in getUniqueColors(product).slice(0, 5)"
-                                        :key="color.color_id"
-                                        :style="{ backgroundColor: color.hex_code || '#ccc' }"
-                                        :title="color.name"
-                                        class="w-3 h-3 rounded-full border border-gray-200 block"
-                                    ></span>
-                                    <span v-if="getUniqueColors(product).length > 5" class="text-[9px] text-text-muted self-center">+{{ getUniqueColors(product).length - 5 }}</span>
-                                </div>
-                            </div>
-                        </router-link>
+                            :product="product"
+                            :is-adding="quickAddingId === product.product_id"
+                            @quick-add="handleQuickAdd"
+                        />
                     </div>
 
                     <!-- Empty state -->
@@ -493,23 +435,6 @@ onMounted(() => { fetchProducts(); fetchCategories() })
         </Teleport>
     </div>
 </template>
-
-<script lang="ts">
-// Helper functions (outside setup for reuse)
-function isNewProduct(product: any): boolean {
-    if (!product.created_at) return false
-    const created = new Date(product.created_at)
-    const now = new Date()
-    const diffDays = (now.getTime() - created.getTime()) / (1000 * 60 * 60 * 24)
-    return diffDays <= 30
-}
-
-function getUniqueColors(product: any): any[] {
-    if (!product.variants?.length) return []
-    const colors = product.variants.map((v: any) => v.color).filter(Boolean)
-    return Array.from(new Map(colors.map((c: any) => [c.color_id, c])).values()) as any[]
-}
-</script>
 
 <style scoped>
 @reference "../../assets/main.css";

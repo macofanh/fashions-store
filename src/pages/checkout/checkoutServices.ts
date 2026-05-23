@@ -1,5 +1,5 @@
-import { cartService } from './cartService'
-import { orderService, type OrderCreateData } from './orderService'
+import { cartService } from '@/pages/cart/cartService'
+import { orderService, type OrderCreateData } from '@/pages/cart/orderService'
 import { promotionService } from '@/pages/promotions/promotionService'
 import { addressService } from '@/pages/profile/addressService'
 import axios from 'axios'

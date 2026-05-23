@@ -289,12 +289,6 @@ const profileMenuItems = computed<ProfileMenuItem[]>(() => [
         to: '/profile?tab=profile',
     },
     {
-        key: 'cart',
-        label: 'Giỏ hàng',
-        icon: 'shopping_bag',
-        to: '/cart',
-    },
-    {
         key: 'vouchers',
         label: 'Voucher của tôi',
         icon: 'local_offer',

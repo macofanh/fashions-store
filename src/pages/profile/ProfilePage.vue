@@ -71,7 +71,7 @@ onMounted(init)
 
                 <div v-if="activeTab === 'membership'">
                     <h2 class="text-[10px] uppercase tracking-[0.3em] font-bold text-fashion-black mb-6 border-b border-border-light pb-4 font-display">Hạng thành viên</h2>
-                    <div class="max-w-lg">
+                    <div class="max-w-2xl">
                         <MembershipCard :total-points="totalPoints" :is-loading="isMembershipLoading" />
                     </div>
                 </div>

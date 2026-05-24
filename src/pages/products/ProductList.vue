@@ -10,6 +10,7 @@ import { cartService } from '@/pages/cart/cartService'
 import FilterSidebar from './FilterSidebar.vue'
 import ProductListCard from './components/ProductListCard.vue'
 import { formatPrice, getPrimaryImage } from './productDisplay'
+import AddToCartRecommendationModal from './components/AddToCartRecommendationModal.vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -23,6 +24,10 @@ const categories = ref<any[]>([])
 const isLoading = ref(true)
 const isMobileSidebarOpen = ref(false)
 const quickAddingId = ref<number | null>(null)
+const quickAddRecommendations = ref<any[]>([])
+const showQuickAddModal = ref(false)
+const addedProductName = ref('')
+const addedProductPrice = ref(0)
 
 // Pagination
 const currentPage = ref(Number(route.query.page) || 1)
@@ -191,7 +196,18 @@ const handleQuickAdd = async (product: Product) => {
                 quantity: 1,
             })
         }
-        uiStore.success(`Đã thêm "${productForCart.name}" vào giỏ!`)
+
+        // Tải danh sách gợi ý sản phẩm mua kèm
+        const recRes = await productService.getRecommendations(productForCart.product_id)
+        quickAddRecommendations.value = recRes.data
+        addedProductName.value = productForCart.name
+        addedProductPrice.value = firstVariant.price || productForCart.base_price
+
+        if (quickAddRecommendations.value.length > 0) {
+            showQuickAddModal.value = true
+        } else {
+            uiStore.success(`Đã thêm "${productForCart.name}" vào giỏ!`)
+        }
     } catch {
         uiStore.error('Có lỗi xảy ra. Vui lòng thử lại.')
     } finally {
@@ -407,6 +423,17 @@ onMounted(() => { fetchProducts(); fetchCategories() })
                 </div>
             </div>
         </div>
+
+        <!-- Add to Cart Recommendation Modal -->
+        <AddToCartRecommendationModal
+            v-if="showQuickAddModal"
+            :recommendations="quickAddRecommendations"
+            :product-name="addedProductName"
+            :product-price="addedProductPrice"
+            :product-image="null"
+            @close="showQuickAddModal = false"
+            @go-to-cart="router.push({ name: 'cart' })"
+        />
 
         <!-- Mobile Sidebar Overlay -->
         <Teleport to="body">

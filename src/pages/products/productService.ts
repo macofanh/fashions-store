@@ -22,6 +22,10 @@ class ProductService {
     public getReviews(productId: number) {
         return axiosClient.get(apiEndpoints.products.reviews(productId))
     }
+    
+    public getRecommendations(productId: number) {
+        return axiosClient.get(apiEndpoints.products.recommendations(productId))
+    }
 
     public addReview(productId: number, payload: {
         variant_id: number

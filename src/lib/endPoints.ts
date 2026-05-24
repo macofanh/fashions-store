@@ -19,6 +19,7 @@ export const apiEndpoints = {
         colors: `${basePrefix}/products/colors`,
         sizes: `${basePrefix}/products/sizes`,
         reviews: (id: number) => `${basePrefix}/products/${id}/reviews`,
+        recommendations: (id: number) => `${basePrefix}/products/${id}/recommendations`,
     },
     categories: {
         list: `${basePrefix}/categories`,

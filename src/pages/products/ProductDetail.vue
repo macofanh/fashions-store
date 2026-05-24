@@ -1,16 +1,18 @@
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { productService } from '@/pages/products/productService'
 import { cartService } from '@/pages/cart/cartService'
 import { useAuthStore } from '@/stores/useAuthStore'
 import { useCartStore } from '@/stores/useCartStore'
 import { useUIStore } from '@/stores/useUIStore'
+import { getImageUrl } from '@/lib/urlHelper'
 
 import ProductGallery from './components/ProductGallery.vue'
 import ProductInfo    from './components/ProductInfo.vue'
 import ProductReviews from './components/ProductReviews.vue'
 import ReviewModal    from './components/ReviewModal.vue'
+import AddToCartRecommendationModal from './components/AddToCartRecommendationModal.vue'
 
 const route     = useRoute()
 const router    = useRouter()
@@ -21,14 +23,20 @@ const uiStore   = useUIStore()
 // ── State ──────────────────────────────────────────────────────────
 const product          = ref<any>(null)
 const reviews          = ref<any[]>([])
+const recommendations  = ref<any[]>([])
 const isProductLoading  = ref(true)
 const isReviewsLoading  = ref(true)
+const isRecommendationsLoading = ref(true)
 const isAddingToCart    = ref(false)
 const isBuyingNow       = ref(false)
 const selectedColor     = ref<any>(null)
 const selectedSize      = ref<any>(null)
 const quantity          = ref(1)
 const showModal         = ref(false)
+const showAddToCartModal = ref(false)
+
+const formatPrice = (price: number) =>
+    new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(price)
 
 // ── Fetch ──────────────────────────────────────────────────────────
 const fetchProduct = async () => {
@@ -43,6 +51,7 @@ const fetchProduct = async () => {
         }
 
         void fetchReviews(product.value.product_id)
+        void fetchRecommendations(product.value.product_id)
     } catch (e) {
         console.error('Lỗi lấy chi tiết sản phẩm:', e)
     } finally {
@@ -62,7 +71,28 @@ const fetchReviews = async (productId: number) => {
     }
 }
 
+const fetchRecommendations = async (productId: number) => {
+    isRecommendationsLoading.value = true
+    try {
+        const res = await productService.getRecommendations(productId)
+        recommendations.value = res.data
+    } catch (e) {
+        console.error('Lỗi lấy gợi ý sản phẩm:', e)
+    } finally {
+        isRecommendationsLoading.value = false
+    }
+}
+
 onMounted(fetchProduct)
+
+watch(
+    () => route.params.slug,
+    (newSlug) => {
+        if (newSlug && route.name === 'product-detail') {
+            fetchProduct()
+        }
+    }
+)
 
 // ── Computed ───────────────────────────────────────────────────────
 const currentVariant = computed(() => {
@@ -100,7 +130,11 @@ const handleAddToCart = async () => {
     isAddingToCart.value = true
     try {
         await addToCartLogic()
-        uiStore.success('Đã thêm vào giỏ hàng!')
+        if (recommendations.value && recommendations.value.length > 0) {
+            showAddToCartModal.value = true
+        } else {
+            uiStore.success('Đã thêm vào giỏ hàng!')
+        }
     } catch { uiStore.error('Có lỗi xảy ra. Vui lòng thử lại.') }
     finally  { isAddingToCart.value = false }
 }
@@ -207,6 +241,54 @@ const handleSubmitReview = async (data: { rating: number; title: string; content
                 :is-loading="isReviewsLoading"
                 @open-modal="showModal = true"
             />
+
+            <!-- Frequently bought together / Recommendations -->
+            <div v-if="recommendations.length > 0" class="mt-20 pt-16 border-t border-border-light">
+                <div class="mb-10 text-center">
+                    <h3 class="text-2xl md:text-3xl font-serif italic text-fashion-black mb-2">Thường được mua kèm</h3>
+                    <p class="text-text-muted text-xs tracking-wider uppercase font-display">Gợi ý dựa trên xu hướng mua sắm</p>
+                </div>
+                
+                <div class="grid grid-cols-2 lg:grid-cols-4 gap-6">
+                    <router-link
+                        v-for="item in recommendations"
+                        :key="item.product_id"
+                        :to="{ name: 'product-detail', params: { slug: item.slug } }"
+                        class="group cursor-pointer block"
+                    >
+                        <!-- Image -->
+                        <div class="relative aspect-[3/4] overflow-hidden bg-fashion-gray rounded-xl mb-3 border border-border-light">
+                            <img
+                                v-if="item.image_url"
+                                :src="getImageUrl(item.image_url)"
+                                :alt="item.name"
+                                class="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
+                            />
+                            <div v-else class="w-full h-full flex items-center justify-center">
+                                <span class="material-symbols-outlined text-4xl text-text-muted/30">image_not_supported</span>
+                            </div>
+
+                            <!-- Hover overlay -->
+                            <div class="absolute inset-0 bg-fashion-black/15 opacity-0 group-hover:opacity-100 transition-opacity duration-400"></div>
+
+                            <!-- Quick view -->
+                            <div class="absolute inset-x-4 bottom-4 translate-y-3 opacity-0 group-hover:translate-y-0 group-hover:opacity-100 transition-all duration-300">
+                                <div class="bg-white text-fashion-black text-[10px] font-bold text-center tracking-widest uppercase py-2.5 rounded-lg font-display hover:bg-primary hover:text-white transition-colors shadow-lg">
+                                    Xem chi tiết
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Info -->
+                        <div class="space-y-1 px-0.5">
+                            <h4 class="text-sm font-semibold text-fashion-black group-hover:text-primary transition-colors line-clamp-2 leading-snug font-display">
+                                {{ item.name }}
+                            </h4>
+                            <p class="text-sm font-bold text-primary font-display">{{ formatPrice(item.base_price) }}</p>
+                        </div>
+                    </router-link>
+                </div>
+            </div>
         </div>
 
         <!-- Review modal -->
@@ -214,6 +296,17 @@ const handleSubmitReview = async (data: { rating: number; title: string; content
             v-if="showModal"
             @close="showModal = false"
             @submit="handleSubmitReview"
+        />
+
+        <!-- Add to Cart Recommendation Modal -->
+        <AddToCartRecommendationModal
+            v-if="showAddToCartModal"
+            :recommendations="recommendations"
+            :product-name="product.name"
+            :product-price="currentVariant ? currentVariant.price : product.base_price"
+            :product-image="product.images?.[0]?.image_url || null"
+            @close="showAddToCartModal = false"
+            @go-to-cart="router.push({ name: 'cart' })"
         />
     </div>
 </template>

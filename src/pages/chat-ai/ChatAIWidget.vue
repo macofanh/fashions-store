@@ -1,9 +1,12 @@
 <script setup lang="ts">
 import { ref } from 'vue'
+import { useRouter } from 'vue-router'
 import { chatAIHandler } from './chatAIHandler'
+import { getImageUrl } from '@/lib/urlHelper'
 
 const isOpen = ref(false)
 const messagesContainer = ref<HTMLElement | null>(null)
+const router = useRouter()
 
 const {
     inputText,
@@ -30,6 +33,152 @@ function scrollToBottom() {
     if (messagesContainer.value) {
         messagesContainer.value.scrollTop = messagesContainer.value.scrollHeight
     }
+}
+
+function normalizeImageUrl(url: string) {
+    return url.replace(/[),.;]+$/, '')
+}
+
+function isLikelyImageUrl(url: string) {
+    const value = url.toLowerCase()
+    return (
+        /\.(png|jpe?g|gif|webp|avif|svg)(\?|#|$)/.test(value) ||
+        value.includes('/image/') ||
+        value.includes('image') ||
+        value.includes('img') ||
+        value.includes('cloudinary') ||
+        value.includes('googleusercontent') ||
+        value.includes('firebasestorage')
+    )
+}
+
+type MessageContentPart =
+    | { type: 'text'; content: string }
+    | { type: 'images'; urls: string[] }
+
+type MessageDisplayPart =
+    | MessageContentPart
+    | { type: 'product'; href: string; children: MessageContentPart[] }
+
+function slugifyProductName(name: string) {
+    return name
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .replace(/\u0111/g, 'd')
+        .replace(/\u0110/g, 'D')
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, '-')
+        .replace(/^-+|-+$/g, '')
+}
+
+function getProductHrefFromTitle(line: string) {
+    const name = line.replace(/^\s*\d+\.\s*/, '').trim()
+    const slug = slugifyProductName(name)
+    return slug ? `/products/${slug}` : ''
+}
+
+function parseContentParts(content: string): MessageContentPart[] {
+    const parts: MessageContentPart[] = []
+    const textLines: string[] = []
+    const standaloneUrlPattern = /^\s*(?:[-*\u2022]\s*)?((?:https?:\/\/|\/)[^\s<>"']+)\s*$/
+
+    const flushText = () => {
+        const text = textLines.join('\n').replace(/\n{3,}/g, '\n\n').trim()
+        if (text) parts.push({ type: 'text', content: text })
+        textLines.length = 0
+    }
+
+    for (const line of content.split('\n')) {
+        const match = line.match(standaloneUrlPattern)
+        if (match?.[1]) {
+            const url = normalizeImageUrl(match[1])
+            if (isLikelyImageUrl(url)) {
+                flushText()
+
+                const previousPart = parts[parts.length - 1]
+                if (previousPart?.type === 'images') {
+                    if (!previousPart.urls.includes(url)) previousPart.urls.push(url)
+                } else {
+                    parts.push({ type: 'images', urls: [url] })
+                }
+
+                continue
+            }
+        }
+
+        textLines.push(line)
+    }
+
+    flushText()
+    return parts
+}
+
+function parseMessageContent(content: string): MessageDisplayPart[] {
+    const parts: MessageDisplayPart[] = []
+    const textLines: string[] = []
+    let currentProduct: { href: string; lines: string[] } | null = null
+
+    const productLinkPattern = /^\s*<!--\s*product-link:([^>]+?)\s*-->\s*$/
+    const productTitlePattern = /^\s*\d+\.\s+\S/
+    const separatorPattern = /^\s*[\u2500-]{5,}\s*$/
+
+    const pushTextParts = (lines: string[]) => {
+        parts.push(...parseContentParts(lines.join('\n')))
+        lines.length = 0
+    }
+
+    const flushProduct = () => {
+        if (!currentProduct) return
+
+        const children = parseContentParts(currentProduct.lines.join('\n'))
+        if (children.length) {
+            parts.push({
+                type: 'product',
+                href: currentProduct.href,
+                children,
+            })
+        }
+
+        currentProduct = null
+    }
+
+    for (const line of content.split('\n')) {
+        if (productTitlePattern.test(line)) {
+            flushProduct()
+            pushTextParts(textLines)
+            currentProduct = {
+                href: getProductHrefFromTitle(line),
+                lines: [line],
+            }
+            continue
+        }
+
+        const productLinkMatch = line.match(productLinkPattern)
+        if (productLinkMatch?.[1]) {
+            if (currentProduct) currentProduct.href = productLinkMatch[1].trim()
+            continue
+        }
+
+        if (currentProduct) {
+            if (separatorPattern.test(line)) {
+                flushProduct()
+            } else {
+                currentProduct.lines.push(line)
+            }
+            continue
+        }
+
+        textLines.push(line)
+    }
+
+    flushProduct()
+    pushTextParts(textLines)
+
+    return parts
+}
+
+function openProduct(href: string) {
+    if (href) void router.push(href)
 }
 </script>
 
@@ -87,13 +236,66 @@ function scrollToBottom() {
                         <div :class="['max-w-[75%]', message.role === 'user' ? 'items-end' : 'items-start', 'flex flex-col gap-1']">
                             <div
                                 :class="[
-                                    'px-4 py-3 text-[12px] leading-relaxed whitespace-pre-wrap',
+                                    'px-4 py-3 text-[12px] leading-relaxed flex flex-col gap-2',
                                     message.role === 'assistant'
                                         ? 'bg-white border border-border-light text-fashion-black'
                                         : 'bg-fashion-black text-white'
                                 ]"
                             >
-                                {{ message.content }}
+                                <template
+                                    v-for="(part, partIndex) in parseMessageContent(message.content)"
+                                    :key="`${message.id}-${partIndex}`"
+                                >
+                                    <p v-if="part.type === 'text'" class="whitespace-pre-wrap">{{ part.content }}</p>
+                                    <div
+                                        v-else-if="part.type === 'images' && part.urls.length"
+                                        class="grid grid-cols-2 gap-2"
+                                    >
+                                        <a
+                                            v-for="imageUrl in part.urls"
+                                            :key="imageUrl"
+                                            :href="getImageUrl(imageUrl)"
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            class="block overflow-hidden border border-border-light bg-zinc-50"
+                                        >
+                                            <img
+                                                :src="getImageUrl(imageUrl)"
+                                                alt="Ảnh sản phẩm"
+                                                class="aspect-[3/4] w-full object-cover"
+                                                loading="lazy"
+                                                @load="scrollToBottom"
+                                            />
+                                        </a>
+                                    </div>
+                                    <button
+                                        v-else-if="part.type === 'product'"
+                                        type="button"
+                                        class="block w-full text-left border border-border-light bg-zinc-50 px-3 py-3 transition-colors hover:border-primary hover:bg-white focus:outline-none focus:ring-2 focus:ring-primary/30"
+                                        @click="openProduct(part.href)"
+                                    >
+                                        <template
+                                            v-for="(child, childIndex) in part.children"
+                                            :key="`${message.id}-${partIndex}-${childIndex}`"
+                                        >
+                                            <p v-if="child.type === 'text'" class="whitespace-pre-wrap">{{ child.content }}</p>
+                                            <div
+                                                v-else-if="child.urls.length"
+                                                class="mt-2 grid grid-cols-2 gap-2"
+                                            >
+                                                <img
+                                                    v-for="imageUrl in child.urls"
+                                                    :key="imageUrl"
+                                                    :src="getImageUrl(imageUrl)"
+                                                    alt="Ảnh sản phẩm"
+                                                    class="aspect-[3/4] w-full border border-border-light bg-white object-cover"
+                                                    loading="lazy"
+                                                    @load="scrollToBottom"
+                                                />
+                                            </div>
+                                        </template>
+                                    </button>
+                                </template>
                             </div>
                             <span class="text-[9px] text-zinc-400 px-1">{{ message.time }}</span>
                         </div>

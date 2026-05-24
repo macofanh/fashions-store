@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, onMounted, watch } from 'vue'
+import { ref, computed, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { productService } from '@/pages/products/productService'
 import { cartService } from '@/pages/cart/cartService'
@@ -34,15 +34,33 @@ const selectedSize      = ref<any>(null)
 const quantity          = ref(1)
 const showModal         = ref(false)
 const showAddToCartModal = ref(false)
+let productRequestId    = 0
 
 const formatPrice = (price: number) =>
     new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(price)
 
 // ── Fetch ──────────────────────────────────────────────────────────
-const fetchProduct = async () => {
+const resetProductState = () => {
+    product.value = null
+    reviews.value = []
+    recommendations.value = []
+    selectedColor.value = null
+    selectedSize.value = null
+    quantity.value = 1
+    showModal.value = false
+    showAddToCartModal.value = false
+}
+
+const fetchProduct = async (slug: string) => {
+    const requestId = ++productRequestId
     isProductLoading.value = true
+    isReviewsLoading.value = true
+    resetProductState()
+
     try {
-        const res = await productService.getProductBySlug(route.params.slug as string)
+        const res = await productService.getProductBySlug(slug)
+        if (requestId !== productRequestId) return
+
         product.value = res.data
 
         if (product.value.variants?.length > 0) {
@@ -50,48 +68,49 @@ const fetchProduct = async () => {
             selectedSize.value  = product.value.variants[0].size
         }
 
-        void fetchReviews(product.value.product_id)
-        void fetchRecommendations(product.value.product_id)
+        void fetchReviews(product.value.product_id, requestId)
+        void fetchRecommendations(product.value.product_id, requestId)
     } catch (e) {
         console.error('Lỗi lấy chi tiết sản phẩm:', e)
     } finally {
-        isProductLoading.value = false
+        if (requestId === productRequestId) isProductLoading.value = false
     }
 }
 
-const fetchReviews = async (productId: number) => {
+const fetchReviews = async (productId: number, requestId = productRequestId) => {
     isReviewsLoading.value = true
     try {
         const reviewsRes = await productService.getReviews(productId)
+        if (requestId !== productRequestId) return
+
         reviews.value = reviewsRes.data
     } catch (e) {
         console.error('Lỗi lấy đánh giá:', e)
     } finally {
-        isReviewsLoading.value = false
+        if (requestId === productRequestId) isReviewsLoading.value = false
     }
 }
 
-const fetchRecommendations = async (productId: number) => {
+const fetchRecommendations = async (productId: number, requestId = productRequestId) => {
     isRecommendationsLoading.value = true
     try {
         const res = await productService.getRecommendations(productId)
+        if (requestId !== productRequestId) return
+
         recommendations.value = res.data
     } catch (e) {
         console.error('Lỗi lấy gợi ý sản phẩm:', e)
     } finally {
-        isRecommendationsLoading.value = false
+        if (requestId === productRequestId) isRecommendationsLoading.value = false
     }
 }
 
-onMounted(fetchProduct)
-
 watch(
     () => route.params.slug,
-    (newSlug) => {
-        if (newSlug && route.name === 'product-detail') {
-            fetchProduct()
-        }
-    }
+    (slug) => {
+        if (typeof slug === 'string' && slug.trim()) void fetchProduct(slug)
+    },
+    { immediate: true }
 )
 
 // ── Computed ───────────────────────────────────────────────────────

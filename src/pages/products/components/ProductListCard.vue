@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { Product } from '@/pages/products/productService'
+import type { Product } from '@/pages/products/types/product.types'
 import { getImageUrl } from '@/lib/urlHelper'
 import { formatPrice, getPrimaryImage, getUniqueColors, isNewProduct } from '@/pages/products/productDisplay'
 

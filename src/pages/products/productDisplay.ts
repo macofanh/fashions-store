@@ -1,4 +1,4 @@
-import type { Product } from '@/pages/products/productService'
+import type { Product } from '@/pages/products/types/product.types'
 
 export interface ProductColor {
     color_id: number

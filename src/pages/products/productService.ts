@@ -1,35 +1,6 @@
 import axiosClient from '@/lib/axiosClient'
 import { apiEndpoints } from '@/lib/endPoints'
-
-export interface Product {
-    product_id: number
-    category_id: number
-    name: string
-    slug: string
-    description?: string
-    brand?: string
-    gender?: string
-    base_price: number
-    is_active: boolean
-    avg_rating: number
-    total_sold: number
-    created_at?: string
-    deleted_at?: string | null
-    images: {
-        image_id: number
-        image_url: string
-        is_primary: boolean
-    }[]
-    variants?: any[]
-}
-
-export interface ProductListResponse {
-    items: Product[]
-    total: number
-    page: number
-    page_size: number
-    total_pages: number
-}
+import type { ProductListResponse } from './types/product.types'
 
 class ProductService {
     public getProducts(params?: any) {

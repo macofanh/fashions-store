@@ -1,7 +1,8 @@
 <script setup lang="ts">
 import { ref, reactive, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { productService, type Product } from '@/pages/products/productService'
+import { productService } from '@/pages/products/productService'
+import type { Product } from '@/pages/products/types/product.types'
 import { useCartStore } from '@/stores/useCartStore'
 import { useAuthStore } from '@/stores/useAuthStore'
 import { useUIStore } from '@/stores/useUIStore'

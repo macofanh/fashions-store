@@ -20,6 +20,15 @@ interface InventoryLogsResponse {
     items: InventoryLog[]
 }
 
+interface PaginatedResponse<T> {
+    items: T[]
+}
+
+function getResponseItems<T>(data: T[] | PaginatedResponse<T>): T[] {
+    if (Array.isArray(data)) return data
+    return Array.isArray(data.items) ? data.items : []
+}
+
 function mapVariantStock(variant: ProductVariantResponse): VariantStock {
     return {
         variant_id: variant.variant_id,
@@ -36,16 +45,19 @@ function mapVariantStock(variant: ProductVariantResponse): VariantStock {
 
 export const inventoryService = {
     async getVariantStocks() {
-        const response = await axiosClient.get<ProductVariantResponse[]>('/api/v1/products/variants')
-        return response.data.map(mapVariantStock)
+        const response = await axiosClient.get<ProductVariantResponse[] | PaginatedResponse<ProductVariantResponse>>(
+            '/api/v1/products/variants',
+            { params: { page_size: 1000 } },
+        )
+        return getResponseItems(response.data).map(mapVariantStock)
     },
 
     async getInventoryLogs(pageSize = 50) {
-        const response = await axiosClient.get<InventoryLogsResponse>('/api/v1/inventory/inventory-logs', {
+        const response = await axiosClient.get<InventoryLog[] | InventoryLogsResponse>('/api/v1/inventory/inventory-logs', {
             params: { page_size: pageSize },
         })
 
-        return response.data.items
+        return getResponseItems(response.data)
     },
 
     async adjustStock(form: AdjustStockForm) {

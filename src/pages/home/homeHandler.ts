@@ -1,7 +1,7 @@
 import { ref } from 'vue'
 import { homeServices } from './homeServices'
 import { useAuthStore } from '@/stores/useAuthStore'
-import type { Product } from '@/pages/products/productService'
+import type { Product } from '@/pages/products/types/product.types'
 import type { Voucher } from '@/pages/promotions/promotionService'
 
 export function homeHandler() {

@@ -1,5 +1,6 @@
 import { ref, onMounted, computed } from 'vue'
-import { productService, type Product } from '@/pages/products/productService'
+import { productService } from '@/pages/products/productService'
+import type { Product } from '@/pages/products/types/product.types'
 import { getImageUrl } from '@/lib/urlHelper'
 import axiosClient from '@/lib/axiosClient'
 import { useUIStore } from '@/stores/useUIStore'

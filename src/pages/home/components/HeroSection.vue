@@ -19,7 +19,7 @@
                 </span>
 
                 <h1 class="text-white text-6xl md:text-8xl font-serif italic mb-10 hero-rise leading-tight">
-                    The New Elegance.
+                    LUXU STORE
                 </h1>
 
                 <div class="flex gap-4 hero-fade nav-buttons" style="animation-delay: 0.5s;">

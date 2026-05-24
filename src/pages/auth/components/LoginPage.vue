@@ -4,10 +4,15 @@ import { authHandler } from '../authHandler'
 import { LoginRequest } from '../authTypes'
 import { APP_NAME, APP_COPYRIGHT } from '@/lib/appConfig'
 
-const { login, startGoogleLogin, isLoading, error: authError } = authHandler()
+const { login, startGoogleLogin, forgotPassword, isLoading, error: authError } = authHandler()
 
 const formData = reactive(new LoginRequest())
 const showPassword = ref(false)
+
+// Trạng thái modal Quên mật khẩu
+const showForgotModal = ref(false)
+const forgotEmail = ref('')
+const isSendingForgot = ref(false)
 
 const handleLogin = async () => {
     try {
@@ -19,6 +24,21 @@ const handleLogin = async () => {
 
 const handleGoogleLogin = () => {
     startGoogleLogin()
+}
+
+const handleForgotPassword = async () => {
+    const email = forgotEmail.value.trim()
+    if (!email) return
+    isSendingForgot.value = true
+    try {
+        await forgotPassword(email)
+        showForgotModal.value = false
+        forgotEmail.value = ''
+    } catch (err) {
+        console.error('Lỗi khôi phục mật khẩu:', err)
+    } finally {
+        isSendingForgot.value = false
+    }
 }
 </script>
 
@@ -103,9 +123,13 @@ const handleGoogleLogin = () => {
                                 <label class="text-[10px] uppercase tracking-widest font-bold text-text-muted block">
                                     Mật khẩu
                                 </label>
-                                <a href="#" class="text-[10px] text-primary hover:text-primary-dark transition-colors font-medium">
+                                <button
+                                    @click="showForgotModal = true"
+                                    type="button"
+                                    class="text-[10px] text-primary hover:text-primary-dark transition-colors font-medium cursor-pointer bg-transparent border-none p-0 outline-none"
+                                >
                                     Quên mật khẩu?
-                                </a>
+                                </button>
                             </div>
                             <div class="relative">
                                 <input
@@ -181,6 +205,59 @@ const handleGoogleLogin = () => {
                 <a href="#" class="text-[10px] uppercase tracking-widest font-bold text-text-muted hover:text-primary transition-colors">Liên hệ</a>
             </nav>
         </footer>
+        <!-- Forgot Password Modal -->
+        <Transition name="fade">
+            <div v-if="showForgotModal" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+                <div @click.stop class="w-full max-w-md bg-white rounded-xl shadow-2xl border border-border-light overflow-hidden">
+                    <!-- Modal Header -->
+                    <div class="px-6 py-5 border-b border-border-light flex justify-between items-center bg-background-light">
+                        <h3 class="font-serif italic text-xl text-fashion-black">Khôi phục mật khẩu</h3>
+                        <button @click="showForgotModal = false" type="button" class="text-text-muted hover:text-fashion-black transition-colors">
+                            <span class="material-symbols-outlined text-[24px]">close</span>
+                        </button>
+                    </div>
+
+                    <!-- Modal Body -->
+                    <form @submit.prevent="handleForgotPassword" class="p-6 space-y-6">
+                        <p class="text-xs text-text-muted leading-relaxed">
+                            Nhập địa chỉ email của bạn bên dưới. Hệ thống sẽ tự động tạo mật khẩu tạm thời mới và gửi trực tiếp về email này.
+                        </p>
+                        
+                        <div class="space-y-1.5">
+                            <label class="text-[10px] uppercase tracking-widest font-bold text-text-muted block">
+                                Địa chỉ Email của bạn
+                            </label>
+                            <input
+                                v-model="forgotEmail"
+                                type="email"
+                                placeholder="name@example.com"
+                                required
+                                class="w-full border border-border-light rounded-lg px-4 py-3 text-sm text-fashion-black placeholder:text-text-muted/50 outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all"
+                            />
+                        </div>
+
+                        <!-- Modal Actions -->
+                        <div class="flex gap-3 justify-end pt-2">
+                            <button
+                                @click="showForgotModal = false"
+                                type="button"
+                                class="px-4 py-2.5 rounded-lg text-xs font-bold tracking-wider uppercase text-text-muted hover:text-fashion-black hover:bg-background-light transition-colors"
+                            >
+                                Hủy bỏ
+                            </button>
+                            <button
+                                type="submit"
+                                :disabled="isSendingForgot"
+                                class="bg-primary text-white px-5 py-2.5 rounded-lg text-xs font-bold tracking-wider uppercase hover:bg-primary-dark transition-all disabled:opacity-60 flex items-center gap-2"
+                            >
+                                <span v-if="isSendingForgot" class="animate-spin h-3.5 w-3.5 border-2 border-white border-t-transparent rounded-full"></span>
+                                {{ isSendingForgot ? 'Đang gửi...' : 'Gửi yêu cầu' }}
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </Transition>
     </div>
 </template>
 

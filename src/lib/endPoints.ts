@@ -10,6 +10,7 @@ export const apiEndpoints = {
         googleLogin: `${basePrefix}/auth/google/login`,
         googleCallback: `${basePrefix}/auth/google/callback`,
         me: `${basePrefix}/auth/me`,
+        forgotPassword: `${basePrefix}/auth/forgot-password`,
     },
     products: {
         list: `${basePrefix}/products`,

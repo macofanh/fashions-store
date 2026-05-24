@@ -70,9 +70,6 @@ const handleAvatarChange = (event: Event) => {
                 <div class="min-w-0">
                     <h3 class="text-xl font-bold text-fashion-black font-display">{{ user?.full_name || '—' }}</h3>
                     <p class="text-sm text-text-muted font-display">{{ user?.email || '—' }}</p>
-                    <p class="mt-2 inline-flex items-center rounded-full bg-primary-light px-2.5 py-1 text-[10px] font-bold uppercase tracking-widest text-primary font-display capitalize">
-                        {{ user?.role?.toLowerCase() || 'customer' }}
-                    </p>
                 </div>
             </div>
 
@@ -103,13 +100,6 @@ const handleAvatarChange = (event: Event) => {
                     <label class="text-xs font-semibold uppercase tracking-wider text-text-muted font-display">Email</label>
                     <div class="w-full rounded-xl border border-border-light px-4 py-3 text-sm bg-fashion-gray/40 text-fashion-black">
                         {{ user?.email || '—' }}
-                    </div>
-                </div>
-
-                <div class="space-y-2">
-                    <label class="text-xs font-semibold uppercase tracking-wider text-text-muted font-display">Vai trò</label>
-                    <div class="w-full rounded-xl border border-border-light px-4 py-3 text-sm bg-fashion-gray/40 text-fashion-black capitalize">
-                        {{ user?.role?.toLowerCase() || 'customer' }}
                     </div>
                 </div>
             </div>

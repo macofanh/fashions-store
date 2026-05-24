@@ -55,6 +55,12 @@ class AuthService {
                 : undefined,
         })
     }
+
+    public forgotPassword(email: string) {
+        return axiosClient.post<{ message: string }>(apiEndpoints.auth.forgotPassword, {
+            email,
+        })
+    }
 }
 
 export const authService = new AuthService()

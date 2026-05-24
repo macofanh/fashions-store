@@ -94,6 +94,21 @@ export function authHandler() {
         router.push({ name: 'login' })
     }
 
+    const forgotPassword = async (email: string) => {
+        isLoading.value = true
+        error.value = null
+        try {
+            const response = await authService.forgotPassword(email)
+            uiStore.success(response.data?.message || 'Đã gửi mật khẩu mới vào email của bạn.')
+            return response.data
+        } catch (err: any) {
+            _setError(err.response?.data?.detail || 'Yêu cầu khôi phục mật khẩu thất bại. Vui lòng thử lại.')
+            throw err
+        } finally {
+            isLoading.value = false
+        }
+    }
+
     return {
         login,
         loginWithGoogle,
@@ -101,6 +116,7 @@ export function authHandler() {
         completeGoogleLogin,
         register,
         logout,
+        forgotPassword,
         isLoading,
         error,
     }

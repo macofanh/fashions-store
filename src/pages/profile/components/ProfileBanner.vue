@@ -40,9 +40,6 @@ const navItems: { key: ProfileTab; icon: string; label: string }[] = [
                 <div>
                     <h2 class="font-bold text-fashion-black font-display">{{ userName }}</h2>
                     <p class="text-xs text-text-muted font-display mt-0.5">{{ email }}</p>
-                    <span class="inline-block mt-2 text-[9px] uppercase tracking-widest font-bold text-primary bg-primary-light px-2.5 py-1 rounded-full font-display capitalize">
-                        {{ role }}
-                    </span>
                 </div>
             </div>
 

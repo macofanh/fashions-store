@@ -1,13 +1,52 @@
 <script setup lang="ts">
-defineProps<{
+import { computed } from 'vue'
+
+const props = defineProps<{
     orders: any[]
+    currentPage: number
+    totalPages: number
+    totalOrders: number
+    itemsPerPage: number
     isLoading: boolean
     formatPrice: (n: number) => string
     formatDate: (s: string) => string
     getStatus: (s: string) => { label: string; classes: string; dot: string }
 }>()
 
-const emit = defineEmits<{ 'open-detail': [order: any] }>()
+const emit = defineEmits<{
+    'open-detail': [order: any]
+    'page-change': [page: number]
+}>()
+
+const changePage = (page: number) => {
+    if (page >= 1 && page <= props.totalPages) {
+        emit('page-change', page)
+    }
+}
+
+// Logic showing visible pages
+const visiblePages = computed(() => {
+    const total = props.totalPages
+    const current = props.currentPage
+    const pages: (number | string)[] = []
+    
+    if (total <= 5) {
+        for (let i = 1; i <= total; i++) pages.push(i)
+    } else {
+        pages.push(1)
+        if (current > 3) pages.push('...')
+        
+        const start = Math.max(2, current - 1)
+        const end = Math.min(total - 1, current + 1)
+        for (let i = start; i <= end; i++) {
+            pages.push(i)
+        }
+        
+        if (current < total - 2) pages.push('...')
+        pages.push(total)
+    }
+    return pages
+})
 </script>
 
 <template>
@@ -23,7 +62,7 @@ const emit = defineEmits<{ 'open-detail': [order: any] }>()
         </div>
 
         <!-- Table -->
-        <div v-else-if="orders.length > 0" class="bg-white border border-border-light rounded-xl overflow-hidden shadow-sm">
+        <div v-else-if="orders && orders.length > 0" class="bg-white border border-border-light rounded-xl overflow-hidden shadow-sm">
             <div class="overflow-x-auto">
                 <table class="w-full text-left border-collapse">
                     <thead>
@@ -62,8 +101,51 @@ const emit = defineEmits<{ 'open-detail': [order: any] }>()
                     </tbody>
                 </table>
             </div>
-            <div class="px-6 py-3 border-t border-border-light bg-white">
-                <span class="text-[10px] text-text-muted font-display">{{ orders.length }} đơn hàng</span>
+            
+            <!-- Footer with pagination info & controls -->
+            <div class="px-6 py-4 border-t border-border-light bg-white flex flex-col sm:flex-row justify-between items-center gap-4">
+                <span class="text-xs text-text-muted font-display">
+                    Hiển thị {{ (currentPage - 1) * itemsPerPage + 1 }} - {{ Math.min(currentPage * itemsPerPage, totalOrders) }} trong số {{ totalOrders }} đơn hàng
+                </span>
+
+                <!-- Pagination controls -->
+                <div v-if="totalPages > 1" class="flex items-center gap-1.5">
+                    <!-- Prev Button -->
+                    <button
+                        @click="changePage(currentPage - 1)"
+                        :disabled="currentPage === 1"
+                        class="w-8 h-8 rounded-lg flex items-center justify-center border border-border-light text-text-muted hover:text-fashion-black hover:bg-background-light disabled:opacity-40 disabled:hover:bg-white disabled:hover:text-text-muted transition-all"
+                    >
+                        <span class="material-symbols-outlined text-[18px]">chevron_left</span>
+                    </button>
+
+                    <!-- Page Numbers -->
+                    <button
+                        v-for="page in visiblePages"
+                        :key="page"
+                        :disabled="page === '...'"
+                        @click="typeof page === 'number' ? changePage(page) : undefined"
+                        :class="[
+                            'w-8 h-8 rounded-lg text-xs font-bold font-display transition-all',
+                            currentPage === page
+                                ? 'bg-primary text-white'
+                                : page === '...' 
+                                    ? 'text-text-muted cursor-default'
+                                    : 'border border-border-light text-text-muted hover:bg-background-light hover:text-fashion-black'
+                        ]"
+                    >
+                        {{ page }}
+                    </button>
+
+                    <!-- Next Button -->
+                    <button
+                        @click="changePage(currentPage + 1)"
+                        :disabled="currentPage === totalPages"
+                        class="w-8 h-8 rounded-lg flex items-center justify-center border border-border-light text-text-muted hover:text-fashion-black hover:bg-background-light disabled:opacity-40 disabled:hover:bg-white disabled:hover:text-text-muted transition-all"
+                    >
+                        <span class="material-symbols-outlined text-[18px]">chevron_right</span>
+                    </button>
+                </div>
             </div>
         </div>
 

@@ -102,6 +102,10 @@ export function profileHandler() {
     const orders              = ref<any[]>([])
     const addresses           = ref<Address[]>([])
     const isLoading           = ref(true)
+    const currentPage         = ref(1)
+    const pageSize            = ref(10)
+    const totalOrders         = ref(0)
+    const totalPages          = ref(0)
     const isOrderDetailLoading = ref(false)
     const isOrderDetailOpen   = ref(false)
     const selectedOrder       = ref<any>(null)
@@ -183,8 +187,19 @@ export function profileHandler() {
         if (tab === 'orders') {
             isLoading.value = true
             try {
-                const res = await profileServices.getMyOrders()
-                orders.value = res.data
+                const res = await profileServices.getMyOrders({
+                    page: currentPage.value,
+                    page_size: pageSize.value
+                })
+                if (res.data && typeof res.data === 'object' && 'items' in res.data) {
+                    orders.value = res.data.items || []
+                    totalOrders.value = res.data.total || 0
+                    totalPages.value = res.data.total_pages || 0
+                } else {
+                    orders.value = Array.isArray(res.data) ? res.data : []
+                    totalOrders.value = orders.value.length
+                    totalPages.value = 1
+                }
             } catch (e) {
                 console.error('Lỗi lấy đơn hàng:', e)
             } finally {
@@ -465,6 +480,30 @@ export function profileHandler() {
         }
     }
 
+    const handleOrderPageChange = async (page: number) => {
+        currentPage.value = page
+        isLoading.value = true
+        try {
+            const res = await profileServices.getMyOrders({
+                page: currentPage.value,
+                page_size: pageSize.value
+            })
+            if (res.data && typeof res.data === 'object' && 'items' in res.data) {
+                orders.value = res.data.items || []
+                totalOrders.value = res.data.total || 0
+                totalPages.value = res.data.total_pages || 0
+            } else {
+                orders.value = Array.isArray(res.data) ? res.data : []
+                totalOrders.value = orders.value.length
+                totalPages.value = 1
+            }
+        } catch (e) {
+            console.error('Lỗi lấy đơn hàng:', e)
+        } finally {
+            isLoading.value = false
+        }
+    }
+
     // ── Đăng xuất ─────────────────────────────────────────────────
     const handleLogout = async () => {
         const confirmed = await uiStore.confirm({
@@ -500,6 +539,7 @@ export function profileHandler() {
     return {
         // state
         activeTab, orders, addresses, isLoading,
+        currentPage, pageSize, totalOrders, totalPages,
         isOrderDetailLoading, isOrderDetailOpen,
         selectedOrder, orderQrSession, orderQrStatusMessage,
         isAddressModalOpen, modalMode, isSubmitting,
@@ -516,7 +556,7 @@ export function profileHandler() {
         openAddressModal, openEditModal,
         handleSaveProfile, handleAvatarChange,
         handleAddAddress, handleDeleteAddress, handleSetDefault,
-        handleLogout,
+        handleLogout, handleOrderPageChange,
         // helpers
         formatPrice, formatDate, getStatus,
     }

@@ -16,6 +16,7 @@ const authStore = useAuthStore()
 
 const {
     activeTab, orders, addresses, isLoading,
+    currentPage, pageSize, totalOrders, totalPages,
     isOrderDetailLoading, isOrderDetailOpen,
     selectedOrder, orderQrSession, orderQrStatusMessage,
     isAddressModalOpen, modalMode, isSubmitting,
@@ -30,7 +31,7 @@ const {
     openAddressModal, openEditModal,
     handleSaveProfile, handleAvatarChange,
     handleAddAddress, handleDeleteAddress, handleSetDefault,
-    handleLogout,
+    handleLogout, handleOrderPageChange,
     formatPrice, formatDate, getStatus,
 } = profileHandler()
 
@@ -47,7 +48,7 @@ onMounted(init)
             <ProfileBanner
                 :user-name="authStore.userName"
                 :email="authStore.user?.email || ''"
-                :order-count="orders.length"
+                :order-count="totalOrders"
                 :membership-label="currentTier.label"
                 :membership-color="currentTier.color"
                 :role="authStore.user?.role?.toLowerCase() || 'customer'"
@@ -62,11 +63,16 @@ onMounted(init)
                 <OrdersTab
                     v-if="activeTab === 'orders'"
                     :orders="orders"
+                    :current-page="currentPage"
+                    :total-pages="totalPages"
+                    :total-orders="totalOrders"
+                    :items-per-page="10"
                     :is-loading="isLoading"
                     :format-price="formatPrice"
                     :format-date="formatDate"
                     :get-status="getStatus"
                     @open-detail="openOrderDetail"
+                    @page-change="handleOrderPageChange"
                 />
 
                 <div v-if="activeTab === 'membership'">

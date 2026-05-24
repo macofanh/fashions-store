@@ -12,7 +12,7 @@ export interface UpdateMyProfilePayload {
 const PROVINCE_API = 'https://provinces.open-api.vn/api'
 
 export const profileServices = {
-    getMyOrders:    () => orderService.getMyOrders(),
+    getMyOrders:    (params?: any) => orderService.getMyOrders(params),
     getMyAddresses: () => addressService.getMyAddresses(),
     addAddress:     (data: any) => addressService.addAddress(data),
     updateMyProfile: (data: UpdateMyProfilePayload) => axiosClient.put(apiEndpoints.users.me, data),

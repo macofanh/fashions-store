@@ -25,8 +25,8 @@ class OrderService {
         return axiosClient.post(apiEndpoints.orders.createFromCart, data)
     }
 
-    public getMyOrders() {
-        return axiosClient.get(apiEndpoints.orders.myOrders)
+    public getMyOrders(params?: any) {
+        return axiosClient.get(apiEndpoints.orders.myOrders, { params })
     }
 
     public getOrderDetail(id: number) {

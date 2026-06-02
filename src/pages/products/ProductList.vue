@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, reactive, computed, onMounted } from 'vue'
+import { ref, reactive, computed, onMounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { productService } from '@/pages/products/productService'
 import type { Product } from '@/pages/products/types/product.types'
@@ -50,6 +50,19 @@ const priceRange = reactive({
     min: filters.min_price?.toString() || '',
     max: filters.max_price?.toString() || '',
 })
+
+const syncFiltersFromRoute = () => {
+    currentPage.value = Number(route.query.page) || 1
+    filters.search = (route.query.search as string) || ''
+    filters.category_id = route.query.category_id ? Number(route.query.category_id) : null
+    filters.gender = (route.query.gender as string) || ''
+    filters.min_price = route.query.min_price ? Number(route.query.min_price) : null
+    filters.max_price = route.query.max_price ? Number(route.query.max_price) : null
+    filters.sort_by = (route.query.sort_by as string) || 'created_at'
+    filters.sort_order = (route.query.sort_order as string) || 'desc'
+    priceRange.min = filters.min_price?.toString() || ''
+    priceRange.max = filters.max_price?.toString() || ''
+}
 
 // ── Computed ──────────────────────────────────────────────────────
 const activeFilterCount = computed(() => {
@@ -126,7 +139,6 @@ const fetchCategories = async () => {
 const applyFilters = () => {
     currentPage.value = 1
     syncToUrl()
-    fetchProducts()
     isMobileSidebarOpen.value = false
 }
 
@@ -152,13 +164,13 @@ const clearAllFilters = () => {
     filters.sort_by = 'created_at'; filters.sort_order = 'desc'
     priceRange.min = ''; priceRange.max = ''
     currentPage.value = 1
-    syncToUrl(); fetchProducts()
+    syncToUrl()
 }
 
 const goToPage = (page: number) => {
     if (page < 1 || page > totalPages.value) return
     currentPage.value = page
-    syncToUrl(); fetchProducts()
+    syncToUrl()
     window.scrollTo({ top: 0, behavior: 'smooth' })
 }
 
@@ -237,7 +249,16 @@ const visiblePages = computed(() => {
     return pages
 })
 
-onMounted(() => { fetchProducts(); fetchCategories() })
+watch(
+    () => route.query,
+    () => {
+        syncFiltersFromRoute()
+        fetchProducts()
+    },
+    { immediate: true }
+)
+
+onMounted(() => { fetchCategories() })
 </script>
 
 <template>

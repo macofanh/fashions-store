@@ -5,7 +5,8 @@ import { useAuthStore } from '@/stores/useAuthStore'
 import { useCartStore } from '@/stores/useCartStore'
 import { useUIStore } from '@/stores/useUIStore'
 import { APP_NAME } from '@/lib/appConfig'
-import type { NavLink, ProfileMenuItem } from './headerTypes'
+import { productService } from '@/pages/products/productService'
+import type { CategoryItem, NavDropdownItem, NavLink, ProfileMenuItem } from './headerTypes'
 import { membershipService, getTierByPoints } from '@/pages/profile/membershipService'
 import {
     notificationService,
@@ -24,6 +25,7 @@ const isNotificationOpen = ref(false)
 const notificationRoot = ref<HTMLElement | null>(null)
 const totalPoints = ref(0)
 const notifications = ref<NotificationItem[]>([])
+const categories = ref<CategoryItem[]>([])
 const unreadCount = ref(0)
 const isLoadingNotifications = ref(false)
 const isMarkingAllRead = ref(false)
@@ -38,6 +40,13 @@ const loadRewardHistory = async () => {
     try {
         const res = await membershipService.getRewardHistory()
         totalPoints.value = res.data.reduce((sum, item) => sum + item.points_delta, 0)
+    } catch { /* silent */ }
+}
+
+const loadCategories = async () => {
+    try {
+        const res = await productService.getCategories()
+        categories.value = Array.isArray(res.data) ? res.data : []
     } catch { /* silent */ }
 }
 
@@ -175,6 +184,7 @@ onMounted(() => {
         : (cb: () => void) => window.setTimeout(cb, 0)
 
     schedule(() => {
+        void loadCategories()
         void loadRewardHistory()
         void loadNotifications()
         if (authStore.isAuthenticated) {
@@ -245,6 +255,14 @@ const isRouteActive = (to: string) => {
     const resolved = router.resolve(to)
 
     if (resolved.path === '/products') {
+        if (resolved.query.gender) {
+            return route.path === '/products' && route.query.gender === resolved.query.gender
+        }
+
+        if (route.query.gender) {
+            return false
+        }
+
         return route.path.startsWith('/products')
     }
 
@@ -264,9 +282,77 @@ const isRouteActive = (to: string) => {
     return true
 }
 
+const normalizeText = (value: string) =>
+    value
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .toLowerCase()
+
+const findGenderRootCategory = (gender: 'male' | 'female') => {
+    const expectedSlug = gender === 'male' ? 'nam' : 'nu'
+    const expectedName = gender === 'male' ? 'nam' : 'nu'
+
+    return categories.value.find((category) =>
+        category.parent_id === null &&
+        (category.slug === expectedSlug || normalizeText(category.name) === expectedName)
+    )
+}
+
+const matchesGenderCategory = (category: CategoryItem, gender: 'male' | 'female') => {
+    const normalizedName = normalizeText(category.name)
+    const normalizedSlug = normalizeText(category.slug)
+
+    if (category.gender === gender) return true
+    return gender === 'male'
+        ? normalizedSlug.endsWith('-nam') || normalizedName.includes(' nam')
+        : normalizedSlug.endsWith('-nu') || normalizedName.includes(' nu')
+}
+
+const buildGenderProductsLink = (gender: 'male' | 'female') => {
+    const params = new URLSearchParams({ gender })
+    return `/products?${params.toString()}`
+}
+
+const buildCategoryProductsLink = (categoryId: number) =>
+    `/products?category_id=${categoryId}`
+
+const getGenderCategoryLinks = (gender: 'male' | 'female'): NavDropdownItem[] => {
+    const rootCategory = findGenderRootCategory(gender)
+    const categoryItems = categories.value.filter((category) => {
+        if (category.category_id === rootCategory?.category_id) return false
+        if (rootCategory && category.parent_id === rootCategory.category_id) return true
+        if (rootCategory) return false
+        return matchesGenderCategory(category, gender)
+    })
+
+    return [
+        { label: 'Tất cả', to: buildGenderProductsLink(gender), categoryId: null },
+        ...categoryItems.map((category) => ({
+            label: category.name,
+            to: buildCategoryProductsLink(category.category_id),
+            categoryId: category.category_id,
+        })),
+    ]
+}
+
+const isDropdownItemActive = (item: NavDropdownItem) => {
+    const resolved = router.resolve(item.to)
+    if (route.path !== resolved.path) return false
+
+    const expectedCategoryId = resolved.query.category_id
+    if (!expectedCategoryId) {
+        if (route.query.gender !== resolved.query.gender) return false
+        return !route.query.category_id
+    }
+
+    return route.query.category_id === expectedCategoryId
+}
+
 // ─── Nav links (desktop + mobile) ─────────────────────────────────────────────
 const navLinks = computed<NavLink[]>(() => [
     { label: 'Bộ sưu tập', to: '/products' },
+    { label: 'Nam', to: buildGenderProductsLink('male'), children: getGenderCategoryLinks('male') },
+    { label: 'Nữ', to: buildGenderProductsLink('female'), children: getGenderCategoryLinks('female') },
     { label: 'Ưu đãi', to: '/vouchers' },
     {
         label: 'Admin',
@@ -336,11 +422,31 @@ const profileMenuItems = computed<ProfileMenuItem[]>(() => [
                 <!-- Desktop Nav -->
                 <nav class="hidden md:flex items-center gap-8">
                     <template v-for="link in navLinks" :key="link.to">
-                        <router-link
+                        <div
                             v-if="link.condition !== false"
-                            :to="link.to"
-                            :class="['nav-link', isRouteActive(link.to) ? 'nav-link-active' : '', link.extraClass]"
-                        >{{ link.label }}</router-link>
+                            class="relative group/nav"
+                        >
+                            <router-link
+                                :to="link.to"
+                                :class="['nav-link', isRouteActive(link.to) ? 'nav-link-active' : '', link.extraClass]"
+                            >{{ link.label }}</router-link>
+
+                            <div
+                                v-if="link.children?.length"
+                                class="absolute left-1/2 top-full z-30 min-w-56 -translate-x-1/2 pt-3 opacity-0 invisible transition-all duration-200 pointer-events-none group-hover/nav:opacity-100 group-hover/nav:visible group-hover/nav:pointer-events-auto"
+                            >
+                                <div class="overflow-hidden rounded-lg border border-border-light bg-white py-2 shadow-xl">
+                                    <router-link
+                                        v-for="child in link.children"
+                                        :key="child.to"
+                                        :to="child.to"
+                                        :class="['nav-dropdown-item', isDropdownItemActive(child) ? 'nav-dropdown-item-active' : '']"
+                                    >
+                                        {{ child.label }}
+                                    </router-link>
+                                </div>
+                            </div>
+                        </div>
                     </template>
                 </nav>
             </div>
@@ -518,12 +624,28 @@ const profileMenuItems = computed<ProfileMenuItem[]>(() => [
             class="fixed inset-0 top-[65px] bg-background-light z-[90] md:hidden flex flex-col p-8 gap-6 border-t border-border-light overflow-y-auto"
         >
             <template v-for="link in navLinks" :key="link.to">
-                <router-link
-                    v-if="link.condition !== false"
-                    :to="link.to"
-                    @click="closeMobileMenu"
-                    :class="['mobile-nav-link', isRouteActive(link.to) ? 'mobile-nav-link-active' : '', link.extraClass]"
-                >{{ link.label }}</router-link>
+                <div v-if="link.condition !== false">
+                    <router-link
+                        :to="link.to"
+                        @click="closeMobileMenu"
+                        :class="['mobile-nav-link block', isRouteActive(link.to) ? 'mobile-nav-link-active' : '', link.extraClass]"
+                    >{{ link.label }}</router-link>
+
+                    <div
+                        v-if="link.children?.length"
+                        class="mt-1 grid gap-1 pl-4"
+                    >
+                        <router-link
+                            v-for="child in link.children"
+                            :key="child.to"
+                            :to="child.to"
+                            @click="closeMobileMenu"
+                            :class="['mobile-nav-child-link', isDropdownItemActive(child) ? 'mobile-nav-child-link-active' : '']"
+                        >
+                            {{ child.label }}
+                        </router-link>
+                    </div>
+                </div>
             </template>
 
             <hr class="border-border-light" />
@@ -603,11 +725,27 @@ const profileMenuItems = computed<ProfileMenuItem[]>(() => [
     @apply bg-primary/10 text-primary hover:bg-primary/10 hover:text-primary;
 }
 
+.nav-dropdown-item {
+    @apply block px-4 py-2.5 text-sm font-medium text-fashion-black transition-colors hover:bg-border-light hover:text-primary;
+}
+
+.nav-dropdown-item-active {
+    @apply bg-primary/10 text-primary hover:bg-primary/10 hover:text-primary;
+}
+
 .mobile-nav-link {
     @apply rounded-lg px-3 py-2 text-lg font-medium text-fashion-black hover:text-primary transition-colors;
 }
 
 .mobile-nav-link-active {
+    @apply bg-primary/10 text-primary;
+}
+
+.mobile-nav-child-link {
+    @apply rounded-lg px-3 py-2 text-sm font-medium text-zinc-600 transition-colors hover:bg-border-light hover:text-primary;
+}
+
+.mobile-nav-child-link-active {
     @apply bg-primary/10 text-primary;
 }
 

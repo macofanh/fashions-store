@@ -5,6 +5,13 @@ export interface NavLink {
     condition?: boolean
     /** Class tuỳ chỉnh thêm vào link */
     extraClass?: string
+    children?: NavDropdownItem[]
+}
+
+export interface NavDropdownItem {
+    label: string
+    to: string
+    categoryId?: number | null
 }
 
 export interface ProfileMenuItem {
@@ -17,4 +24,14 @@ export interface ProfileMenuItem {
     extraClass?: string
     /** Thêm divider phía trên item này */
     dividerBefore?: boolean
+}
+
+export interface CategoryItem {
+    category_id: number
+    parent_id: number | null
+    name: string
+    slug: string
+    image_url?: string | null
+    gender?: string | null
+    product_count?: number
 }

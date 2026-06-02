@@ -36,13 +36,6 @@
                     >
                         Đồ nữ
                     </router-link>
-
-                    <router-link
-                        to="/products?gender=kids"
-                        class="btn-radius hero-btn btn-kids px-10 py-4 text-[10px] font-bold tracking-[0.3em] uppercase"
-                    >
-                        Đồ trẻ em
-                    </router-link>
                 </div>
             </div>
         </section>

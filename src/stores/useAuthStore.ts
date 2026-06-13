@@ -8,6 +8,8 @@ export interface UserInfo {
     full_name: string
     phone?: string | null
     avatar_url?: string | null
+    height_cm?: number | null
+    weight_kg?: number | null
     role: string
     account_type?: string
     total_points?: number

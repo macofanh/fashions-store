@@ -119,6 +119,8 @@ export function profileHandler() {
     const profileForm         = ref({
         full_name: '',
         phone: '',
+        height_cm: null as number | null,
+        weight_kg: null as number | null,
     })
     const avatarPreviewUrl    = ref<string | null>(null)
 
@@ -149,6 +151,8 @@ export function profileHandler() {
         profileForm.value = {
             full_name: authStore.user?.full_name || '',
             phone: authStore.user?.phone || '',
+            height_cm: authStore.user?.height_cm ?? null,
+            weight_kg: authStore.user?.weight_kg ?? null,
         }
         avatarPreviewUrl.value = authStore.user?.avatar_url || null
     }
@@ -321,16 +325,30 @@ export function profileHandler() {
             return
         }
 
+        if (profileForm.value.height_cm !== null && (profileForm.value.height_cm < 100 || profileForm.value.height_cm > 250)) {
+            uiStore.warning('Chiều cao cần nằm trong khoảng 100 - 250 cm.')
+            return
+        }
+
+        if (profileForm.value.weight_kg !== null && (profileForm.value.weight_kg < 25 || profileForm.value.weight_kg > 300)) {
+            uiStore.warning('Cân nặng cần nằm trong khoảng 25 - 300 kg.')
+            return
+        }
+
         isProfileSaving.value = true
         try {
             const response = await profileServices.updateMyProfile({
                 full_name: fullName,
                 phone: profileForm.value.phone.trim() || null,
+                height_cm: profileForm.value.height_cm,
+                weight_kg: profileForm.value.weight_kg,
             })
 
             authStore.hydrateUser({
                 ...(authStore.user as any),
                 ...response.data,
+                height_cm: profileForm.value.height_cm,
+                weight_kg: profileForm.value.weight_kg,
             })
             syncProfileForm()
             uiStore.success('Cập nhật hồ sơ thành công!')

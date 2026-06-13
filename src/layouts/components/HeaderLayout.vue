@@ -8,6 +8,8 @@ import { APP_NAME } from '@/lib/appConfig'
 import { productService } from '@/pages/products/productService'
 import type { CategoryItem, NavDropdownItem, NavLink, ProfileMenuItem } from './headerTypes'
 import { membershipService, getTierByPoints } from '@/pages/profile/membershipService'
+import { profileServices } from '@/pages/profile/profileServices'
+import BodyMeasurementsModal from '@/pages/profile/components/BodyMeasurementsModal.vue'
 import {
     notificationService,
     type NotificationItem,
@@ -29,9 +31,13 @@ const categories = ref<CategoryItem[]>([])
 const unreadCount = ref(0)
 const isLoadingNotifications = ref(false)
 const isMarkingAllRead = ref(false)
+const isMeasurementsModalOpen = ref(false)
+const isSavingMeasurements = ref(false)
+const pendingProfileDestination = ref('/profile?tab=profile')
 const knownNotificationKeys = ref(new Set<string>())
 const hasInitializedNotifications = ref(false)
 let notificationPollingTimer: number | null = null
+let categoriesRequest: Promise<void> | null = null
 const NOTIFICATION_POLLING_INTERVAL = 7000
 
 // Fetch điểm khi đã đăng nhập
@@ -44,10 +50,22 @@ const loadRewardHistory = async () => {
 }
 
 const loadCategories = async () => {
+    if (categories.value.length > 0) return
+
     try {
         const res = await productService.getCategories()
         categories.value = Array.isArray(res.data) ? res.data : []
     } catch { /* silent */ }
+}
+
+const ensureCategoriesLoaded = () => {
+    if (categories.value.length > 0) return Promise.resolve()
+    if (categoriesRequest) return categoriesRequest
+
+    categoriesRequest = loadCategories().finally(() => {
+        categoriesRequest = null
+    })
+    return categoriesRequest
 }
 
 const getNotificationId = (notification: NotificationItem) =>
@@ -184,7 +202,6 @@ onMounted(() => {
         : (cb: () => void) => window.setTimeout(cb, 0)
 
     schedule(() => {
-        void loadCategories()
         void loadRewardHistory()
         void loadNotifications()
         if (authStore.isAuthenticated) {
@@ -249,6 +266,68 @@ const handleLogout = async () => {
 
 const closeMobileMenu = () => {
     isMobileMenuOpen.value = false
+}
+
+const toggleMobileMenu = () => {
+    isMobileMenuOpen.value = !isMobileMenuOpen.value
+    if (isMobileMenuOpen.value) {
+        void ensureCategoriesLoaded()
+    }
+}
+
+const measurementsPromptKey = computed(() =>
+    `body-measurements-prompt-seen:${authStore.user?.user_id ?? 'guest'}`
+)
+
+const hasBodyMeasurements = computed(() =>
+    authStore.user?.height_cm != null && authStore.user?.weight_kg != null
+)
+
+const continueToProfile = async () => {
+    isMeasurementsModalOpen.value = false
+    closeMobileMenu()
+    await router.push(pendingProfileDestination.value)
+}
+
+const handleProfileNavigation = async (to: string) => {
+    pendingProfileDestination.value = to
+
+    if (
+        hasBodyMeasurements.value ||
+        localStorage.getItem(measurementsPromptKey.value) === 'true'
+    ) {
+        closeMobileMenu()
+        await router.push(to)
+        return
+    }
+
+    localStorage.setItem(measurementsPromptKey.value, 'true')
+    isMeasurementsModalOpen.value = true
+}
+
+const saveBodyMeasurements = async (measurements: { height_cm: number; weight_kg: number }) => {
+    if (!authStore.user) return
+
+    isSavingMeasurements.value = true
+    try {
+        const response = await profileServices.updateMyProfile({
+            full_name: authStore.user.full_name,
+            phone: authStore.user.phone || null,
+            ...measurements,
+        })
+        authStore.hydrateUser({
+            ...authStore.user,
+            ...response.data,
+            height_cm: measurements.height_cm,
+            weight_kg: measurements.weight_kg,
+        })
+        uiStore.success('Đã lưu chiều cao và cân nặng.')
+        await continueToProfile()
+    } catch (e: any) {
+        uiStore.error(e.response?.data?.detail || 'Không thể lưu số đo của bạn.')
+    } finally {
+        isSavingMeasurements.value = false
+    }
 }
 
 const isRouteActive = (to: string) => {
@@ -424,6 +503,8 @@ const profileMenuItems = computed<ProfileMenuItem[]>(() => [
                         <div
                             v-if="link.condition !== false"
                             class="relative group/nav"
+                            @mouseenter="link.children?.length && ensureCategoriesLoaded()"
+                            @focusin="link.children?.length && ensureCategoriesLoaded()"
                         >
                             <router-link
                                 :to="link.to"
@@ -579,6 +660,7 @@ const profileMenuItems = computed<ProfileMenuItem[]>(() => [
                                         <router-link
                                             v-if="item.to"
                                             :to="item.to"
+                                            @click.prevent="item.key === 'profile' ? handleProfileNavigation(item.to) : router.push(item.to)"
                                             :class="['dropdown-item', isRouteActive(item.to) ? 'dropdown-item-active' : '', item.extraClass]"
                                         >
                                             <span class="material-symbols-outlined text-[16px]">{{ item.icon }}</span>
@@ -608,7 +690,7 @@ const profileMenuItems = computed<ProfileMenuItem[]>(() => [
                     </template>
 
                     <!-- Mobile hamburger -->
-                    <button @click="isMobileMenuOpen = !isMobileMenuOpen" class="icon-btn md:hidden ml-1">
+                    <button @click="toggleMobileMenu" class="icon-btn md:hidden ml-1">
                         <span class="material-symbols-outlined text-[26px]">{{ isMobileMenuOpen ? 'close' : 'menu' }}</span>
                     </button>
                 </div>
@@ -664,7 +746,7 @@ const profileMenuItems = computed<ProfileMenuItem[]>(() => [
                         <router-link
                             v-if="item.to"
                             :to="item.to"
-                            @click="closeMobileMenu"
+                            @click.prevent="item.key === 'profile' ? handleProfileNavigation(item.to) : (closeMobileMenu(), router.push(item.to))"
                             :class="[
                                 'flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium transition-colors',
                                 isRouteActive(item.to)
@@ -695,6 +777,15 @@ const profileMenuItems = computed<ProfileMenuItem[]>(() => [
             </template>
         </div>
     </Transition>
+
+    <BodyMeasurementsModal
+        :is-open="isMeasurementsModalOpen"
+        :initial-height="authStore.user?.height_cm"
+        :initial-weight="authStore.user?.weight_kg"
+        :is-saving="isSavingMeasurements"
+        @save="saveBodyMeasurements"
+        @defer="continueToProfile"
+    />
 </template>
 
 <style scoped>

@@ -4,6 +4,8 @@ export interface User {
     full_name: string
     phone?: string
     avatar_url?: string
+    height_cm?: number | null
+    weight_kg?: number | null
     role: string
     account_type: string
     total_points: number

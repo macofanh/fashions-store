@@ -63,6 +63,19 @@ function extractOrderCode(payload: any) {
     return payload?.order_code ?? payload?.code ?? payload?.order?.order_code ?? payload?.order?.code ?? ''
 }
 
+function extractOrderAmount(payload: any) {
+    const amount =
+        payload?.total_amount
+        ?? payload?.final_amount
+        ?? payload?.total
+        ?? payload?.order?.total_amount
+        ?? payload?.order?.final_amount
+        ?? payload?.order?.total
+
+    const parsedAmount = Number(amount)
+    return Number.isFinite(parsedAmount) && parsedAmount > 0 ? parsedAmount : null
+}
+
 function isPaidStatus(value: unknown) {
     return ['PAID', 'SUCCESS', 'SUCCESSFUL', 'COMPLETED', 'DONE', 'FINISHED'].includes(String(value).toUpperCase())
 }
@@ -73,6 +86,7 @@ function isOrderPaid(orderData: any) {
     if (orderData.is_paid === true) return true
     if (orderData.payment_status && isPaidStatus(orderData.payment_status)) return true
     if (orderData.payment_state && isPaidStatus(orderData.payment_state)) return true
+    if (orderData.payment?.status && isPaidStatus(orderData.payment.status)) return true
     if (orderData.status && isPaidStatus(orderData.status)) return true
 
     return false
@@ -101,6 +115,7 @@ export function checkoutHandler() {
     const selectedVoucher = ref<UserVoucher | null>(null)
     const isLoading       = ref(true)
     const isSubmitting    = ref(false)
+    const loadError       = ref('')
     const qrSession       = ref<SePayQrSession | null>(null)
     const qrStatus        = ref<'idle' | 'waiting' | 'paid' | 'failed'>('idle')
     const qrStatusMessage = ref('')
@@ -109,6 +124,7 @@ export function checkoutHandler() {
     const savedAddresses    = ref<Address[]>([])
     const selectedAddressId = ref<number | null>(null)
     let qrPollTimer: ReturnType<typeof window.setInterval> | null = null
+    let isApplyingSavedAddress = false
 
     // Form — họ tên + SĐT lấy từ auth store
     const form = ref({
@@ -133,19 +149,24 @@ export function checkoutHandler() {
 
     // ── Áp dụng địa chỉ đã lưu vào form ──────────────────────────
     const applyAddress = (addr: Address) => {
-        selectedAddressId.value = addr.address_id
-        form.value.recipient_name = addr.recipient_name
-        form.value.phone          = addr.phone
-        form.value.province       = addr.province
-        form.value.district       = addr.district
-        form.value.ward           = addr.ward
-        form.value.street_address = addr.street_address
-        form.value.latitude       = addr.latitude ?? null
-        form.value.longitude      = addr.longitude ?? null
-        selectedProvinceCode.value = ''
-        selectedDistrictCode.value = ''
-        districts.value = []
-        wards.value     = []
+        isApplyingSavedAddress = true
+        try {
+            selectedAddressId.value = addr.address_id
+            form.value.recipient_name = addr.recipient_name
+            form.value.phone          = addr.phone
+            form.value.province       = addr.province
+            form.value.district       = addr.district
+            form.value.ward           = addr.ward
+            form.value.street_address = addr.street_address
+            form.value.latitude       = addr.latitude ?? null
+            form.value.longitude      = addr.longitude ?? null
+            selectedProvinceCode.value = ''
+            selectedDistrictCode.value = ''
+            districts.value = []
+            wards.value     = []
+        } finally {
+            isApplyingSavedAddress = false
+        }
     }
 
     const clearQrPoller = () => {
@@ -227,20 +248,24 @@ export function checkoutHandler() {
     // Khi user tự nhập form → bỏ chọn địa chỉ đã lưu
     watch(
         () => [form.value.recipient_name, form.value.phone, form.value.street_address],
-        () => { selectedAddressId.value = null },
+        () => {
+            if (!isApplyingSavedAddress) {
+                selectedAddressId.value = null
+            }
+        },
         { flush: 'sync' }
     )
 
     // ── Init ───────────────────────────────────────────────────────
     const init = async () => {
         isLoading.value = true
+        loadError.value = ''
         try {
             shippingStore.reload()
 
-            const [cartRes, vouchersRes, provincesRes, addressesRes] = await Promise.all([
-                checkoutServices.getCart(),
+            const cartRes = await checkoutServices.getCart()
+            const [vouchersResult, addressesResult] = await Promise.allSettled([
                 checkoutServices.getMyVouchers(),
-                checkoutServices.getProvinces(),
                 checkoutServices.getMyAddresses(),
             ])
 
@@ -252,9 +277,19 @@ export function checkoutHandler() {
                     ? (cartRes.data.items || []).filter((item: any) => requestedIdSet.has(item.cart_item_id))
                     : cartRes.data.items,
             }
-            myVouchers.value   = vouchersRes.data
-            provinces.value    = provincesRes.data
-            savedAddresses.value = addressesRes.data
+            myVouchers.value = vouchersResult.status === 'fulfilled'
+                ? vouchersResult.value.data
+                : []
+            savedAddresses.value = addressesResult.status === 'fulfilled'
+                ? addressesResult.value.data
+                : []
+
+            if (vouchersResult.status === 'rejected') {
+                console.error('Lỗi tải voucher checkout:', vouchersResult.reason)
+            }
+            if (addressesResult.status === 'rejected') {
+                console.error('Lỗi tải địa chỉ checkout:', addressesResult.reason)
+            }
 
             if (!cart.value.items?.length) {
                 if (requestedCartItemIds.length > 0) {
@@ -281,8 +316,13 @@ export function checkoutHandler() {
                 const found = myVouchers.value.find(uv => uv.voucher_id === voucherIdFromQuery)
                 if (found) selectedVoucher.value = found
             }
-        } catch (e) {
+        } catch (e: any) {
             console.error('Lỗi khởi tạo checkout:', e)
+            const apiMessage = e.response?.data?.detail || e.response?.data?.message
+            loadError.value = apiMessage
+                || (e.code === 'ERR_NETWORK'
+                    ? 'Không thể kết nối đến máy chủ. Vui lòng kiểm tra backend đang chạy.'
+                    : 'Không thể tải giỏ hàng để thanh toán.')
         } finally {
             isLoading.value = false
         }
@@ -402,6 +442,8 @@ export function checkoutHandler() {
                     district:       form.value.district,
                     ward:           form.value.ward,
                     street_address: form.value.street_address,
+                    latitude:       form.value.latitude,
+                    longitude:      form.value.longitude,
                 },
                 shipping_fee: SHIPPING_FEE.value,
                 voucher_id:   selectedVoucher.value?.voucher_id,
@@ -412,18 +454,19 @@ export function checkoutHandler() {
                 const payload = unwrapOrderPayload(response)
                 const orderId = extractOrderId(payload)
                 const orderCode = extractOrderCode(payload)
+                const orderAmount = extractOrderAmount(payload) ?? total.value
 
                 if (!orderId || !orderCode) {
                     throw new Error('Không lấy được thông tin đơn hàng QR.')
                 }
 
                 const description = buildTransferDescription(transferCustomerName.value, orderCode)
-                const qrUrl = buildSePayQrUrl(total.value, description)
+                const qrUrl = buildSePayQrUrl(orderAmount, description)
 
                 qrSession.value = {
                     orderId,
                     orderCode,
-                    amount: total.value,
+                    amount: orderAmount,
                     description,
                     qrUrl,
                 }
@@ -493,7 +536,7 @@ export function checkoutHandler() {
     return {
         // state
         cart, myVouchers, selectedVoucher,
-        isLoading, isSubmitting,
+        isLoading, isSubmitting, loadError,
         qrSession, qrStatus, qrStatusMessage,
         form, provinces, districts, wards,
         selectedProvinceCode, selectedDistrictCode,

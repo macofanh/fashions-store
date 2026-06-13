@@ -7,6 +7,8 @@ import { apiEndpoints } from '@/lib/endPoints'
 export interface UpdateMyProfilePayload {
     full_name: string
     phone?: string | null
+    height_cm?: number | null
+    weight_kg?: number | null
 }
 
 const PROVINCE_API = 'https://provinces.open-api.vn/api'

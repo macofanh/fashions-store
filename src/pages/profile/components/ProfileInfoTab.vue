@@ -11,6 +11,8 @@ defineProps<{
     } | null
     fullName: string
     phone: string
+    heightCm: number | null
+    weightKg: number | null
     avatarUrl: string
     isProfileSaving: boolean
     isAvatarUploading: boolean
@@ -19,6 +21,8 @@ defineProps<{
 const emit = defineEmits<{
     'update:fullName': [value: string]
     'update:phone': [value: string]
+    'update:heightCm': [value: number | null]
+    'update:weightKg': [value: number | null]
     'save-profile': []
     'change-avatar': [file: File]
 }>()
@@ -100,6 +104,56 @@ const handleAvatarChange = (event: Event) => {
                     <label class="text-xs font-semibold uppercase tracking-wider text-text-muted font-display">Email</label>
                     <div class="w-full rounded-xl border border-border-light px-4 py-3 text-sm bg-fashion-gray/40 text-fashion-black">
                         {{ user?.email || '—' }}
+                    </div>
+                </div>
+
+                <div class="space-y-2">
+                    <label class="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-text-muted font-display">
+                        Chiều cao
+                        <span v-if="heightCm === null" class="group relative inline-flex normal-case tracking-normal">
+                            <button type="button" class="flex h-4 w-4 items-center justify-center rounded-full border border-text-muted text-[10px] font-bold" aria-label="Tại sao nên nhập chiều cao?">?</button>
+                            <span class="pointer-events-none absolute bottom-full left-1/2 z-10 mb-2 w-56 -translate-x-1/2 rounded-lg bg-fashion-black px-3 py-2 text-center text-xs font-normal leading-relaxed text-white opacity-0 shadow-lg transition-opacity group-hover:opacity-100 group-focus-within:opacity-100">
+                                Điền vào để gợi ý trang phục phù hợp với bạn nhanh hơn.
+                            </span>
+                        </span>
+                    </label>
+                    <div class="relative">
+                        <input
+                            :value="heightCm ?? ''"
+                            @input="emit('update:heightCm', ($event.target as HTMLInputElement).value === '' ? null : Number(($event.target as HTMLInputElement).value))"
+                            type="number"
+                            min="100"
+                            max="250"
+                            step="1"
+                            class="w-full rounded-xl border border-border-light px-4 py-3 pr-12 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all"
+                            placeholder="Nhập chiều cao"
+                        />
+                        <span class="absolute right-4 top-1/2 -translate-y-1/2 text-xs text-text-muted">cm</span>
+                    </div>
+                </div>
+
+                <div class="space-y-2">
+                    <label class="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-text-muted font-display">
+                        Cân nặng
+                        <span v-if="weightKg === null" class="group relative inline-flex normal-case tracking-normal">
+                            <button type="button" class="flex h-4 w-4 items-center justify-center rounded-full border border-text-muted text-[10px] font-bold" aria-label="Tại sao nên nhập cân nặng?">?</button>
+                            <span class="pointer-events-none absolute bottom-full left-1/2 z-10 mb-2 w-56 -translate-x-1/2 rounded-lg bg-fashion-black px-3 py-2 text-center text-xs font-normal leading-relaxed text-white opacity-0 shadow-lg transition-opacity group-hover:opacity-100 group-focus-within:opacity-100">
+                                Điền vào để gợi ý trang phục phù hợp với bạn nhanh hơn.
+                            </span>
+                        </span>
+                    </label>
+                    <div class="relative">
+                        <input
+                            :value="weightKg ?? ''"
+                            @input="emit('update:weightKg', ($event.target as HTMLInputElement).value === '' ? null : Number(($event.target as HTMLInputElement).value))"
+                            type="number"
+                            min="25"
+                            max="300"
+                            step="0.1"
+                            class="w-full rounded-xl border border-border-light px-4 py-3 pr-12 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all"
+                            placeholder="Nhập cân nặng"
+                        />
+                        <span class="absolute right-4 top-1/2 -translate-y-1/2 text-xs text-text-muted">kg</span>
                     </div>
                 </div>
             </div>

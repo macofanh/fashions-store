@@ -9,7 +9,7 @@ import OrderSummary    from './components/OrderSummary.vue'
 
 const {
     cart, myVouchers, selectedVoucher,
-    isLoading, isSubmitting,
+    isLoading, isSubmitting, loadError,
     qrSession, qrStatus, qrStatusMessage,
     form, provinces, districts, wards,
     selectedProvinceCode, selectedDistrictCode,
@@ -38,8 +38,6 @@ onMounted(init)
                     <span>/</span>
                     <span class="text-fashion-black font-medium">Thanh toán</span>
                 </nav>
-                <h1 class="text-3xl md:text-4xl font-serif italic text-fashion-black">Thanh toán</h1>
-                <p class="text-text-muted text-sm mt-1 font-display">Hoàn tất đơn hàng của bạn</p>
             </div>
 
             <!-- Loading -->
@@ -47,7 +45,30 @@ onMounted(init)
                 <div class="animate-spin h-10 w-10 border-4 border-primary border-t-transparent rounded-full"></div>
             </div>
 
-            <div v-else class="flex flex-col lg:flex-row gap-8 lg:gap-10 items-start">
+            <div v-else-if="loadError" class="mx-auto max-w-lg rounded-2xl border border-red-100 bg-white p-8 text-center shadow-sm">
+                <div class="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-red-50 text-red-500">
+                    <span class="material-symbols-outlined">error</span>
+                </div>
+                <h2 class="mt-4 text-lg font-bold text-fashion-black">Không thể tải trang thanh toán</h2>
+                <p class="mt-2 text-sm text-text-muted">{{ loadError }}</p>
+                <div class="mt-6 flex flex-col justify-center gap-3 sm:flex-row">
+                    <router-link
+                        to="/cart"
+                        class="rounded-xl border border-border-light px-5 py-3 text-sm font-semibold text-fashion-black transition-colors hover:bg-border-light"
+                    >
+                        Quay lại giỏ hàng
+                    </router-link>
+                    <button
+                        type="button"
+                        class="rounded-xl bg-primary px-5 py-3 text-sm font-semibold text-white transition-colors hover:bg-primary/90"
+                        @click="init"
+                    >
+                        Thử lại
+                    </button>
+                </div>
+            </div>
+
+            <div v-else-if="cart" class="flex flex-col lg:flex-row gap-8 lg:gap-10 items-start">
                 <!-- LEFT: Form sections -->
                 <div class="flex-grow space-y-5 min-w-0">
                     <ShippingForm

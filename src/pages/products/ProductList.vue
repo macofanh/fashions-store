@@ -335,14 +335,8 @@ onMounted(() => { fetchCategories() })
                 <aside class="hidden lg:block w-64 flex-shrink-0">
                     <div class="sticky top-24">
                         <FilterSidebar
-                            :categories="categories"
-                            :filters="filters"
                             :price-range="priceRange"
-                            :active-filter-count="activeFilterCount"
-                            @set-category="setCategory"
-                            @set-gender="setGender"
                             @apply-price-range="applyPriceRange"
-                            @clear-all="clearAllFilters"
                         />
                     </div>
                 </aside>
@@ -359,27 +353,6 @@ onMounted(() => { fetchCategories() })
                                 <span class="material-symbols-outlined text-[12px]">close</span>
                             </button>
                         </span>
-                        <span v-if="filters.category_id" class="chip">
-                            {{ categories.find(c => c.category_id === filters.category_id)?.name || 'Danh mục' }}
-                            <button @click="setCategory(null)" class="hover:text-red-500 ml-1">
-                                <span class="material-symbols-outlined text-[12px]">close</span>
-                            </button>
-                        </span>
-                        <span v-if="filters.gender" class="chip">
-                            {{ { male: 'Nam', female: 'Nữ', unisex: 'Unisex', kids: 'Trẻ em' }[filters.gender] }}
-                            <button @click="setGender(filters.gender)" class="hover:text-red-500 ml-1">
-                                <span class="material-symbols-outlined text-[12px]">close</span>
-                            </button>
-                        </span>
-                        <span v-if="filters.min_price !== null || filters.max_price !== null" class="chip">
-                            {{ filters.min_price ? formatPrice(filters.min_price) : '0' }} — {{ filters.max_price ? formatPrice(filters.max_price) : '∞' }}
-                            <button @click="filters.min_price = null; filters.max_price = null; priceRange.min = ''; priceRange.max = ''; applyFilters()" class="hover:text-red-500 ml-1">
-                                <span class="material-symbols-outlined text-[12px]">close</span>
-                            </button>
-                        </span>
-                        <button @click="clearAllFilters" class="text-[11px] font-medium text-text-muted hover:text-red-500 transition-colors underline underline-offset-4">
-                            Xóa tất cả
-                        </button>
                     </div>
 
                     <!-- Loading skeleton -->
@@ -461,22 +434,19 @@ onMounted(() => { fetchCategories() })
             <Transition name="slide">
                 <div v-if="isMobileSidebarOpen" class="fixed inset-0 z-50 lg:hidden flex">
                     <div class="absolute inset-0 bg-black/50 backdrop-blur-sm" @click="isMobileSidebarOpen = false"></div>
-                    <aside class="relative w-80 max-w-[85vw] bg-white h-full overflow-y-auto shadow-2xl p-8">
-                        <div class="flex justify-between items-center mb-8">
-                            <h2 class="text-sm font-bold uppercase tracking-wider text-fashion-black">Bộ lọc</h2>
-                            <button @click="isMobileSidebarOpen = false" class="w-8 h-8 flex items-center justify-center hover:bg-border-light rounded-full transition-colors">
+                    <aside class="relative w-80 max-w-[88vw] bg-background-light h-full overflow-y-auto shadow-2xl p-4 pt-16">
+                        <div class="absolute right-4 top-4">
+                            <button
+                                aria-label="Đóng bộ lọc"
+                                @click="isMobileSidebarOpen = false"
+                                class="w-9 h-9 bg-white border border-border-light flex items-center justify-center hover:border-primary hover:text-primary rounded-full transition-colors"
+                            >
                                 <span class="material-symbols-outlined text-[20px]">close</span>
                             </button>
                         </div>
                         <FilterSidebar
-                            :categories="categories"
-                            :filters="filters"
                             :price-range="priceRange"
-                            :active-filter-count="activeFilterCount"
-                            @set-category="setCategory"
-                            @set-gender="setGender"
                             @apply-price-range="applyPriceRange"
-                            @clear-all="clearAllFilters"
                         />
                     </aside>
                 </div>

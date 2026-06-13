@@ -1,202 +1,182 @@
 <script setup lang="ts">
-defineProps<{
-    categories: any[]
-    filters: {
-        category_id: number | null
-        gender: string
-        min_price: number | null
-        max_price: number | null
-    }
+import { computed } from 'vue'
+
+const props = defineProps<{
     priceRange: { min: string; max: string }
-    activeFilterCount: number
 }>()
 
 const emit = defineEmits<{
-    setCategory: [id: number | null]
-    setGender: [val: string]
     applyPriceRange: []
-    clearAll: []
 }>()
 
-const genderOptions = [
-    { label: 'Nam',    value: 'male',   icon: 'man'        },
-    { label: 'Nữ',    value: 'female', icon: 'woman'      },
-    { label: 'Unisex', value: 'unisex', icon: 'people'     },
-    { label: 'Trẻ em', value: 'kids',   icon: 'child_care' },
+const pricePresets = [
+    { label: 'Dưới 200K', description: 'Sản phẩm giá tốt', min: '', max: '200000' },
+    { label: '200K - 500K', description: 'Phổ biến nhất', min: '200000', max: '500000' },
+    { label: '500K - 1 triệu', description: 'Phân khúc cao cấp', min: '500000', max: '1000000' },
+    { label: 'Trên 1 triệu', description: 'Dòng tuyển chọn', min: '1000000', max: '' },
 ]
 
-const pricePresets = [
-    { label: '< 200K',   min: '',        max: '200000'  },
-    { label: '200–500K', min: '200000',  max: '500000'  },
-    { label: '500K–1M',  min: '500000',  max: '1000000' },
-    { label: '> 1M',     min: '1000000', max: ''        },
-]
+const priceRangeError = computed(() => {
+    const min = Number(props.priceRange.min)
+    const max = Number(props.priceRange.max)
+
+    return Boolean(props.priceRange.min && props.priceRange.max && min > max)
+})
+
+const hasPriceRange = computed(() => Boolean(props.priceRange.min || props.priceRange.max))
+
+const isPresetActive = (min: string, max: string) =>
+    props.priceRange.min === min && props.priceRange.max === max
+
+const applyPreset = (min: string, max: string) => {
+    props.priceRange.min = min
+    props.priceRange.max = max
+    emit('applyPriceRange')
+}
+
+const applyCustomRange = () => {
+    if (!priceRangeError.value) {
+        emit('applyPriceRange')
+    }
+}
 </script>
 
 <template>
-    <div class="space-y-7">
-
-        <!-- ── Header + Clear ── -->
-        <div class="flex items-center justify-between">
-            <h2 class="text-sm font-bold uppercase tracking-wider text-fashion-black">Bộ lọc</h2>
-            <button
-                v-if="activeFilterCount > 0"
-                @click="emit('clearAll')"
-                class="text-[11px] font-medium text-text-muted hover:text-red-500 transition-colors flex items-center gap-1"
-            >
-                <span class="material-symbols-outlined text-[14px]">close</span>
-                Xóa ({{ activeFilterCount }})
-            </button>
-        </div>
-
-        <!-- ── Danh mục ── -->
-        <div class="space-y-3">
-            <h3 class="filter-title">Danh mục</h3>
-            <ul class="space-y-1.5">
-                <li>
-                    <!-- group đặt trực tiếp trên label, không dùng @apply group -->
-                    <label class="flex items-center gap-3 cursor-pointer group py-0.5">
-                        <input
-                            type="checkbox"
-                            :checked="filters.category_id === null"
-                            @change="emit('setCategory', null)"
-                            class="h-4 w-4 rounded border-border-light text-primary focus:ring-primary/20 cursor-pointer accent-primary"
-                        />
-                        <span class="text-sm text-fashion-black group-hover:text-primary transition-colors">Tất cả</span>
-                    </label>
-                </li>
-                <li v-for="cat in categories" :key="cat.category_id">
-                    <label class="flex items-center gap-3 cursor-pointer group py-0.5">
-                        <input
-                            type="checkbox"
-                            :checked="filters.category_id === cat.category_id"
-                            @change="emit('setCategory', cat.category_id)"
-                            class="h-4 w-4 rounded border-border-light text-primary focus:ring-primary/20 cursor-pointer accent-primary"
-                        />
-                        <span class="text-sm text-fashion-black group-hover:text-primary transition-colors flex-grow">{{ cat.name }}</span>
-                        <span v-if="cat.product_count" class="text-xs text-text-muted">({{ cat.product_count }})</span>
-                    </label>
-                </li>
-            </ul>
-        </div>
-
-        <div class="border-t border-border-light" />
-
-        <!-- ── Giới tính ── -->
-        <div class="space-y-3">
-            <h3 class="filter-title">Giới tính</h3>
-            <div class="grid grid-cols-2 gap-2">
-                <button
-                    v-for="g in genderOptions"
-                    :key="g.value"
-                    @click="emit('setGender', g.value)"
-                    :class="[
-                        'gender-btn',
-                        filters.gender === g.value ? 'gender-btn--active' : 'gender-btn--default'
-                    ]"
+    <section class="filter-panel">
+        <div class="p-5">
+            <div class="mb-4 flex items-start justify-between gap-3">
+                <div>
+                    <h2 class="text-sm font-bold uppercase tracking-wider text-fashion-black">Khoảng giá</h2>
+                    <p class="mt-1 text-xs leading-5 text-text-muted">Chọn nhanh hoặc nhập mức giá phù hợp.</p>
+                </div>
+                <span
+                    v-if="hasPriceRange"
+                    class="rounded-full bg-primary-light px-2 py-1 text-[9px] font-bold uppercase tracking-wider text-primary"
                 >
-                    <span class="material-symbols-outlined text-[16px]">{{ g.icon }}</span>
-                    {{ g.label }}
-                </button>
+                    Đã chọn
+                </span>
             </div>
-        </div>
 
-        <div class="border-t border-border-light" />
-
-        <!-- ── Khoảng giá ── -->
-        <div class="space-y-3">
-            <h3 class="filter-title">Khoảng giá</h3>
-
-            <!-- Preset chips -->
-            <div class="grid grid-cols-2 gap-1.5">
+            <div class="space-y-2">
                 <button
                     v-for="preset in pricePresets"
                     :key="preset.label"
-                    @click="priceRange.min = preset.min; priceRange.max = preset.max; emit('applyPriceRange')"
+                    type="button"
                     :class="[
                         'price-preset',
-                        priceRange.min === preset.min && priceRange.max === preset.max
+                        isPresetActive(preset.min, preset.max)
                             ? 'price-preset--active'
                             : 'price-preset--default'
                     ]"
+                    @click="applyPreset(preset.min, preset.max)"
                 >
-                    {{ preset.label }}
+                    <span>
+                        <span class="block text-xs font-bold">{{ preset.label }}</span>
+                        <span class="mt-0.5 block text-[10px] font-normal opacity-70">{{ preset.description }}</span>
+                    </span>
+                    <span
+                        class="material-symbols-outlined text-[18px]"
+                        :style="isPresetActive(preset.min, preset.max) ? `font-variation-settings: 'FILL' 1` : ''"
+                    >
+                        {{ isPresetActive(preset.min, preset.max) ? 'check_circle' : 'chevron_right' }}
+                    </span>
                 </button>
             </div>
 
-            <!-- Manual range inputs -->
-            <div class="bg-border-light/40 rounded-lg p-3 space-y-2">
-                <p class="text-[10px] uppercase tracking-widest font-bold text-text-muted">Nhập khoảng giá</p>
-                <div class="flex gap-2 items-center">
-                    <div class="flex-1 relative">
-                        <input
-                            v-model="priceRange.min"
-                            type="number"
-                            min="0"
-                            placeholder="Từ"
-                            class="price-input"
-                        />
-                        <span class="absolute right-2 top-1/2 -translate-y-1/2 text-[9px] text-text-muted font-bold">₫</span>
-                    </div>
-                    <div class="w-4 h-px bg-text-muted/30 shrink-0"></div>
-                    <div class="flex-1 relative">
-                        <input
-                            v-model="priceRange.max"
-                            type="number"
-                            min="0"
-                            placeholder="Đến"
-                            class="price-input"
-                        />
-                        <span class="absolute right-2 top-1/2 -translate-y-1/2 text-[9px] text-text-muted font-bold">₫</span>
-                    </div>
-                </div>
-                <button
-                    @click="emit('applyPriceRange')"
-                    class="w-full bg-primary text-white py-2 text-xs font-semibold hover:bg-primary-dark transition-colors flex items-center justify-center gap-1.5 rounded-lg"
-                >
-                    <span class="material-symbols-outlined text-[14px]">check</span>
-                    Áp dụng
-                </button>
+            <div class="my-5 flex items-center gap-3">
+                <span class="h-px flex-1 bg-border-light"></span>
+                <span class="text-[9px] font-bold uppercase tracking-[0.18em] text-text-muted">Tùy chọn</span>
+                <span class="h-px flex-1 bg-border-light"></span>
             </div>
+
+            <form class="space-y-3" @submit.prevent="applyCustomRange">
+                <div class="grid grid-cols-2 gap-2">
+                    <label class="price-field">
+                        <span class="price-field__label">Giá từ</span>
+                        <span class="relative block">
+                            <input
+                                v-model="priceRange.min"
+                                type="number"
+                                inputmode="numeric"
+                                min="0"
+                                placeholder="0"
+                                class="price-input"
+                            />
+                            <span class="price-field__currency">₫</span>
+                        </span>
+                    </label>
+
+                    <label class="price-field">
+                        <span class="price-field__label">Giá đến</span>
+                        <span class="relative block">
+                            <input
+                                v-model="priceRange.max"
+                                type="number"
+                                inputmode="numeric"
+                                min="0"
+                                placeholder="Không giới hạn"
+                                class="price-input"
+                            />
+                            <span class="price-field__currency">₫</span>
+                        </span>
+                    </label>
+                </div>
+
+                <p v-if="priceRangeError" class="flex items-center gap-1.5 text-[11px] text-red-500">
+                    <span class="material-symbols-outlined text-[15px]">error</span>
+                    Giá bắt đầu phải nhỏ hơn giá kết thúc.
+                </p>
+
+                <button
+                    type="submit"
+                    :disabled="priceRangeError"
+                    class="apply-button"
+                >
+                    Áp dụng khoảng giá
+                    <span class="material-symbols-outlined text-[17px]">arrow_forward</span>
+                </button>
+            </form>
         </div>
-    </div>
+    </section>
 </template>
 
 <style scoped>
 @reference "../../assets/main.css";
 
-.filter-title {
-    @apply text-xs font-bold uppercase tracking-wider text-fashion-black;
+.filter-panel {
+    @apply overflow-hidden rounded-xl border border-border-light bg-white shadow-sm;
 }
 
-/* Gender buttons */
-.gender-btn {
-    @apply h-10 flex items-center justify-center gap-1.5 border text-sm font-medium transition-all rounded-lg;
-}
-
-.gender-btn--active {
-    @apply border-primary bg-primary text-white;
-}
-
-.gender-btn--default {
-    @apply border-border-light text-fashion-black hover:border-primary hover:text-primary hover:bg-primary-light;
-}
-
-/* Price preset chips */
 .price-preset {
-    @apply h-8 border text-xs font-medium transition-all rounded-lg;
+    @apply flex w-full items-center justify-between rounded-lg border px-3.5 py-2.5 text-left transition-all;
 }
 
 .price-preset--active {
-    @apply border-primary bg-primary text-white;
+    @apply border-primary bg-primary text-white shadow-sm;
 }
 
 .price-preset--default {
-    @apply border-border-light text-fashion-black hover:border-primary hover:text-primary hover:bg-primary-light;
+    @apply border-border-light bg-white text-fashion-black hover:border-primary/60 hover:bg-primary-light/50 hover:text-primary;
 }
 
-/* Price inputs */
-.price-input {
-    @apply w-full bg-white border border-border-light py-2 pl-3 pr-6 text-xs outline-none focus:border-primary transition-colors rounded-lg;
+.price-field {
+    @apply block rounded-lg border border-border-light bg-background-light px-3 py-2 transition-all focus-within:border-primary focus-within:bg-white focus-within:ring-2 focus-within:ring-primary/10;
 }
+
+.price-field__label {
+    @apply mb-1 block text-[9px] font-bold uppercase tracking-wider text-text-muted;
+}
+
+.price-input {
+    @apply w-full bg-transparent pr-4 text-xs font-semibold text-fashion-black outline-none placeholder:text-[10px] placeholder:font-normal placeholder:text-text-muted/60;
+}
+
+.price-field__currency {
+    @apply absolute right-0 top-1/2 -translate-y-1/2 text-[10px] font-bold text-text-muted;
+}
+
+.apply-button {
+    @apply flex w-full items-center justify-center gap-2 rounded-lg bg-fashion-black px-4 py-3 text-[11px] font-bold uppercase tracking-wider text-white transition-all hover:bg-primary disabled:cursor-not-allowed disabled:opacity-40;
+}
+
 </style>

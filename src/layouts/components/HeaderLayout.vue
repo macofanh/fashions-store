@@ -350,7 +350,6 @@ const isDropdownItemActive = (item: NavDropdownItem) => {
 
 // ─── Nav links (desktop + mobile) ─────────────────────────────────────────────
 const navLinks = computed<NavLink[]>(() => [
-    { label: 'Bộ sưu tập', to: '/products' },
     { label: 'Nam', to: buildGenderProductsLink('male'), children: getGenderCategoryLinks('male') },
     { label: 'Nữ', to: buildGenderProductsLink('female'), children: getGenderCategoryLinks('female') },
     { label: 'Ưu đãi', to: '/vouchers' },

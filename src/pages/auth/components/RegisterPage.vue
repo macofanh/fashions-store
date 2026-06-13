@@ -20,8 +20,11 @@ const handleRegister = async () => {
         return
     }
     try {
-        await register(formData)
-        router.push('/auth/login')
+        const result = await register(formData)
+        router.push({
+            name: 'verify-email',
+            query: { email: result.email },
+        })
     } catch (err) {
         // lỗi đã được authHandler hiển thị qua uiStore
     }

@@ -1,7 +1,14 @@
 import axiosClient from '@/lib/axiosClient'
 import { apiEndpoints } from '@/lib/endPoints'
 import axios from 'axios'
-import type { AuthResponse, User } from './authTypes'
+import type {
+    AuthResponse,
+    RegisterPendingResponse,
+    ResendVerificationResponse,
+    User,
+    VerifyEmailRequest,
+    VerifyEmailResponse,
+} from './authTypes'
 import type { LoginRequest, RegisterRequest } from './authTypes'
 
 class AuthService {
@@ -21,12 +28,23 @@ class AuthService {
     }
 
     public register(data: RegisterRequest) {
-        return axiosClient.post<AuthResponse>(apiEndpoints.auth.register, {
+        return axiosClient.post<RegisterPendingResponse>(apiEndpoints.auth.register, {
             full_name: data.full_name,
             email: data.email,
             password: data.password,
             phone: data.phone?.trim() === '' ? undefined : data.phone,
         })
+    }
+
+    public verifyEmail(data: VerifyEmailRequest) {
+        return axiosClient.post<VerifyEmailResponse>(apiEndpoints.auth.verifyEmail, data)
+    }
+
+    public resendVerification(email: string) {
+        return axiosClient.post<ResendVerificationResponse>(
+            apiEndpoints.auth.resendVerification,
+            { email },
+        )
     }
 
     public loginWithGoogle(idToken: string) {

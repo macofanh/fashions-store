@@ -1,7 +1,7 @@
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { authService } from './authServices'
-import type { LoginRequest, RegisterRequest } from './authTypes'
+import type { LoginRequest, RegisterRequest, VerifyEmailRequest } from './authTypes'
 import { useAuthStore } from '@/stores/useAuthStore'
 import { useUIStore } from '@/stores/useUIStore'
 
@@ -10,6 +10,8 @@ export function authHandler() {
     const authStore = useAuthStore()
     const uiStore = useUIStore()
     const isLoading = ref(false)
+    const isVerifying = ref(false)
+    const isResending = ref(false)
     const error = ref<string | null>(null)
 
     // Hàm dùng chung để lưu auth sau khi đăng nhập thành công
@@ -32,7 +34,14 @@ export function authHandler() {
             _handleAuthSuccess(response.data)
             return response.data
         } catch (err: any) {
-            _setError(err.response?.data?.detail || 'Đăng nhập thất bại. Vui lòng thử lại.')
+            const message = err.response?.data?.detail || 'Đăng nhập thất bại. Vui lòng thử lại.'
+            _setError(message)
+            if (err.response?.status === 403 && message === 'Email chưa được xác thực') {
+                router.push({
+                    name: 'verify-email',
+                    query: { email: credentials.email.trim().toLowerCase() },
+                })
+            }
             throw err
         } finally {
             isLoading.value = false
@@ -78,13 +87,43 @@ export function authHandler() {
         error.value = null
         try {
             const response = await authService.register(userData)
-            uiStore.success('Đăng ký tài khoản thành công! Vui lòng đăng nhập.')
+            uiStore.success(response.data.message)
             return response.data
         } catch (err: any) {
             _setError(err.response?.data?.detail || 'Đăng ký thất bại. Vui lòng kiểm tra lại thông tin.')
             throw err
         } finally {
             isLoading.value = false
+        }
+    }
+
+    const verifyEmail = async (data: VerifyEmailRequest) => {
+        isVerifying.value = true
+        error.value = null
+        try {
+            const response = await authService.verifyEmail(data)
+            uiStore.success(response.data.message)
+            return response.data
+        } catch (err: any) {
+            _setError(err.response?.data?.detail || 'Xác thực email thất bại. Vui lòng thử lại.')
+            throw err
+        } finally {
+            isVerifying.value = false
+        }
+    }
+
+    const resendVerification = async (email: string) => {
+        isResending.value = true
+        error.value = null
+        try {
+            const response = await authService.resendVerification(email)
+            uiStore.success(response.data.message)
+            return response.data
+        } catch (err: any) {
+            _setError(err.response?.data?.detail || 'Không thể gửi lại mã. Vui lòng thử lại.')
+            throw err
+        } finally {
+            isResending.value = false
         }
     }
 
@@ -115,9 +154,13 @@ export function authHandler() {
         startGoogleLogin,
         completeGoogleLogin,
         register,
+        verifyEmail,
+        resendVerification,
         logout,
         forgotPassword,
         isLoading,
+        isVerifying,
+        isResending,
         error,
     }
 }

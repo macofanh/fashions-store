@@ -31,3 +31,26 @@ export class RegisterRequest {
     phone? = ''
     confirmPassword = ''
 }
+
+export interface RegisterPendingResponse {
+    message: string
+    email: string
+    expires_in: number
+    resend_after: number
+}
+
+export interface VerifyEmailRequest {
+    email: string
+    code: string
+}
+
+export interface VerifyEmailResponse {
+    message: string
+}
+
+export interface ResendVerificationResponse {
+    message: string
+    email?: string
+    expires_in?: number
+    resend_after?: number
+}

@@ -30,6 +30,12 @@ const routes: Array<RouteRecordRaw> = [
                 component: () =>
                     import('@/pages/auth/components/RegisterPage.vue'),
             },
+            {
+                name: 'verify-email',
+                path: 'verify-email',
+                component: () =>
+                    import('@/pages/auth/components/VerifyEmailPage.vue'),
+            },
         ],
     },
     {

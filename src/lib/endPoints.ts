@@ -3,6 +3,8 @@ const basePrefix = '/api/v1'
 export const apiEndpoints = {
     auth: {
         register: `${basePrefix}/auth/register`,
+        verifyEmail: `${basePrefix}/auth/verify-email`,
+        resendVerification: `${basePrefix}/auth/resend-verification`,
         createStaff: `${basePrefix}/auth/admin/create-staff`,
         login: `${basePrefix}/auth/login`,
         refresh: `${basePrefix}/auth/refresh`,

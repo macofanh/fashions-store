@@ -27,6 +27,24 @@ class ProductService {
         return axiosClient.get(apiEndpoints.products.recommendations(productId))
     }
 
+    public getStockNotificationStatus(variantId: number) {
+        return axiosClient.get<{ variant_id: number; subscribed: boolean; message: string }>(
+            apiEndpoints.products.stockNotification(variantId),
+        )
+    }
+
+    public subscribeStockNotification(variantId: number) {
+        return axiosClient.post<{ variant_id: number; subscribed: boolean; message: string }>(
+            apiEndpoints.products.stockNotification(variantId),
+        )
+    }
+
+    public unsubscribeStockNotification(variantId: number) {
+        return axiosClient.delete<{ variant_id: number; subscribed: boolean; message: string }>(
+            apiEndpoints.products.stockNotification(variantId),
+        )
+    }
+
     public addReview(productId: number, payload: {
         variant_id: number
         rating: number

@@ -29,6 +29,8 @@ const isReviewsLoading  = ref(true)
 const isRecommendationsLoading = ref(true)
 const isAddingToCart    = ref(false)
 const isBuyingNow       = ref(false)
+const isStockNotificationSubscribed = ref(false)
+const isStockNotificationLoading = ref(false)
 const selectedColor     = ref<any>(null)
 const selectedSize      = ref<any>(null)
 const quantity          = ref(1)
@@ -120,6 +122,68 @@ const currentVariant = computed(() => {
         (v: any) => v.color_id === selectedColor.value.color_id && v.size_id === selectedSize.value.size_id
     ) ?? null
 })
+
+const fetchStockNotificationStatus = async () => {
+    const variant = currentVariant.value
+    isStockNotificationSubscribed.value = false
+    if (!variant || variant.stock_qty > 0 || !authStore.isAuthenticated) return
+
+    isStockNotificationLoading.value = true
+    try {
+        const response = await productService.getStockNotificationStatus(variant.variant_id)
+        if (currentVariant.value?.variant_id === variant.variant_id) {
+            isStockNotificationSubscribed.value = response.data.subscribed
+        }
+    } catch (error) {
+        console.error('Lỗi lấy trạng thái thông báo tồn kho:', error)
+    } finally {
+        if (currentVariant.value?.variant_id === variant.variant_id) {
+            isStockNotificationLoading.value = false
+        }
+    }
+}
+
+watch(
+    () => currentVariant.value?.variant_id,
+    () => void fetchStockNotificationStatus(),
+)
+
+const handleToggleStockNotification = async () => {
+    const variant = currentVariant.value
+    if (!variant || variant.stock_qty > 0) return
+
+    if (!authStore.isAuthenticated) {
+        router.push({ name: 'login', query: { redirect: route.fullPath } })
+        return
+    }
+
+    const isSubscribed = isStockNotificationSubscribed.value
+    const confirmed = await uiStore.confirm({
+        title: isSubscribed ? 'Hủy thông báo có hàng' : 'Thông báo khi có hàng',
+        message: isSubscribed
+            ? `Bạn có muốn hủy nhận email khi ${product.value.name} (${selectedColor.value?.name} / ${selectedSize.value?.name}) có hàng không?`
+            : `Chúng tôi sẽ gửi email tới tài khoản của bạn khi ${product.value.name} (${selectedColor.value?.name} / ${selectedSize.value?.name}) có hàng trở lại.`,
+        confirmLabel: isSubscribed ? 'Xác nhận hủy' : 'Xác nhận',
+        cancelLabel: 'Hủy',
+        variant: isSubscribed ? 'danger' : 'primary',
+    })
+    if (!confirmed) return
+
+    isStockNotificationLoading.value = true
+    try {
+        const response = isSubscribed
+            ? await productService.unsubscribeStockNotification(variant.variant_id)
+            : await productService.subscribeStockNotification(variant.variant_id)
+        isStockNotificationSubscribed.value = response.data.subscribed
+        uiStore.success(response.data.message)
+    } catch (error: any) {
+        uiStore.error(
+            error.response?.data?.detail || 'Không thể cập nhật thông báo tồn kho.',
+        )
+    } finally {
+        isStockNotificationLoading.value = false
+    }
+}
 
 // ── Cart logic ─────────────────────────────────────────────────────
 const validateSelection = () => {
@@ -245,11 +309,14 @@ const handleSubmitReview = async (data: { rating: number; title: string; content
                     :review-count="reviews.length"
                     :is-adding-to-cart="isAddingToCart"
                     :is-buying-now="isBuyingNow"
+                    :is-stock-notification-subscribed="isStockNotificationSubscribed"
+                    :is-stock-notification-loading="isStockNotificationLoading"
                     @update:selected-color="selectedColor = $event"
                     @update:selected-size="selectedSize = $event"
                     @update:quantity="quantity = $event"
                     @add-to-cart="handleAddToCart"
                     @buy-now="handleBuyNow"
+                    @toggle-stock-notification="handleToggleStockNotification"
                 />
             </div>
 

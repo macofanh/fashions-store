@@ -23,6 +23,8 @@ const props = defineProps<{
     reviewCount: number
     isAddingToCart: boolean
     isBuyingNow: boolean
+    isStockNotificationSubscribed: boolean
+    isStockNotificationLoading: boolean
 }>()
 
 const emit = defineEmits<{
@@ -31,6 +33,7 @@ const emit = defineEmits<{
     'update:quantity':      [qty: number]
     addToCart: []
     buyNow: []
+    toggleStockNotification: []
 }>()
 
 const availableColors = computed(() => {
@@ -167,6 +170,27 @@ const formatPrice = (price: number) =>
 
             <!-- CTA Buttons -->
             <div class="flex flex-col gap-2 pt-1">
+                <button
+                    v-if="isOutOfStock"
+                    type="button"
+                    :disabled="isStockNotificationLoading"
+                    class="w-full flex items-center justify-center gap-2 py-2 text-sm font-semibold text-primary hover:text-primary-dark transition-colors disabled:opacity-60"
+                    @click="emit('toggleStockNotification')"
+                >
+                    <span
+                        v-if="isStockNotificationLoading"
+                        class="animate-spin h-4 w-4 border-2 border-current border-t-transparent rounded-full"
+                    ></span>
+                    <span v-else class="material-symbols-outlined text-[18px]">
+                        {{ isStockNotificationSubscribed ? 'notifications_active' : 'notifications' }}
+                    </span>
+                    {{
+                        isStockNotificationSubscribed
+                            ? 'Đã đăng ký thông báo khi có hàng'
+                            : 'Thông báo cho tôi khi có hàng'
+                    }}
+                </button>
+
                 <button @click="emit('buyNow')" :disabled="isOutOfStock || isBuyingNow"
                     class="w-full bg-primary text-white py-3 text-sm font-semibold rounded-lg hover:bg-primary-dark transition-all active:scale-[0.98] disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2 shadow-sm">
                     <span v-if="isBuyingNow" class="animate-spin h-4 w-4 border-2 border-white border-t-transparent rounded-full"></span>

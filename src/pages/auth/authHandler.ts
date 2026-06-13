@@ -18,7 +18,8 @@ export function authHandler() {
     const _handleAuthSuccess = (data: { access_token: string; refresh_token: string; user: any }) => {
         localStorage.setItem('refresh_token', data.refresh_token)
         authStore.setAuth(data.user, data.access_token)
-        router.push({ name: 'home' })
+        const redirect = router.currentRoute.value.query.redirect
+        router.push(typeof redirect === 'string' && redirect.startsWith('/') ? redirect : { name: 'home' })
     }
 
     const _setError = (msg: string) => {

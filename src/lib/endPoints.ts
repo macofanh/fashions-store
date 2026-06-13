@@ -22,6 +22,8 @@ export const apiEndpoints = {
         sizes: `${basePrefix}/products/sizes`,
         reviews: (id: number) => `${basePrefix}/products/${id}/reviews`,
         recommendations: (id: number) => `${basePrefix}/products/${id}/recommendations`,
+        stockNotification: (variantId: number) =>
+            `${basePrefix}/notifications/stock/${variantId}`,
     },
     categories: {
         list: `${basePrefix}/categories`,

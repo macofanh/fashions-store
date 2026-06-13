@@ -91,6 +91,11 @@ const routes: Array<RouteRecordRaw> = [
                 meta: { requiresAuth: true },
             },
             {
+                name: 'about',
+                path: 'about',
+                component: () => import('@/pages/about/AboutUs.vue'),
+            },
+            {
                 name: 'payment-return',
                 path: 'payment/:gateway/return',
                 component: () => import('@/pages/checkout/PaymentReturnPage.vue'),

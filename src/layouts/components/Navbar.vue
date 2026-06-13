@@ -3,6 +3,7 @@ import { computed, ref } from 'vue'
 import { useRouter, type RouteLocationRaw } from 'vue-router'
 import { useAuthStore } from '@/stores/useAuthStore'
 import { useCartStore } from '@/stores/useCartStore'
+import { APP_NAME } from '@/lib/appConfig'
 
 type NavbarSection = 'main' | 'action' | 'guest'
 
@@ -28,24 +29,17 @@ const isMenuOpen = ref(false)
 
 const navbarItems = computed<NavbarItem[]>(() => [
     {
-        key: 'products',
-        label: 'Bộ sưu tập',
-        icon: 'styler',
-        to: { name: 'products' },
-        section: 'main',
-    },
-    {
         key: 'men-products',
         label: 'Nam',
         icon: 'styler',
-        to: { name: 'products' },
+        to: { name: 'products', query: { gender: 'male' } },
         section: 'main',
     },
     {
         key: 'women-products',
         label: 'Nữ',
         icon: 'styler',
-        to: { name: 'products' },
+        to: { name: 'products', query: { gender: 'female' } },
         section: 'main',
     },
     {
@@ -145,7 +139,7 @@ const toggleMenu = () => {
             
             <!-- Logo -->
             <router-link to="/" class="flex flex-col items-center">
-                <h1 class="text-2xl font-serif tracking-tight text-zinc-900">AZURE</h1>
+                <h1 class="text-2xl font-serif tracking-tight text-zinc-900">{{ APP_NAME.toUpperCase() }}</h1>
                 <p class="text-[7px] uppercase tracking-[0.5em] text-zinc-400 -mt-1 font-bold">Editorial</p>
             </router-link>
 

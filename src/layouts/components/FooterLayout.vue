@@ -1,8 +1,14 @@
 <script setup lang="ts">
 import { APP_NAME, APP_TAGLINE, APP_COPYRIGHT } from '@/lib/appConfig'
 import { useShippingConfigStore } from '@/stores/useShippingConfigStore'
+import { useUIStore } from '@/stores/useUIStore'
 
 const shippingStore = useShippingConfigStore()
+const uiStore = useUIStore()
+
+const openChat = () => {
+    uiStore.isChatOpen = true
+}
 </script>
 
 <template>
@@ -34,10 +40,8 @@ const shippingStore = useShippingConfigStore()
                 <div>
                     <h4 class="footer-heading">Shop</h4>
                     <ul class="footer-links">
-                        <li><router-link to="/products">Bộ sưu tập</router-link></li>
                         <li><router-link to="/products?gender=female">Nữ</router-link></li>
                         <li><router-link to="/products?gender=male">Nam</router-link></li>
-                        <li><router-link to="/products?gender=kids">Trẻ em</router-link></li>
                     </ul>
                 </div>
 
@@ -45,10 +49,7 @@ const shippingStore = useShippingConfigStore()
                 <div>
                     <h4 class="footer-heading">Thông tin</h4>
                     <ul class="footer-links">
-                        <li><a href="#">Về chúng tôi</a></li>
-                        <li><a href="#">Phát triển bền vững</a></li>
-                        <li><a href="#">Tuyển dụng</a></li>
-                        <li><a href="#">Báo chí</a></li>
+                        <li><router-link to="/about">Về chúng tôi</router-link></li>
                     </ul>
                 </div>
 
@@ -56,7 +57,7 @@ const shippingStore = useShippingConfigStore()
                 <div>
                     <h4 class="footer-heading">Hỗ trợ</h4>
                     <ul class="footer-links">
-                        <li><a href="#">Chăm sóc khách hàng</a></li>
+                        <li><button @click="openChat">Chăm sóc khách hàng</button></li>
                         <li><router-link to="/profile">Tài khoản của tôi</router-link></li>
                         <li><a href="#">Chính sách đổi trả</a></li>
                         <li><a href="#">Điều khoản & Bảo mật</a></li>
@@ -80,10 +81,10 @@ const shippingStore = useShippingConfigStore()
                         :href="`https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(shippingStore.config.store_address)}`"
                         target="_blank"
                         rel="noopener noreferrer"
-                        class="flex items-center gap-2 hover:opacity-80 transition-opacity"
+                        class="flex items-center gap-2 hover:opacity-80 transition-opacity max-w-full"
                     >
-                        <span class="material-symbols-outlined text-primary text-[16px]">location_on</span>
-                        <span class="text-[10px] text-zinc-500 uppercase tracking-widest underline">{{ shippingStore.config.store_address }}</span>
+                        <span class="material-symbols-outlined text-primary text-[16px] shrink-0">location_on</span>
+                        <span class="text-[10px] text-zinc-500 uppercase tracking-wider underline truncate max-w-[200px] xs:max-w-[250px] sm:max-w-[300px] md:max-w-[400px]">{{ shippingStore.config.store_address }}</span>
                     </a>
                 </div>
             </div>
@@ -107,7 +108,8 @@ const shippingStore = useShippingConfigStore()
 }
 
 .footer-links li a,
+.footer-links li button,
 .footer-links li :deep(a) {
-    @apply text-sm text-zinc-500 hover:text-white transition-colors font-light;
+    @apply text-sm text-zinc-500 hover:text-white transition-colors font-light bg-transparent border-none p-0 outline-none text-left cursor-pointer;
 }
 </style>

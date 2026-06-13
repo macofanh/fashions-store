@@ -288,7 +288,7 @@ const handleSubmitReview = async (data: { rating: number; title: string; content
             <nav class="flex items-center gap-2 text-[10px] uppercase tracking-widest text-text-muted mb-8 font-display">
                 <router-link to="/" class="hover:text-primary transition-colors">Trang chủ</router-link>
                 <span class="text-border-light">/</span>
-                <router-link to="/products" class="hover:text-primary transition-colors">Bộ sưu tập</router-link>
+                <router-link to="/products" class="hover:text-primary transition-colors">Sản phẩm</router-link>
                 <span class="text-border-light">/</span>
                 <span class="text-fashion-black font-medium truncate max-w-[200px]">{{ product.name }}</span>
             </nav>

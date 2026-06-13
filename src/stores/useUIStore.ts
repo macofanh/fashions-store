@@ -27,6 +27,7 @@ export const useUIStore = defineStore('ui', () => {
     const toasts = ref<Toast[]>([])
     const isPageLoading = ref(false)
     const confirmState = ref<ConfirmState | null>(null)
+    const isChatOpen = ref(false)
     let toastCounter = 0
 
     function showToast(message: string, type: ToastType = 'info', duration = 3000) {
@@ -62,5 +63,6 @@ export const useUIStore = defineStore('ui', () => {
         showToast, removeToast,
         success, error, info, warning,
         confirmState, confirm, _resolveConfirm,
+        isChatOpen
     }
 })

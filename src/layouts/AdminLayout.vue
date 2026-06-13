@@ -4,6 +4,7 @@ import { useRouter, useRoute } from 'vue-router'
 import { useAuthStore } from '@/stores/useAuthStore'
 import { isFirebaseConfigured } from '@/lib/firebase'
 import { isConversationUnreadForStaff, subscribeToConversations } from '@/pages/chat/chatService'
+import { APP_NAME } from '@/lib/appConfig'
 
 const authStore = useAuthStore()
 const router = useRouter()
@@ -80,7 +81,7 @@ onBeforeUnmount(() => {
                         <span class="material-symbols-outlined text-white text-[16px]">storefront</span>
                     </div>
                     <div>
-                        <h1 class="text-sm font-bold text-slate-900 tracking-tight">Azure Admin</h1>
+                        <h1 class="text-sm font-bold text-slate-900 tracking-tight">{{ APP_NAME }} Admin</h1>
                         <p class="text-[9px] text-slate-400 uppercase tracking-widest">Management</p>
                     </div>
                 </div>

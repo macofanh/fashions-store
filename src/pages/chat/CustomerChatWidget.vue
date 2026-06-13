@@ -1,7 +1,8 @@
 <script setup lang="ts">
-import { nextTick, onBeforeUnmount, ref, watch } from 'vue'
+import { computed, nextTick, onBeforeUnmount, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/useAuthStore'
+import { useUIStore } from '@/stores/useUIStore'
 import { isFirebaseConfigured } from '@/lib/firebase'
 import { sendChatMessage, subscribeToConversationMessages } from './chatService'
 import { playChatNotification } from './chatSound'
@@ -9,7 +10,11 @@ import type { ChatMessage } from './chat.types'
 
 const authStore = useAuthStore()
 const router = useRouter()
-const isOpen = ref(false)
+const uiStore = useUIStore()
+const isOpen = computed({
+    get: () => uiStore.isChatOpen,
+    set: (val) => { uiStore.isChatOpen = val }
+})
 const inputText = ref('')
 const messages = ref<ChatMessage[]>([])
 const sendError = ref('')
@@ -112,7 +117,7 @@ onBeforeUnmount(stopListening)
 </script>
 
 <template>
-    <div class="fixed bottom-6 right-24 z-[150] flex flex-col items-end gap-3">
+    <div class="fixed bottom-6 right-6 z-[150] flex flex-col items-end gap-3">
         <Transition name="chat-window">
             <div
                 v-if="isOpen"

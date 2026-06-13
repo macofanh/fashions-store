@@ -21,7 +21,7 @@ export function useProductManagement() {
         const allColors = ref<any[]>([])
         const allSizes = ref<any[]>([])
         const allCategories = ref<any[]>([])
-        const genderOptions = ['male', 'female', 'unisex', 'kids']
+        const genderOptions = ['male', 'female', 'unisex']
 
         const isVariantFormOpen = ref(false)
         const editingVariantIndex = ref<number | null>(null)

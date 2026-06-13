@@ -78,7 +78,7 @@ const handleForgotPassword = async () => {
                 <!-- Bottom quote -->
                 <div class="absolute bottom-12 left-10 right-10 animate-fade-in-up">
                     <span class="text-[10px] uppercase tracking-[0.3em] text-white/50 mb-3 block group-hover:translate-x-2 transition-transform duration-700">
-                        Bộ sưu tập Mùa Đông
+                        Thời Trang Nam & Nữ
                     </span>
                     <h2 class="text-white text-4xl font-serif italic leading-tight group-hover:translate-x-2 transition-transform duration-700">
                         Định hình phong cách hiện đại qua sự tinh tế.
@@ -98,7 +98,7 @@ const handleForgotPassword = async () => {
                             <span class="text-2xl font-serif text-fashion-black tracking-tight leading-none">{{ APP_NAME }}</span>
                         </router-link>
                         <h1 class="text-4xl md:text-5xl font-serif italic text-fashion-black mb-2">Chào mừng trở lại</h1>
-                        <p class="text-text-muted text-sm font-light">Đăng nhập để khám phá bộ sưu tập mới nhất.</p>
+                        <p class="text-text-muted text-sm font-light">Đăng nhập để khám phá các sản phẩm mới nhất.</p>
                     </div>
 
                     <!-- Form -->

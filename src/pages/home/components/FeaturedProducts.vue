@@ -15,7 +15,7 @@ const PAGE_SIZE = 8
         <header class="flex flex-col md:flex-row justify-between items-end mb-12 gap-4">
             <div>
                 <p class="text-[10px] uppercase tracking-[0.4em] text-text-muted mb-2 font-display">Được tuyển chọn kỹ lưỡng</p>
-                <h2 class="text-3xl md:text-4xl font-serif italic text-fashion-black">Bộ sưu tập nổi bật</h2>
+                <h2 class="text-3xl md:text-4xl font-serif italic text-fashion-black">Sản phẩm nổi bật</h2>
             </div>
             <router-link
                 to="/products"

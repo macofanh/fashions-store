@@ -183,7 +183,7 @@ function openProduct(href: string) {
 </script>
 
 <template>
-    <div class="fixed bottom-6 right-6 z-[150] flex flex-col items-end gap-3">
+    <div class="fixed bottom-[88px] right-6 z-[150] flex flex-col items-end gap-3">
         <!-- Chat Window -->
         <Transition name="chat-window">
             <div
@@ -354,7 +354,7 @@ function openProduct(href: string) {
         <!-- Toggle Button -->
         <button
             @click="toggleChat"
-            class="w-14 h-14 bg-fashion-black text-white rounded-full flex items-center justify-center shadow-xl hover:bg-primary transition-all duration-300 hover:scale-110 active:scale-95"
+            class="w-14 h-14 bg-white border border-zinc-200 text-fashion-black rounded-full flex items-center justify-center shadow-xl hover:bg-primary hover:text-white transition-all duration-300 hover:scale-110 active:scale-95"
             :title="isOpen ? 'Đóng chat' : 'Chat với AI'"
         >
             <Transition name="icon-swap" mode="out-in">

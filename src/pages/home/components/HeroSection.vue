@@ -111,13 +111,4 @@
     box-shadow: 0 0 20px rgba(255, 182, 193, 0.55);
     transform: translateY(-2px);
 }
-
-/* Đồ trẻ em */
-.btn-kids:hover {
-    background: #ffe066;
-    color: black;
-    border-color: transparent;
-    transform: translateY(-3px) rotate(-1deg) scale(1.05);
-    box-shadow: 0 6px 18px rgba(255, 224, 102, 0.6);
-}
 </style>

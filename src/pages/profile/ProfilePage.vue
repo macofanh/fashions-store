@@ -26,7 +26,7 @@ const {
     provinces, districts, wards,
     selectedProvinceCode, selectedDistrictCode,
     addressForm,
-    init,
+    init, handleTabChange,
     openOrderDetail, closeOrderDetail,
     openAddressModal, openEditModal,
     handleSaveProfile, handleAvatarChange,
@@ -54,7 +54,7 @@ onMounted(init)
                 :role="authStore.user?.role?.toLowerCase() || 'customer'"
                 :avatar-url="authStore.user?.avatar_url || ''"
                 :active-tab="activeTab"
-                @update:active-tab="activeTab = $event"
+                @update:active-tab="handleTabChange"
                 @logout="handleLogout"
             />
 

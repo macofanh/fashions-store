@@ -289,19 +289,34 @@ const continueToProfile = async () => {
     await router.push(pendingProfileDestination.value)
 }
 
+const deferBodyMeasurements = async () => {
+    localStorage.setItem(measurementsPromptKey.value, 'true')
+    await continueToProfile()
+}
+
 const handleProfileNavigation = async (to: string) => {
     pendingProfileDestination.value = to
 
-    if (
-        hasBodyMeasurements.value ||
-        localStorage.getItem(measurementsPromptKey.value) === 'true'
-    ) {
+    if (localStorage.getItem(measurementsPromptKey.value) === 'true') {
         closeMobileMenu()
         await router.push(to)
         return
     }
 
-    localStorage.setItem(measurementsPromptKey.value, 'true')
+    try {
+        const response = await profileServices.getMyProfile()
+        authStore.hydrateUser(response.data)
+    } catch (e: any) {
+        uiStore.error(e.response?.data?.detail || 'Không thể lấy thông tin hồ sơ.')
+        return
+    }
+
+    if (hasBodyMeasurements.value) {
+        closeMobileMenu()
+        await router.push(to)
+        return
+    }
+
     isMeasurementsModalOpen.value = true
 }
 
@@ -310,17 +325,8 @@ const saveBodyMeasurements = async (measurements: { height_cm: number; weight_kg
 
     isSavingMeasurements.value = true
     try {
-        const response = await profileServices.updateMyProfile({
-            full_name: authStore.user.full_name,
-            phone: authStore.user.phone || null,
-            ...measurements,
-        })
-        authStore.hydrateUser({
-            ...authStore.user,
-            ...response.data,
-            height_cm: measurements.height_cm,
-            weight_kg: measurements.weight_kg,
-        })
+        const response = await profileServices.updateMyProfile(measurements)
+        authStore.hydrateUser(response.data)
         uiStore.success('Đã lưu chiều cao và cân nặng.')
         await continueToProfile()
     } catch (e: any) {
@@ -784,7 +790,7 @@ const profileMenuItems = computed<ProfileMenuItem[]>(() => [
         :initial-weight="authStore.user?.weight_kg"
         :is-saving="isSavingMeasurements"
         @save="saveBodyMeasurements"
-        @defer="continueToProfile"
+        @defer="deferBodyMeasurements"
     />
 </template>
 

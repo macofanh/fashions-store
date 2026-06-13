@@ -19,10 +19,10 @@ defineProps<{
 }>()
 
 const emit = defineEmits<{
-    'update:fullName': [value: string]
+    'update:full-name': [value: string]
     'update:phone': [value: string]
-    'update:heightCm': [value: number | null]
-    'update:weightKg': [value: number | null]
+    'update:height-cm': [value: number | null]
+    'update:weight-kg': [value: number | null]
     'save-profile': []
     'change-avatar': [file: File]
 }>()
@@ -50,7 +50,10 @@ const handleAvatarChange = (event: Event) => {
             <p class="text-text-muted text-sm font-display">Quản lý thông tin tài khoản của bạn.</p>
         </div>
 
-        <div class="bg-white border border-border-light rounded-xl p-8 max-w-2xl shadow-sm space-y-8">
+        <form
+            class="bg-white border border-border-light rounded-xl p-8 max-w-2xl shadow-sm space-y-8"
+            @submit.prevent="emit('save-profile')"
+        >
             <div class="flex flex-col sm:flex-row gap-6 sm:items-center">
                 <div class="relative shrink-0">
                     <input ref="avatarInput" type="file" class="hidden" accept="image/*" @change="handleAvatarChange" />
@@ -82,7 +85,7 @@ const handleAvatarChange = (event: Event) => {
                     <label class="text-xs font-semibold uppercase tracking-wider text-text-muted font-display">Họ và tên</label>
                     <input
                         :value="fullName"
-                        @input="emit('update:fullName', ($event.target as HTMLInputElement).value)"
+                        @input="emit('update:full-name', ($event.target as HTMLInputElement).value)"
                         type="text"
                         class="w-full rounded-xl border border-border-light px-4 py-3 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all"
                         placeholder="Nhập họ và tên"
@@ -120,7 +123,7 @@ const handleAvatarChange = (event: Event) => {
                     <div class="relative">
                         <input
                             :value="heightCm ?? ''"
-                            @input="emit('update:heightCm', ($event.target as HTMLInputElement).value === '' ? null : Number(($event.target as HTMLInputElement).value))"
+                            @input="emit('update:height-cm', ($event.target as HTMLInputElement).value === '' ? null : Number(($event.target as HTMLInputElement).value))"
                             type="number"
                             min="100"
                             max="250"
@@ -145,7 +148,7 @@ const handleAvatarChange = (event: Event) => {
                     <div class="relative">
                         <input
                             :value="weightKg ?? ''"
-                            @input="emit('update:weightKg', ($event.target as HTMLInputElement).value === '' ? null : Number(($event.target as HTMLInputElement).value))"
+                            @input="emit('update:weight-kg', ($event.target as HTMLInputElement).value === '' ? null : Number(($event.target as HTMLInputElement).value))"
                             type="number"
                             min="25"
                             max="300"
@@ -160,8 +163,7 @@ const handleAvatarChange = (event: Event) => {
 
             <div class="flex justify-end">
                 <button
-                    type="button"
-                    @click="emit('save-profile')"
+                    type="submit"
                     :disabled="isProfileSaving"
                     class="inline-flex items-center justify-center gap-2 rounded-xl bg-primary px-5 py-3 text-sm font-semibold text-white transition-colors hover:bg-primary/90 disabled:opacity-60"
                 >
@@ -169,6 +171,6 @@ const handleAvatarChange = (event: Event) => {
                     {{ isProfileSaving ? 'Đang lưu...' : 'Lưu thay đổi' }}
                 </button>
             </div>
-        </div>
+        </form>
     </div>
 </template>

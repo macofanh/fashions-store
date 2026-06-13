@@ -185,8 +185,10 @@ export function profileHandler() {
     const loadedTabs = new Set<string>()
 
     const loadTab = async (tab: string) => {
-        if (loadedTabs.has(tab)) return
-        loadedTabs.add(tab)
+        if (tab !== 'profile') {
+            if (loadedTabs.has(tab)) return
+            loadedTabs.add(tab)
+        }
 
         if (tab === 'orders') {
             isLoading.value = true
@@ -240,13 +242,31 @@ export function profileHandler() {
         }
 
         if (tab === 'profile') {
-            syncProfileForm()
+            try {
+                const res = await profileServices.getMyProfile()
+                authStore.hydrateUser(res.data)
+                syncProfileForm()
+            } catch (e: any) {
+                console.error('Lỗi lấy thông tin hồ sơ:', e)
+                uiStore.error(e.response?.data?.detail || 'Không thể lấy thông tin hồ sơ.')
+            }
         }
     }
 
     // Gọi khi component mount — chỉ load tab đang active
     const init = () => {
         loadTab(activeTab.value)
+    }
+
+    const handleTabChange = (tab: ProfileTab) => {
+        if (tab === activeTab.value) {
+            if (tab === 'profile') {
+                loadTab(tab)
+            }
+            return
+        }
+
+        activeTab.value = tab
     }
 
     const closeOrderDetail = () => {
@@ -344,12 +364,7 @@ export function profileHandler() {
                 weight_kg: profileForm.value.weight_kg,
             })
 
-            authStore.hydrateUser({
-                ...(authStore.user as any),
-                ...response.data,
-                height_cm: profileForm.value.height_cm,
-                weight_kg: profileForm.value.weight_kg,
-            })
+            authStore.hydrateUser(response.data)
             syncProfileForm()
             uiStore.success('Cập nhật hồ sơ thành công!')
         } catch (e: any) {
@@ -568,7 +583,7 @@ export function profileHandler() {
         selectedProvinceCode, selectedDistrictCode,
         addressForm,
         // actions
-        init,
+        init, handleTabChange,
         openOrderDetail,
         closeOrderDetail,
         openAddressModal, openEditModal,

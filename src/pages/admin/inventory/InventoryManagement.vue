@@ -53,19 +53,21 @@ const {
                 v-model:filter-stock="filterStock"
             />
 
-            <StockTable
-                :items="filteredStock"
-                :is-loading="isLoading"
-                @adjust="openAdjustDrawer"
-            />
+            <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+                <StockTable
+                    :items="filteredStock"
+                    :is-loading="isLoading"
+                    @adjust="openAdjustDrawer"
+                />
 
-            <StockPagination
-                :current-page="currentPage"
-                :total-pages="totalPages"
-                :visible-count="filteredStock.length"
-                :total-items="totalItems"
-                @change="handlePageChange"
-            />
+                <StockPagination
+                    :current-page="currentPage"
+                    :total-pages="totalPages"
+                    :visible-count="filteredStock.length"
+                    :total-items="totalItems"
+                    @change="handlePageChange"
+                />
+            </div>
         </template>
 
         <InventoryLogsTable

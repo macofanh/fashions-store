@@ -69,41 +69,11 @@ export function useInventoryManagement() {
     const isLowStock = (item: VariantStock) =>
         item.stock_qty > 0 && item.stock_qty <= (item.low_stock_threshold || 5)
 
-    const matchingStock = computed(() => {
-        let list = stockList.value
+    const totalItems = ref(0)
+    const totalPages = ref(1)
+    const stockStats = ref({ total: 0, low: 0, out: 0 })
 
-        if (filterStock.value === 'low') {
-            list = list.filter(isLowStock)
-        }
-
-        if (filterStock.value === 'out') {
-            list = list.filter(item => item.stock_qty <= 0)
-        }
-
-        const query = searchQuery.value.trim().toLowerCase()
-        if (query) {
-            list = list.filter(item =>
-                item.product_name.toLowerCase().includes(query) ||
-                item.sku.toLowerCase().includes(query),
-            )
-        }
-
-        return list
-    })
-
-    const totalItems = computed(() => matchingStock.value.length)
-    const totalPages = computed(() => Math.max(1, Math.ceil(totalItems.value / pageSize.value)))
-
-    const filteredStock = computed(() => {
-        const start = (currentPage.value - 1) * pageSize.value
-        return matchingStock.value.slice(start, start + pageSize.value)
-    })
-
-    const stockStats = computed(() => ({
-        total: stockList.value.length,
-        low: stockList.value.filter(isLowStock).length,
-        out: stockList.value.filter(item => item.stock_qty <= 0).length,
-    }))
+    const filteredStock = computed(() => stockList.value)
 
     const handlePageChange = (page: number) => {
         currentPage.value = Math.min(Math.max(page, 1), totalPages.value)
@@ -118,9 +88,19 @@ export function useInventoryManagement() {
         }
 
         try {
-            const items = await inventoryService.getVariantStocks()
-            stockList.value = items
-            persistStockCache(items)
+            const result = await inventoryService.getVariantStocks(
+                currentPage.value,
+                pageSize.value,
+                searchQuery.value,
+                filterStock.value
+            )
+            stockList.value = result.items
+            totalItems.value = result.total
+            totalPages.value = result.totalPages
+            if (result.stats) {
+                stockStats.value = result.stats
+            }
+            persistStockCache(result.items)
         } catch (error) {
             console.error(error)
             uiStore.error('Không thể tải tồn kho')
@@ -206,12 +186,27 @@ export function useInventoryManagement() {
     }
 
     onMounted(() => {
-        const hasCache = hydrateStockCache()
-        void fetchStock({ background: hasCache })
+        // Hydrate cache locally but still trigger initial fetch
+        hydrateStockCache()
+        void fetchStock()
     })
 
-    watch([searchQuery, filterStock], () => {
+    let searchTimeout: any = null
+    watch(searchQuery, () => {
+        if (searchTimeout) clearTimeout(searchTimeout)
+        searchTimeout = setTimeout(() => {
+            currentPage.value = 1
+            void fetchStock()
+        }, 500)
+    })
+
+    watch(filterStock, () => {
         currentPage.value = 1
+        void fetchStock()
+    })
+
+    watch(currentPage, () => {
+        void fetchStock()
     })
 
     watch(totalPages, pages => {

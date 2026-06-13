@@ -1,5 +1,5 @@
 import axiosClient from '@/lib/axiosClient'
-import type { AdjustStockForm, InventoryLog, VariantStock } from './inventory.types'
+import type { AdjustStockForm, InventoryLog, VariantStock, StockStats } from './inventory.types'
 
 interface ProductVariantResponse {
     variant_id: number
@@ -14,6 +14,15 @@ interface ProductVariantResponse {
     }
     color?: { name?: string }
     size?: { name?: string }
+}
+
+interface VariantPaginatedResponse {
+    items: ProductVariantResponse[]
+    total: number
+    page: number
+    page_size: number
+    total_pages: number
+    stats?: StockStats
 }
 
 interface InventoryLogsResponse {
@@ -44,12 +53,26 @@ function mapVariantStock(variant: ProductVariantResponse): VariantStock {
 }
 
 export const inventoryService = {
-    async getVariantStocks() {
-        const response = await axiosClient.get<ProductVariantResponse[] | PaginatedResponse<ProductVariantResponse>>(
+    async getVariantStocks(page = 1, pageSize = 10, search = '', stockFilter = 'all') {
+        const response = await axiosClient.get<VariantPaginatedResponse>(
             '/api/v1/products/variants',
-            { params: { page_size: 1000 } },
+            {
+                params: {
+                    page,
+                    page_size: pageSize,
+                    search: search.trim() || undefined,
+                    stock_filter: stockFilter,
+                },
+            },
         )
-        return getResponseItems(response.data).map(mapVariantStock)
+        return {
+            items: response.data.items.map(mapVariantStock),
+            total: response.data.total,
+            page: response.data.page,
+            pageSize: response.data.page_size,
+            totalPages: response.data.total_pages,
+            stats: response.data.stats,
+        }
     },
 
     async getInventoryLogs(pageSize = 50) {
@@ -64,9 +87,7 @@ export const inventoryService = {
         return axiosClient.post('/api/v1/inventory/inventory-logs', {
             variant_id: Number(form.variant_id),
             change_type: form.change_type,
-            quantity: form.change_type === 'OUT'
-                ? -Math.abs(form.quantity)
-                : Math.abs(form.quantity),
+            quantity: form.quantity,
             note: form.note,
         })
     },

@@ -145,22 +145,24 @@ watch(() => props.form.street_address, (value) => {
                             : 'border-border-light hover:border-primary/40 hover:bg-gray-50/60'
                     ]"
                 >
-                    <!-- Badge mặc định -->
-                    <span
-                        v-if="addr.is_default"
-                        class="absolute top-2.5 right-3 text-[9px] font-bold uppercase tracking-wider bg-primary text-white px-2 py-0.5 rounded-full"
-                    >Mặc định</span>
+                    <!-- Trạng thái / Lựa chọn địa chỉ -->
+                    <div class="absolute top-2.5 right-3 flex items-center gap-1.5 pointer-events-none">
+                        <!-- Tick chọn -->
+                        <span
+                            v-if="selectedAddressId === addr.address_id"
+                            class="w-5 h-5 bg-primary rounded-full flex items-center justify-center shrink-0 shadow-sm"
+                        >
+                            <span class="material-symbols-outlined text-white text-[13px]" style="font-variation-settings:'FILL' 1">check</span>
+                        </span>
 
-                    <!-- Tick chọn -->
-                    <span
-                        v-if="selectedAddressId === addr.address_id"
-                        class="absolute top-2.5 right-3 w-5 h-5 bg-primary rounded-full flex items-center justify-center"
-                        :class="{ 'right-[72px]': addr.is_default }"
-                    >
-                        <span class="material-symbols-outlined text-white text-[14px]" style="font-variation-settings:'FILL' 1">check</span>
-                    </span>
+                        <!-- Badge mặc định -->
+                        <span
+                            v-if="addr.is_default"
+                            class="text-[9px] font-bold uppercase tracking-wider bg-primary text-white px-2 py-0.5 rounded-full shrink-0 shadow-sm"
+                        >Mặc định</span>
+                    </div>
 
-                    <p class="text-sm font-semibold text-fashion-black pr-16 leading-snug">{{ addr.recipient_name }}</p>
+                    <p class="text-sm font-semibold text-fashion-black pr-24 leading-snug">{{ addr.recipient_name }}</p>
                     <p class="text-xs text-text-muted mt-0.5">{{ addr.phone }}</p>
                     <p class="text-xs text-text-muted mt-1 leading-relaxed line-clamp-2">
                         {{ addr.street_address }}, {{ addr.ward }}, {{ addr.district }}, {{ addr.province }}

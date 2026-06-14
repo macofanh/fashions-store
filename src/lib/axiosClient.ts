@@ -28,9 +28,41 @@ const processQueue = (error: any, token: string | null = null) => {
     failedQueue = []
 }
 
+const ISO_DATE_REGEX = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?$/
+
+function normalizeDates(obj: any): any {
+    if (obj === null || obj === undefined) return obj
+
+    if (typeof obj === 'string') {
+        if (ISO_DATE_REGEX.test(obj)) {
+            return `${obj}Z`
+        }
+        return obj
+    }
+
+    if (Array.isArray(obj)) {
+        return obj.map(normalizeDates)
+    }
+
+    if (typeof obj === 'object') {
+        for (const key in obj) {
+            if (Object.prototype.hasOwnProperty.call(obj, key)) {
+                obj[key] = normalizeDates(obj[key])
+            }
+        }
+    }
+
+    return obj
+}
+
 // Interceptor NHẬN VỀ: Xử lý refresh token và lỗi tập trung
 axiosClient.interceptors.response.use(
-    (response) => response,
+    (response) => {
+        if (response.data) {
+            response.data = normalizeDates(response.data)
+        }
+        return response
+    },
     async (error) => {
         const originalRequest = error.config
 

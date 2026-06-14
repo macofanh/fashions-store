@@ -162,7 +162,7 @@ onMounted(() => {
                                     selectedSizeType === 'top' ? 'bg-black text-white' : 'text-gray-600 hover:text-black'
                                 ]"
                             >
-                                Áo (Tops)
+                                Áo
                             </button>
                             <button 
                                 @click="selectedSizeType = 'bottom'"
@@ -171,7 +171,7 @@ onMounted(() => {
                                     selectedSizeType === 'bottom' ? 'bg-black text-white' : 'text-gray-600 hover:text-black'
                                 ]"
                             >
-                                Quần & Váy (Bottoms)
+                                Quần & Váy
                             </button>
                         </div>
                     </div>
@@ -280,7 +280,7 @@ onMounted(() => {
                                                 : 'border-gray-200 text-gray-700 hover:border-black'
                                         ]"
                                     >
-                                        Áo (Tops)
+                                        Áo
                                     </button>
                                     <button 
                                         @click="calcSizeType = 'bottom'"
@@ -292,7 +292,7 @@ onMounted(() => {
                                                 : 'border-gray-200 text-gray-700 hover:border-black'
                                         ]"
                                     >
-                                        Quần (Bottoms)
+                                        Quần
                                     </button>
                                 </div>
                             </div>
@@ -346,10 +346,6 @@ onMounted(() => {
                                 <p class="text-xs text-gray-500 max-w-xs leading-relaxed">
                                     {{ calcDetail }}
                                 </p>
-                                <div class="mt-4 inline-flex items-center gap-1 text-[11px] font-bold uppercase tracking-wider text-green-700 bg-green-50 border border-green-200 px-3 py-1 rounded-full">
-                                    <span class="material-symbols-outlined text-[13px]">check_circle</span>
-                                    Độ tin cậy: cao
-                                </div>
                             </template>
 
                             <template v-else>

@@ -3,10 +3,13 @@ import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { chatAIHandler } from './chatAIHandler'
 import { getImageUrl } from '@/lib/urlHelper'
+import { productService } from '@/pages/products/productService'
 
 const isOpen = ref(false)
 const messagesContainer = ref<HTMLElement | null>(null)
 const router = useRouter()
+const categories = ref<Array<{ category_id: number; slug: string }>>([])
+let categoriesRequest: Promise<void> | null = null
 
 const {
     inputText,
@@ -58,23 +61,35 @@ type MessageContentPart =
 
 type MessageDisplayPart =
     | MessageContentPart
-    | { type: 'product'; href: string; children: MessageContentPart[] }
+    | { type: 'product'; slug: string; children: MessageContentPart[] }
+    | { type: 'category'; target: string; children: MessageContentPart[] }
 
-function slugifyProductName(name: string) {
-    return name
-        .normalize('NFD')
-        .replace(/[\u0300-\u036f]/g, '')
-        .replace(/\u0111/g, 'd')
-        .replace(/\u0110/g, 'D')
-        .toLowerCase()
-        .replace(/[^a-z0-9]+/g, '-')
-        .replace(/^-+|-+$/g, '')
+function getProductSlugFromLink(link: string) {
+    const value = link.trim()
+    const match = value.match(/(?:^|\/)products\/([^/?#]+)/)
+    return decodeURIComponent(match?.[1] || value.replace(/^\/+|\/+$/g, ''))
 }
 
-function getProductHrefFromTitle(line: string) {
-    const name = line.replace(/^\s*\d+\.\s*/, '').trim()
-    const slug = slugifyProductName(name)
-    return slug ? `/products/${slug}` : ''
+function getCategoryTargetFromLink(link: string) {
+    return decodeURIComponent(link.trim())
+}
+
+async function ensureCategoriesLoaded() {
+    if (categories.value.length) return
+    if (categoriesRequest) return categoriesRequest
+
+    categoriesRequest = productService.getCategories()
+        .then((response) => {
+            categories.value = Array.isArray(response.data) ? response.data : []
+        })
+        .catch(() => {
+            categories.value = []
+        })
+        .finally(() => {
+            categoriesRequest = null
+        })
+
+    return categoriesRequest
 }
 
 function parseContentParts(content: string): MessageContentPart[] {
@@ -116,9 +131,15 @@ function parseContentParts(content: string): MessageContentPart[] {
 function parseMessageContent(content: string): MessageDisplayPart[] {
     const parts: MessageDisplayPart[] = []
     const textLines: string[] = []
-    let currentProduct: { href: string; lines: string[] } | null = null
+    let currentItem: {
+        type: 'product' | 'category' | null
+        slug: string
+        target: string
+        lines: string[]
+    } | null = null
 
     const productLinkPattern = /^\s*<!--\s*product-link:([^>]+?)\s*-->\s*$/
+    const categoryLinkPattern = /^\s*<!--\s*category-link:([^>]+?)\s*-->\s*$/
     const productTitlePattern = /^\s*\d+\.\s+\S/
     const separatorPattern = /^\s*[\u2500-]{5,}\s*$/
 
@@ -127,27 +148,39 @@ function parseMessageContent(content: string): MessageDisplayPart[] {
         lines.length = 0
     }
 
-    const flushProduct = () => {
-        if (!currentProduct) return
+    const flushItem = () => {
+        if (!currentItem) return
 
-        const children = parseContentParts(currentProduct.lines.join('\n'))
+        const children = parseContentParts(currentItem.lines.join('\n'))
         if (children.length) {
-            parts.push({
-                type: 'product',
-                href: currentProduct.href,
-                children,
-            })
+            if (currentItem.type === 'product' && currentItem.slug) {
+                parts.push({
+                    type: 'product',
+                    slug: currentItem.slug,
+                    children,
+                })
+            } else if (currentItem.type === 'category' && currentItem.target) {
+                parts.push({
+                    type: 'category',
+                    target: currentItem.target,
+                    children,
+                })
+            } else {
+                parts.push(...children)
+            }
         }
 
-        currentProduct = null
+        currentItem = null
     }
 
     for (const line of content.split('\n')) {
         if (productTitlePattern.test(line)) {
-            flushProduct()
+            flushItem()
             pushTextParts(textLines)
-            currentProduct = {
-                href: getProductHrefFromTitle(line),
+            currentItem = {
+                type: null,
+                slug: '',
+                target: '',
                 lines: [line],
             }
             continue
@@ -155,15 +188,27 @@ function parseMessageContent(content: string): MessageDisplayPart[] {
 
         const productLinkMatch = line.match(productLinkPattern)
         if (productLinkMatch?.[1]) {
-            if (currentProduct) currentProduct.href = productLinkMatch[1].trim()
+            if (currentItem) {
+                currentItem.type = 'product'
+                currentItem.slug = getProductSlugFromLink(productLinkMatch[1])
+            }
             continue
         }
 
-        if (currentProduct) {
+        const categoryLinkMatch = line.match(categoryLinkPattern)
+        if (categoryLinkMatch?.[1]) {
+            if (currentItem) {
+                currentItem.type = 'category'
+                currentItem.target = getCategoryTargetFromLink(categoryLinkMatch[1])
+            }
+            continue
+        }
+
+        if (currentItem) {
             if (separatorPattern.test(line)) {
-                flushProduct()
+                flushItem()
             } else {
-                currentProduct.lines.push(line)
+                currentItem.lines.push(line)
             }
             continue
         }
@@ -171,14 +216,29 @@ function parseMessageContent(content: string): MessageDisplayPart[] {
         textLines.push(line)
     }
 
-    flushProduct()
+    flushItem()
     pushTextParts(textLines)
 
     return parts
 }
 
-function openProduct(href: string) {
-    if (href) void router.push(href)
+function openProduct(slug: string) {
+    if (slug) void router.push({ name: 'product-detail', params: { slug } })
+}
+
+async function openCategory(target: string) {
+    if (!target) return
+
+    if (target.startsWith('/products')) {
+        await router.push(target)
+        return
+    }
+
+    await ensureCategoriesLoaded()
+    const category = categories.value.find(item => item.slug === target)
+    if (category) {
+        await router.push(`/products?category_id=${category.category_id}`)
+    }
 }
 </script>
 
@@ -272,7 +332,7 @@ function openProduct(href: string) {
                                         v-else-if="part.type === 'product'"
                                         type="button"
                                         class="block w-full text-left border border-border-light bg-zinc-50 px-3 py-3 transition-colors hover:border-primary hover:bg-white focus:outline-none focus:ring-2 focus:ring-primary/30"
-                                        @click="openProduct(part.href)"
+                                        @click="openProduct(part.slug)"
                                     >
                                         <template
                                             v-for="(child, childIndex) in part.children"
@@ -281,10 +341,10 @@ function openProduct(href: string) {
                                             <p v-if="child.type === 'text'" class="whitespace-pre-wrap">{{ child.content }}</p>
                                             <div
                                                 v-else-if="child.urls.length"
-                                                class="mt-2 grid grid-cols-2 gap-2"
+                                                class="mt-2 grid grid-cols-1 gap-2"
                                             >
                                                 <img
-                                                    v-for="imageUrl in child.urls"
+                                                    v-for="imageUrl in child.urls.slice(0, 1)"
                                                     :key="imageUrl"
                                                     :src="getImageUrl(imageUrl)"
                                                     alt="Ảnh sản phẩm"
@@ -293,6 +353,19 @@ function openProduct(href: string) {
                                                     @load="scrollToBottom"
                                                 />
                                             </div>
+                                        </template>
+                                    </button>
+                                    <button
+                                        v-else-if="part.type === 'category'"
+                                        type="button"
+                                        class="block w-full text-left border border-border-light bg-zinc-50 px-3 py-2 transition-colors hover:border-primary hover:bg-white focus:outline-none focus:ring-2 focus:ring-primary/30"
+                                        @click="openCategory(part.target)"
+                                    >
+                                        <template
+                                            v-for="(child, childIndex) in part.children"
+                                            :key="`${message.id}-${partIndex}-${childIndex}`"
+                                        >
+                                            <p v-if="child.type === 'text'" class="whitespace-pre-wrap">{{ child.content }}</p>
                                         </template>
                                     </button>
                                 </template>

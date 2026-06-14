@@ -252,6 +252,9 @@ const handleAddToCart = async () => {
 
 const handleBuyNow = async () => {
     if (!validateSelection()) return
+    const variant = currentVariant.value
+    if (!variant) return
+
     if (!authStore.isAuthenticated) {
         router.push({ name: 'login', query: { redirect: route.fullPath } })
         return
@@ -259,7 +262,16 @@ const handleBuyNow = async () => {
     isBuyingNow.value = true
     try {
         await addToCartLogic()
-        router.push({ name: 'checkout' })
+        const cartItem = cartStore.items.find(item => item.variant_id === variant.variant_id)
+        if (!cartItem) {
+            uiStore.error('Không thể xác định sản phẩm cần thanh toán. Vui lòng thử lại.')
+            return
+        }
+
+        router.push({
+            name: 'checkout',
+            query: { cart_item_ids: String(cartItem.cart_item_id) },
+        })
     } catch { uiStore.error('Có lỗi xảy ra. Vui lòng thử lại.') }
     finally  { isBuyingNow.value = false }
 }

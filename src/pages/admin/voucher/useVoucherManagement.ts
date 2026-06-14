@@ -13,6 +13,8 @@ export function useVoucherManagement() {
     const isEditing = ref(false)
     const fieldErrors = ref<Partial<Record<MoneyField | 'discount_type', string>>>({})
 
+    // ── Factory ───────────────────────────────────────────────────
+
     const createEmptyVoucher = (): Partial<Voucher> => ({
         code: '',
         name: '',
@@ -24,46 +26,50 @@ export function useVoucherManagement() {
         required_tier: null,
         start_date: new Date().toISOString().split('T')[0],
         end_date: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-        is_active: true
+        is_active: true,
     })
 
     const currentVoucher = ref<Partial<Voucher>>(createEmptyVoucher())
 
-    const formatMoneyInput = (value: number | string | null | undefined) => {
-        const numericValue = Number(value ?? 0)
-        if (Number.isNaN(numericValue)) return '0'
-        return new Intl.NumberFormat('vi-VN').format(numericValue)
+    // ── Formatting helpers ────────────────────────────────────────
+
+    const formatMoneyInput = (value: number | string | null | undefined): string => {
+        const num = Number(value ?? 0)
+        return Number.isNaN(num) ? '0' : new Intl.NumberFormat('vi-VN').format(num)
     }
 
-    const parseMoneyInput = (value: string) => {
-        const digitsOnly = value.replace(/[^\d]/g, '')
-        return digitsOnly ? Number(digitsOnly) : 0
+    const parseMoneyInput = (value: string): number => {
+        const digits = value.replace(/[^\d]/g, '')
+        return digits ? Number(digits) : 0
     }
 
-    const clampPercentValue = (value: number) => Math.max(0, Math.min(100, Math.trunc(value)))
+    const formatPrice = (price: number): string =>
+        new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(price)
+
+    // ── Validation ────────────────────────────────────────────────
 
     const clearFieldError = (field: MoneyField | 'discount_type') => {
         delete fieldErrors.value[field]
+        // trigger reactivity
         fieldErrors.value = { ...fieldErrors.value }
     }
 
-    const validateVoucher = () => {
+    const validateVoucher = (): boolean => {
         fieldErrors.value = {}
 
-        const discountType = currentVoucher.value.discount_type ?? 'PERCENT'
+        const type = currentVoucher.value.discount_type ?? 'PERCENT'
         const discountValue = Number(currentVoucher.value.discount_value ?? 0)
         const minOrderValue = Number(currentVoucher.value.min_order_value ?? 0)
         const maxDiscount = Number(currentVoucher.value.max_discount ?? 0)
 
-        if (discountType === 'PERCENT') {
+        if (type === 'PERCENT') {
             if (!Number.isFinite(discountValue) || discountValue < 0 || discountValue > 100) {
                 fieldErrors.value.discount_value = 'Giá trị phần trăm phải từ 0 đến 100.'
             }
-
             if (maxDiscount < 0) {
                 fieldErrors.value.max_discount = 'Giảm tối đa không được nhỏ hơn 0.'
             }
-        } else if (discountType === 'FIXED_AMOUNT') {
+        } else if (type === 'FIXED_AMOUNT') {
             if (!Number.isFinite(discountValue) || discountValue < 0) {
                 fieldErrors.value.discount_value = 'Giá trị tiền phải từ 0 trở lên.'
             }
@@ -75,6 +81,29 @@ export function useVoucherManagement() {
 
         return Object.keys(fieldErrors.value).length === 0
     }
+
+    // ── Input handlers ────────────────────────────────────────────
+
+    const updateMoneyField = (field: MoneyField, event: Event) => {
+        const target = event.target as HTMLInputElement | null
+        if (!target) return
+        currentVoucher.value[field] = parseMoneyInput(target.value)
+        clearFieldError(field)
+    }
+
+    const updateDiscountValue = (event: Event) => {
+        updateMoneyField('discount_value', event)
+    }
+
+    const handleDiscountTypeChange = () => {
+        currentVoucher.value.discount_value = 0
+        currentVoucher.value.max_discount = 0
+        clearFieldError('discount_value')
+        clearFieldError('max_discount')
+        clearFieldError('discount_type')
+    }
+
+    // ── API ───────────────────────────────────────────────────────
 
     const fetchVouchers = async () => {
         isLoading.value = true
@@ -102,65 +131,30 @@ export function useVoucherManagement() {
         currentVoucher.value = {
             ...v,
             start_date: v.start_date.split('T')[0],
-            end_date: v.end_date.split('T')[0]
+            end_date: v.end_date.split('T')[0],
         }
         fieldErrors.value = {}
         isModalOpen.value = true
     }
 
-    const handleDiscountTypeChange = () => {
-        currentVoucher.value.discount_value = 0
-        currentVoucher.value.max_discount = 0
-        clearFieldError('discount_value')
-        clearFieldError('max_discount')
-        clearFieldError('discount_type')
-    }
-
-    const updateMoneyField = (field: MoneyField, event: Event) => {
-        const target = event.target as HTMLInputElement | null
-        if (!target) return
-        currentVoucher.value[field] = parseMoneyInput(target.value)
-        clearFieldError(field)
-    }
-
-    const updateDiscountValue = (event: Event) => {
-        const target = event.target as HTMLInputElement | null
-        if (!target) return
-
-        const parsedValue = parseMoneyInput(target.value)
-        if (currentVoucher.value.discount_type === 'PERCENT') {
-            currentVoucher.value.discount_value = parsedValue
-            clearFieldError('discount_value')
-            return
-        }
-
-        currentVoucher.value.discount_value = parsedValue
-        clearFieldError('discount_value')
-    }
-
-    const normalizeVoucherPayload = () => {
-        const discountType = currentVoucher.value.discount_type ?? 'PERCENT'
-
+    const normalizePayload = () => {
+        const type = currentVoucher.value.discount_type ?? 'PERCENT'
         return {
             ...currentVoucher.value,
-            discount_type: discountType,
+            discount_type: type,
             discount_value: Number(currentVoucher.value.discount_value ?? 0),
             min_order_value: Number(currentVoucher.value.min_order_value ?? 0),
-            max_discount: discountType === 'PERCENT'
-                ? Number(currentVoucher.value.max_discount ?? 0)
-                : 0
+            max_discount: type === 'PERCENT' ? Number(currentVoucher.value.max_discount ?? 0) : 0,
         }
     }
 
     const handleSubmit = async () => {
+        if (!validateVoucher()) {
+            uiStore.error('Vui lòng kiểm tra lại các trường đang báo lỗi.')
+            return
+        }
         try {
-            if (!validateVoucher()) {
-                uiStore.error('Vui lòng kiểm tra lại các trường đang báo lỗi.')
-                return
-            }
-
-            const payload = normalizeVoucherPayload()
-
+            const payload = normalizePayload()
             if (isEditing.value && currentVoucher.value.voucher_id) {
                 await promotionService.updateVoucher(currentVoucher.value.voucher_id, payload)
                 uiStore.success('Cập nhật voucher thành công!')
@@ -193,12 +187,7 @@ export function useVoucherManagement() {
         }
     }
 
-    const formatPrice = (price: number) => {
-        return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(price)
-    }
-
     return {
-        uiStore,
         vouchers,
         isLoading,
         isModalOpen,
@@ -206,6 +195,7 @@ export function useVoucherManagement() {
         currentVoucher,
         fieldErrors,
         formatMoneyInput,
+        formatPrice,
         fetchVouchers,
         openCreateModal,
         openEditModal,
@@ -215,6 +205,5 @@ export function useVoucherManagement() {
         updateDiscountValue,
         handleSubmit,
         deleteVoucher,
-        formatPrice
     }
 }

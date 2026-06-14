@@ -373,6 +373,26 @@ export function useProductManagement() {
             }
         }
 
+        const handleUpdateImageColor = async (imageId: number, colorId: number | null) => {
+            try {
+                const cleanColorId = (colorId === null || isNaN(colorId)) ? undefined : colorId
+                const response = await axiosClient.put(`/api/v1/products/images/${imageId}/color`, null, {
+                    params: { color_id: cleanColorId }
+                })
+                if (selectedProduct.value) {
+                    const img = selectedProduct.value.images.find((i: any) => i.image_id === imageId)
+                    if (img) {
+                        img.color_id = response.data.color_id
+                    }
+                    updateLocalProductSync()
+                }
+                uiStore.success('Cập nhật màu cho ảnh thành công!')
+            } catch (error) {
+                console.error('Lỗi khi cập nhật màu cho ảnh:', error)
+                uiStore.error('Lỗi khi cập nhật màu cho ảnh.')
+            }
+        }
+
         const updateLocalProductSync = () => {
             if (!selectedProduct.value) return
             const index = products.value.findIndex(p => p.product_id === selectedProduct.value.product_id)
@@ -577,6 +597,7 @@ export function useProductManagement() {
         handleVariantImageUpload,
         handleSetPrimary,
         handleDeleteImage,
+        handleUpdateImageColor,
         updateLocalProductSync,
         handleSave,
         openVariantForm,

@@ -335,6 +335,7 @@ const handleOpenReviewModal = () => {
                 <ProductGallery
                     :images="product.images || []"
                     :product-name="product.name"
+                    :selected-color-id="selectedColor?.color_id"
                 />
 
                 <ProductInfo

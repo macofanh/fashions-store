@@ -37,6 +37,7 @@ const {
     handleVariantImageUpload,
     handleSetPrimary,
     handleDeleteImage,
+    handleUpdateImageColor,
     updateLocalProductSync,
     handleSave,
     openVariantForm,
@@ -192,22 +193,38 @@ const isVariantsExpanded = ref(false)
                     <section v-if="selectedProduct?.product_id">
                         <h3 class="text-xs font-bold text-slate-500 uppercase tracking-wider mb-4">Hình ảnh sản phẩm</h3>
                         <input type="file" ref="fileInput" class="hidden" accept="image/*" @change="handleFileUpload" />
-                        <div class="grid grid-cols-5 gap-3">
-                            <div v-for="(img, idx) in selectedProduct.images" :key="idx" class="aspect-[3/4] bg-slate-100 rounded-xl relative group overflow-hidden">
-                                <img :src="getImageUrl(img.image_url)" class="w-full h-full object-cover" />
-                                <div v-if="img.is_primary" class="absolute top-2 left-2 bg-indigo-600 text-white text-[9px] font-bold px-2 py-0.5 rounded-full">Chính</div>
-                                <div class="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity rounded-xl flex flex-col items-center justify-center gap-2">
-                                    <button v-if="!img.is_primary" @click="handleSetPrimary(img.image_id)" class="bg-white text-slate-900 text-[9px] font-semibold px-3 py-1.5 rounded-lg hover:bg-indigo-600 hover:text-white transition-colors">Đặt chính</button>
-                                    <button @click="handleDeleteImage(img.image_id)" class="text-white hover:text-red-300 transition-colors">
-                                        <span class="material-symbols-outlined text-sm">delete</span>
-                                    </button>
+                        <div class="grid grid-cols-4 sm:grid-cols-5 gap-4">
+                            <div v-for="(img, idx) in selectedProduct.images" :key="idx" class="flex flex-col gap-1.5">
+                                <div class="aspect-[3/4] bg-slate-100 rounded-xl relative group overflow-hidden">
+                                    <img :src="getImageUrl(img.image_url)" class="w-full h-full object-cover" />
+                                    <div v-if="img.is_primary" class="absolute top-2 left-2 bg-indigo-600 text-white text-[9px] font-bold px-2 py-0.5 rounded-full">Chính</div>
+                                    <div class="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity rounded-xl flex flex-col items-center justify-center gap-2">
+                                        <button v-if="!img.is_primary" @click="handleSetPrimary(img.image_id)" class="bg-white text-slate-900 text-[9px] font-semibold px-3 py-1.5 rounded-lg hover:bg-indigo-600 hover:text-white transition-colors">Đặt chính</button>
+                                        <button @click="handleDeleteImage(img.image_id)" class="text-white hover:text-red-300 transition-colors">
+                                            <span class="material-symbols-outlined text-sm">delete</span>
+                                        </button>
+                                    </div>
                                 </div>
+                                <select 
+                                    :value="img.color_id ?? ''"
+                                    @change="e => {
+                                        const val = (e.target as HTMLSelectElement).value;
+                                        handleUpdateImageColor(img.image_id, val ? Number(val) : null);
+                                    }"
+                                    class="w-full border border-slate-200 rounded-lg px-1 py-1.5 text-[11px] outline-none focus:border-indigo-400 bg-white"
+                                >
+                                    <option value="">Ảnh chung</option>
+                                    <option v-for="c in allColors" :key="c.color_id" :value="c.color_id">{{ c.name }}</option>
+                                </select>
                             </div>
-                            <button @click="triggerFileInput" :disabled="isUploading" class="aspect-[3/4] border-2 border-dashed border-slate-200 rounded-xl flex flex-col items-center justify-center text-slate-400 hover:border-indigo-400 hover:text-indigo-500 transition-all disabled:opacity-50">
-                                <span v-if="isUploading" class="animate-spin h-5 w-5 border-2 border-indigo-500 border-t-transparent rounded-full mb-1"></span>
-                                <span v-else class="material-symbols-outlined text-2xl">add_a_photo</span>
-                                <span class="text-[9px] font-semibold mt-1">{{ isUploading ? 'Đang tải...' : 'Thêm ảnh' }}</span>
-                            </button>
+                            <div class="flex flex-col gap-1.5">
+                                <button @click="triggerFileInput" :disabled="isUploading" class="aspect-[3/4] border-2 border-dashed border-slate-200 rounded-xl flex flex-col items-center justify-center text-slate-400 hover:border-indigo-400 hover:text-indigo-500 transition-all disabled:opacity-50 w-full">
+                                    <span v-if="isUploading" class="animate-spin h-5 w-5 border-2 border-indigo-500 border-t-transparent rounded-full mb-1"></span>
+                                    <span v-else class="material-symbols-outlined text-2xl">add_a_photo</span>
+                                    <span class="text-[9px] font-semibold mt-1">{{ isUploading ? 'Đang tải...' : 'Thêm ảnh' }}</span>
+                                </button>
+                                <div class="h-[26px]"></div>
+                            </div>
                         </div>
                     </section>
 

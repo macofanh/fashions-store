@@ -10,7 +10,7 @@ interface Review {
     created_at: string
     user_name?: string
     user_email?: string
-    images?: { image_id: number; image_url: string }[]
+    images?: { img_id?: number; image_id?: number; image_url: string }[]
 }
 
 const props = defineProps<{
@@ -133,7 +133,7 @@ const getDisplayName = (review: Review) => {
 
                 <!-- Review images -->
                 <div v-if="review.images?.length" class="flex flex-wrap gap-2">
-                    <div v-for="img in review.images" :key="img.image_id"
+                    <div v-for="img in review.images" :key="img.img_id || img.image_id || img.image_url"
                         class="w-16 h-16 border border-border-light rounded-lg overflow-hidden cursor-pointer hover:opacity-90 transition-opacity">
                         <img :src="getImageUrl(img.image_url)" :alt="review.title" class="w-full h-full object-cover" />
                     </div>

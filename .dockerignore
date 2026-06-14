@@ -1,33 +1,10 @@
 node_modules
 dist
-dist-ssr
-coverage
-
+.env
+.env.local
+.env.*.local
 .git
 .gitignore
+*.md
 .vscode
-.idea
-
-*.log
-npm-debug.log*
-yarn-debug.log*
-pnpm-debug.log*
-
-.env
-.env.*
-!.env.example
-
-*.tsbuildinfo
-.eslintcache
-
-# Docker files (không cần copy vào image)
-Dockerfile
-compose.yaml
-.dockerignore
-
-# Vercel
-.vercel
-.vercelignore
-
 .DS_Store
-Thumbs.db

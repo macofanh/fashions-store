@@ -79,7 +79,7 @@ const handleSubmit = async () => {
                         <span class="normal-case tracking-normal text-text-muted/60 font-normal ml-1">(không bắt buộc)</span>
                     </label>
                     <input v-model="form.title" type="text"
-                        class="w-full border border-border-light rounded-lg px-4 py-3 text-sm outline-none focus:border-primary transition-colors font-display"
+                        class="w-full border border-border-light rounded-none px-4 py-3 text-sm outline-none focus:border-black transition-colors font-display"
                         placeholder="Rất hài lòng / Chất vải đẹp..." />
                 </div>
 
@@ -90,7 +90,7 @@ const handleSubmit = async () => {
                         <span class="normal-case tracking-normal text-text-muted/60 font-normal ml-1">(không bắt buộc)</span>
                     </label>
                     <textarea v-model="form.content" rows="4"
-                        class="w-full border border-border-light rounded-lg px-4 py-3 text-sm outline-none focus:border-primary transition-colors resize-none font-display"
+                        class="w-full border border-border-light rounded-none px-4 py-3 text-sm outline-none focus:border-black transition-colors resize-none font-display"
                         placeholder="Hãy chia sẻ trải nghiệm của bạn..."></textarea>
                 </div>
 
@@ -102,7 +102,7 @@ const handleSubmit = async () => {
                     </label>
 
                     <!-- Upload area -->
-                    <label class="flex flex-col items-center justify-center w-full h-24 border-2 border-dashed border-border-light rounded-lg cursor-pointer hover:border-primary hover:bg-primary/5 transition-all">
+                    <label class="flex flex-col items-center justify-center w-full h-24 border-2 border-dashed border-border-light rounded-none cursor-pointer hover:border-black hover:bg-black/5 transition-all">
                         <span class="material-symbols-outlined text-text-muted text-2xl">add_photo_alternate</span>
                         <span class="text-[10px] text-text-muted font-display mt-1">Chọn ảnh (tối đa 5 ảnh)</span>
                         <input type="file" multiple accept="image/*" class="hidden" @change="handleFileChange" />
@@ -127,7 +127,7 @@ const handleSubmit = async () => {
             <button
                 @click="handleSubmit"
                 :disabled="isSubmitting"
-                class="w-full bg-primary text-white py-3.5 rounded-lg text-sm font-bold tracking-widest uppercase hover:bg-primary-dark transition-all font-display disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center gap-2">
+                class="w-full bg-black text-white py-3.5 rounded-none text-sm font-bold tracking-widest uppercase hover:bg-gray-900 transition-all font-display disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center gap-2">
                 <span v-if="isSubmitting" class="animate-spin h-4 w-4 border-2 border-white border-t-transparent rounded-full"></span>
                 {{ isSubmitting ? 'Đang gửi...' : 'Gửi đánh giá' }}
             </button>

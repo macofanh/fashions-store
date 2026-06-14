@@ -323,9 +323,25 @@ export function useProductManagement() {
                 uiStore.warning('Vui lòng điền đầy đủ thông tin biến thể!')
                 return
             }
+            if (newVariant.value.price <= 0) {
+                uiStore.warning('Giá biến thể phải lớn hơn 0!')
+                return
+            }
 
             selectedProduct.value.variants = selectedProduct.value.variants || []
             const variantPayload = JSON.parse(JSON.stringify(newVariant.value))
+
+            // Parse numbers to make sure payload types are correct
+            variantPayload.price = Number(variantPayload.price) || 0
+            variantPayload.compare_price = variantPayload.compare_price ? Number(variantPayload.compare_price) : null
+            variantPayload.stock_qty = Number(variantPayload.stock_qty) || 0
+            variantPayload.low_stock_threshold = Number(variantPayload.low_stock_threshold) || 5
+
+            // Tìm thông tin color và size từ danh sách meta data để gán trực tiếp hiển thị lên UI
+            const foundColor = allColors.value.find(c => c.color_id === Number(variantPayload.color_id))
+            const foundSize = allSizes.value.find(s => s.size_id === Number(variantPayload.size_id))
+            variantPayload.color = foundColor ? { ...foundColor } : undefined
+            variantPayload.size = foundSize ? { ...foundSize } : undefined
 
             if (editingVariantIndex.value !== null && selectedProduct.value.variants[editingVariantIndex.value]) {
                 selectedProduct.value.variants[editingVariantIndex.value] = {

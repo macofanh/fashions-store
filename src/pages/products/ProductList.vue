@@ -85,6 +85,17 @@ const sortOptions = [
 
 const currentSortValue = computed(() => `${filters.sort_by}:${filters.sort_order}`)
 
+const selectedCategoryName = computed(() => {
+    if (!filters.category_id || !categories.value.length) return null
+    const cat = categories.value.find(c => c.category_id === filters.category_id)
+    return cat ? cat.name : null
+})
+
+const genderLabel = computed(() => {
+    if (!filters.gender) return null
+    return filters.gender === 'male' ? 'Nam' : filters.gender === 'female' ? 'Nữ' : null
+})
+
 // ── Helpers ───────────────────────────────────────────────────────
 const buildParams = () => {
     const p: Record<string, any> = {
@@ -269,16 +280,21 @@ onMounted(() => { fetchCategories() })
             <div class="max-w-[1440px] mx-auto px-6 py-8">
                 <!-- Breadcrumb -->
                 <nav class="flex items-center gap-2 text-sm text-text-muted mb-6">
-                    <router-link to="/" class="hover:text-primary transition-colors">Trang chủ</router-link>
+                    <router-link to="/" class="hover:text-black hover:underline transition-colors">Trang chủ</router-link>
                     <span class="text-xs">/</span>
-                    <span class="text-fashion-black font-medium">Sản phẩm</span>
+                    <template v-if="selectedCategoryName || genderLabel">
+                        <router-link to="/products" class="hover:text-black hover:underline transition-colors">Sản phẩm</router-link>
+                        <span class="text-xs">/</span>
+                        <span class="text-fashion-black font-medium">{{ selectedCategoryName || genderLabel }}</span>
+                    </template>
+                    <span v-else class="text-fashion-black font-medium">Sản phẩm</span>
                 </nav>
 
                 <!-- Title row -->
                 <div class="flex flex-col md:flex-row md:items-end justify-between gap-4">
                     <div>
                         <h1 class="text-3xl md:text-4xl font-serif font-bold tracking-tight text-fashion-black mb-2">
-                            Sản phẩm
+                            {{ selectedCategoryName || genderLabel || 'Sản phẩm' }}
                         </h1>
                         <p class="text-text-muted text-sm">
                             <template v-if="!isLoading && totalItems > 0">{{ totalItems.toLocaleString('vi-VN') }} sản phẩm</template>

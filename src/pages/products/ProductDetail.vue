@@ -273,12 +273,21 @@ const handleSubmitReview = async (data: { rating: number; title: string; content
         }
     }
 }
+
+const handleOpenReviewModal = () => {
+    if (!authStore.isAuthenticated) {
+        uiStore.warning('Vui lòng đăng nhập để đánh giá sản phẩm.')
+        router.push({ name: 'login', query: { redirect: route.fullPath } })
+        return
+    }
+    showModal.value = true
+}
 </script>
 
 <template>
     <!-- Loading -->
     <div v-if="isProductLoading" class="min-h-screen flex items-center justify-center bg-background-light">
-        <div class="animate-spin h-8 w-8 border-2 border-primary border-t-transparent rounded-full"></div>
+        <div class="animate-spin h-8 w-8 border-2 border-black border-t-transparent rounded-full"></div>
     </div>
 
     <div v-else-if="product" class="bg-background-light min-h-screen pb-24">
@@ -286,9 +295,9 @@ const handleSubmitReview = async (data: { rating: number; title: string; content
 
             <!-- Breadcrumb -->
             <nav class="flex items-center gap-2 text-[10px] uppercase tracking-widest text-text-muted mb-8 font-display">
-                <router-link to="/" class="hover:text-primary transition-colors">Trang chủ</router-link>
+                <router-link to="/" class="hover:text-black hover:underline transition-colors">Trang chủ</router-link>
                 <span class="text-border-light">/</span>
-                <router-link to="/products" class="hover:text-primary transition-colors">Sản phẩm</router-link>
+                <router-link to="/products" class="hover:text-black hover:underline transition-colors">Sản phẩm</router-link>
                 <span class="text-border-light">/</span>
                 <span class="text-fashion-black font-medium truncate max-w-[200px]">{{ product.name }}</span>
             </nav>
@@ -325,7 +334,7 @@ const handleSubmitReview = async (data: { rating: number; title: string; content
                 :reviews="reviews"
                 :avg-rating="product.avg_rating"
                 :is-loading="isReviewsLoading"
-                @open-modal="showModal = true"
+                @open-modal="handleOpenReviewModal"
             />
 
             <!-- Frequently bought together / Recommendations -->
@@ -359,7 +368,7 @@ const handleSubmitReview = async (data: { rating: number; title: string; content
 
                             <!-- Quick view -->
                             <div class="absolute inset-x-4 bottom-4 translate-y-3 opacity-0 group-hover:translate-y-0 group-hover:opacity-100 transition-all duration-300">
-                                <div class="bg-white text-fashion-black text-[10px] font-bold text-center tracking-widest uppercase py-2.5 rounded-lg font-display hover:bg-primary hover:text-white transition-colors shadow-lg">
+                                <div class="bg-white text-fashion-black text-[10px] font-bold text-center tracking-widest uppercase py-2.5 rounded-none font-display hover:bg-black hover:text-white transition-colors shadow-lg">
                                     Xem chi tiết
                                 </div>
                             </div>
@@ -367,10 +376,10 @@ const handleSubmitReview = async (data: { rating: number; title: string; content
 
                         <!-- Info -->
                         <div class="space-y-1 px-0.5">
-                            <h4 class="text-sm font-semibold text-fashion-black group-hover:text-primary transition-colors line-clamp-2 leading-snug font-display">
+                            <h4 class="text-sm font-semibold text-fashion-black group-hover:text-black group-hover:underline transition-colors line-clamp-2 leading-snug font-display">
                                 {{ item.name }}
                             </h4>
-                            <p class="text-sm font-bold text-primary font-display">{{ formatPrice(item.base_price) }}</p>
+                            <p class="text-sm font-bold text-black font-display">{{ formatPrice(item.base_price) }}</p>
                         </div>
                     </router-link>
                 </div>

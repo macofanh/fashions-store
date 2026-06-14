@@ -141,7 +141,7 @@ const getDisplayName = (review: Review) => {
 
                 <!-- Reviewer -->
                 <div class="flex items-center gap-2 pt-1">
-                    <div class="w-7 h-7 bg-primary-light rounded-full flex items-center justify-center text-[10px] font-bold text-primary font-display shrink-0">
+                    <div class="w-7 h-7 bg-fashion-gray rounded-full flex items-center justify-center text-[10px] font-bold text-fashion-black font-display shrink-0">
                         {{ getInitial(review, idx) }}
                     </div>
                     <div class="flex items-center gap-2 flex-wrap">

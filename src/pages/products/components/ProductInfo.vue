@@ -78,7 +78,7 @@ const formatPrice = (price: number) =>
 
             <!-- Price + Rating -->
             <div class="flex items-center gap-3 flex-wrap">
-                <span class="text-xl font-bold text-primary font-display">
+                <span class="text-2xl font-bold text-black font-display">
                     {{ formatPrice(currentVariant?.price || product.base_price) }}
                 </span>
                 <div v-if="product.avg_rating > 0" class="flex items-center gap-1 text-sm text-text-muted">
@@ -93,7 +93,7 @@ const formatPrice = (price: number) =>
             <!-- Color -->
             <div>
                 <p class="text-xs font-semibold text-fashion-black mb-2">
-                    Màu sắc: <span class="font-normal text-text-muted">{{ selectedColor?.name }}</span>
+                    Màu sắc: <span class="font-bold uppercase text-black ml-1">{{ selectedColor?.name }}</span>
                 </p>
                 <div class="flex gap-2 flex-wrap">
                     <button
@@ -102,13 +102,13 @@ const formatPrice = (price: number) =>
                         @click="emit('update:selectedColor', color)"
                         :title="color.name"
                         :class="[
-                            'w-8 h-8 rounded-full border-2 p-0.5 transition-all',
+                            'w-9 h-9 p-0.5 transition-all border bg-white flex items-center justify-center',
                             selectedColor?.color_id === color.color_id
-                                ? 'border-primary scale-110 shadow'
-                                : 'border-border-light hover:border-primary'
+                                ? 'border-black border-2 scale-105 shadow-sm'
+                                : 'border-gray-200 hover:border-black'
                         ]"
                     >
-                        <div :style="{ backgroundColor: color.hex_code || '#eee' }" class="w-full h-full rounded-full border border-black/5"></div>
+                        <div :style="{ backgroundColor: color.hex_code || '#eee' }" class="w-full h-full border border-black/5"></div>
                     </button>
                 </div>
             </div>
@@ -117,8 +117,8 @@ const formatPrice = (price: number) =>
             <div>
                 <div class="flex justify-between items-center mb-2">
                     <p class="text-xs font-semibold text-fashion-black">Kích thước</p>
-                    <button class="text-[11px] text-primary underline underline-offset-2 hover:opacity-75 transition-opacity">
-                        Hướng dẫn chọn size
+                    <button class="text-[11px] text-black hover:text-fashion-black font-semibold flex items-center gap-1 hover:opacity-75 transition-opacity">
+                        <span class="material-symbols-outlined text-[14px]">straighten</span> Hướng dẫn chọn size
                     </button>
                 </div>
                 <div class="flex flex-wrap gap-2">
@@ -127,10 +127,10 @@ const formatPrice = (price: number) =>
                         :key="size.size_id"
                         @click="emit('update:selectedSize', size)"
                         :class="[
-                            'min-w-[44px] px-3 py-1.5 text-sm font-medium border rounded-md transition-all',
+                            'min-w-[44px] px-4 py-2 text-sm font-bold border transition-all rounded-none',
                             selectedSize?.size_id === size.size_id
-                                ? 'border-primary bg-primary text-white'
-                                : 'border-border-light text-text-muted hover:border-primary hover:text-primary bg-white'
+                                ? 'border-black border-2 text-black bg-white'
+                                : 'border-gray-200 text-black hover:border-black bg-white'
                         ]"
                     >
                         {{ size.name }}
@@ -142,27 +142,27 @@ const formatPrice = (price: number) =>
             <div class="flex items-center gap-4">
                 <div>
                     <p class="text-xs font-semibold text-fashion-black mb-1.5">Số lượng</p>
-                    <div class="flex items-center border border-border-light rounded-md overflow-hidden w-fit bg-white">
+                    <div class="flex items-center border border-black rounded-none overflow-hidden w-fit bg-white">
                         <button @click="emit('update:quantity', Math.max(1, quantity - 1))"
-                            class="w-8 h-8 flex items-center justify-center hover:bg-gray-50 text-fashion-black transition-colors">
+                            class="w-9 h-9 flex items-center justify-center hover:bg-gray-50 text-fashion-black transition-colors">
                             <span class="material-symbols-outlined text-[16px]">remove</span>
                         </button>
-                        <span class="w-10 h-8 flex items-center justify-center text-sm font-bold border-x border-border-light font-display">{{ quantity }}</span>
+                        <span class="w-11 h-9 flex items-center justify-center text-sm font-bold border-x border-black font-display text-black">{{ quantity }}</span>
                         <button @click="emit('update:quantity', quantity + 1)"
-                            class="w-8 h-8 flex items-center justify-center hover:bg-gray-50 text-fashion-black transition-colors">
+                            class="w-9 h-9 flex items-center justify-center hover:bg-gray-50 text-fashion-black transition-colors">
                             <span class="material-symbols-outlined text-[16px]">add</span>
                         </button>
                     </div>
                 </div>
 
                 <div v-if="currentVariant" class="mt-5">
-                    <span v-if="isOutOfStock" class="inline-flex items-center gap-1 text-xs font-medium text-red-500 bg-red-50 border border-red-100 px-2.5 py-1 rounded-full">
+                    <span v-if="isOutOfStock" class="inline-flex items-center gap-1 text-xs font-semibold text-red-600 bg-red-50 border border-red-200 px-2.5 py-1 rounded-none">
                         <span class="material-symbols-outlined text-[13px]">cancel</span> Hết hàng
                     </span>
-                    <span v-else-if="isLowStock" class="inline-flex items-center gap-1 text-xs font-medium text-amber-600 bg-amber-50 border border-amber-100 px-2.5 py-1 rounded-full">
+                    <span v-else-if="isLowStock" class="inline-flex items-center gap-1 text-xs font-semibold text-amber-700 bg-amber-50 border border-amber-200 px-2.5 py-1 rounded-none">
                         <span class="material-symbols-outlined text-[13px]">warning</span> Còn {{ currentVariant.stock_qty }} sản phẩm
                     </span>
-                    <span v-else class="inline-flex items-center gap-1 text-xs font-medium text-green-600 bg-green-50 border border-green-100 px-2.5 py-1 rounded-full">
+                    <span v-else class="inline-flex items-center gap-1 text-xs font-semibold text-black bg-gray-50 border border-black px-2.5 py-1 rounded-none">
                         <span class="material-symbols-outlined text-[13px]">check_circle</span> Còn hàng
                     </span>
                 </div>
@@ -174,7 +174,7 @@ const formatPrice = (price: number) =>
                     v-if="isOutOfStock"
                     type="button"
                     :disabled="isStockNotificationLoading"
-                    class="w-full flex items-center justify-center gap-2 py-2 text-sm font-semibold text-primary hover:text-primary-dark transition-colors disabled:opacity-60"
+                    class="w-full flex items-center justify-center gap-2 py-3 text-sm font-bold uppercase tracking-wider text-black border border-black hover:bg-black hover:text-white transition-colors disabled:opacity-60 rounded-none"
                     @click="emit('toggleStockNotification')"
                 >
                     <span
@@ -192,17 +192,17 @@ const formatPrice = (price: number) =>
                 </button>
 
                 <button @click="emit('buyNow')" :disabled="isOutOfStock || isBuyingNow"
-                    class="w-full bg-primary text-white py-3 text-sm font-semibold rounded-lg hover:bg-primary-dark transition-all active:scale-[0.98] disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2 shadow-sm">
+                    class="w-full bg-black text-white py-3.5 text-sm font-bold uppercase tracking-wider hover:bg-gray-900 transition-all active:scale-[0.98] disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2 shadow-sm rounded-none">
                     <span v-if="isBuyingNow" class="animate-spin h-4 w-4 border-2 border-white border-t-transparent rounded-full"></span>
                     <span v-else class="material-symbols-outlined text-[17px]">bolt</span>
                     Mua ngay
                 </button>
 
                 <button @click="emit('addToCart')" :disabled="isOutOfStock || isAddingToCart"
-                    class="w-full bg-white border border-primary text-primary py-3 text-sm font-semibold rounded-lg hover:bg-primary/5 transition-all active:scale-[0.98] disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2">
+                    class="w-full bg-white border-2 border-black text-black py-3.5 text-sm font-bold uppercase tracking-wider hover:bg-black hover:text-white transition-all active:scale-[0.98] disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2 rounded-none">
                     <span v-if="isAddingToCart" class="animate-spin h-4 w-4 border-2 border-current border-t-transparent rounded-full"></span>
                     <span v-else class="material-symbols-outlined text-[17px]">shopping_bag</span>
-                    {{ isOutOfStock ? 'Hết hàng' : 'Thêm vào giỏ' }}
+                    {{ isOutOfStock ? 'Hết hàng' : 'Thêm vào giỏ hàng' }}
                 </button>
             </div>
 
@@ -213,16 +213,16 @@ const formatPrice = (price: number) =>
                     { icon: 'replay',         label: 'Đổi trả 30 ngày' },
                     { icon: 'verified_user',  label: 'Chính hãng' },
                 ]" :key="badge.icon"
-                    class="flex-1 flex flex-col items-center gap-1 py-2.5 bg-gray-50 border border-border-light rounded-lg text-center">
-                    <span class="material-symbols-outlined text-primary text-[18px]">{{ badge.icon }}</span>
-                    <span class="text-[10px] font-medium text-text-muted leading-tight">{{ badge.label }}</span>
+                    class="flex-1 flex flex-col items-center gap-1 py-2.5 bg-gray-50 border border-border-light rounded-none text-center">
+                    <span class="material-symbols-outlined text-black text-[18px]">{{ badge.icon }}</span>
+                    <span class="text-[10px] font-bold text-black leading-tight uppercase tracking-wider font-display">{{ badge.label }}</span>
                 </div>
             </div>
 
             <!-- Description -->
             <div class="pt-2 border-t border-border-light">
-                <p class="text-xs font-semibold text-fashion-black mb-2">Chi tiết sản phẩm</p>
-                <p class="text-text-muted text-sm leading-relaxed">
+                <p class="text-xs font-bold uppercase tracking-wider text-black mb-2">Chi tiết sản phẩm</p>
+                <p class="text-fashion-black text-sm leading-relaxed">
                     {{ product.description || 'Mô tả sản phẩm đang được cập nhật...' }}
                 </p>
             </div>

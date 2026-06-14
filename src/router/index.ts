@@ -96,6 +96,11 @@ const routes: Array<RouteRecordRaw> = [
                 component: () => import('@/pages/about/AboutUs.vue'),
             },
             {
+                name: 'return-policy',
+                path: 'return-policy',
+                component: () => import('@/pages/policies/ReturnPolicy.vue'),
+            },
+            {
                 name: 'payment-return',
                 path: 'payment/:gateway/return',
                 component: () => import('@/pages/checkout/PaymentReturnPage.vue'),

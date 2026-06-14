@@ -295,66 +295,6 @@ const {
                             <span class="material-symbols-outlined text-[18px]">add</span>
                             Thêm biến thể mới
                         </button>
-
-                        <div v-if="isVariantFormOpen" class="mt-4 bg-indigo-50 border border-indigo-100 rounded-xl p-4 space-y-4">
-                            <div class="flex items-center justify-between gap-3">
-                                <p class="text-xs font-semibold text-indigo-700">
-                                    {{ editingVariantIndex !== null ? 'Chỉnh sửa biến thể' : 'Thêm biến thể mới' }}
-                                </p>
-                                <button @click="handleCancelVariantForm" class="text-[10px] font-semibold uppercase tracking-widest text-slate-500 hover:text-slate-700">Đóng</button>
-                            </div>
-
-                            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-                                <div>
-                                    <label class="text-[10px] font-semibold text-slate-500 block mb-1">Màu sắc</label>
-                                    <select v-model="newVariant.color_id" class="w-full border border-slate-200 rounded-lg px-3 py-2 text-xs outline-none focus:border-indigo-400 bg-white">
-                                        <option :value="null">Chọn màu</option>
-                                        <option v-for="c in allColors" :key="c.color_id" :value="c.color_id">{{ c.name }}</option>
-                                    </select>
-                                </div>
-                                <div>
-                                    <label class="text-[10px] font-semibold text-slate-500 block mb-1">Kích cỡ</label>
-                                    <select v-model="newVariant.size_id" class="w-full border border-slate-200 rounded-lg px-3 py-2 text-xs outline-none focus:border-indigo-400 bg-white">
-                                        <option :value="null">Chọn size</option>
-                                        <option v-for="s in allSizes" :key="s.size_id" :value="s.size_id">{{ s.name }} ({{ s.size_type }})</option>
-                                    </select>
-                                </div>
-                                <div>
-                                    <label class="text-[10px] font-semibold text-slate-500 block mb-1">Mã sản phẩm</label>
-                                    <input v-model="newVariant.sku" placeholder="VD: SMT-RED-M" class="w-full border border-slate-200 rounded-lg px-3 py-2 text-xs outline-none focus:border-indigo-400" />
-                                </div>
-                                <div>
-                                    <label class="text-[10px] font-semibold text-slate-500 block mb-1">Giá (₫)</label>
-                                    <input v-model.number="newVariant.price" type="number" class="w-full border border-slate-200 rounded-lg px-3 py-2 text-xs outline-none focus:border-indigo-400" />
-                                </div>
-                                <div>
-                                    <label class="text-[10px] font-semibold text-slate-500 block mb-1">Giá so sánh (₫)</label>
-                                    <input v-model.number="newVariant.compare_price" type="number" class="w-full border border-slate-200 rounded-lg px-3 py-2 text-xs outline-none focus:border-indigo-400" placeholder="Tuỳ chọn" />
-                                </div>
-                                <div>
-                                    <label class="text-[10px] font-semibold text-slate-500 block mb-1">Tồn kho</label>
-                                    <input v-model.number="newVariant.stock_qty" type="number" class="w-full border border-slate-200 rounded-lg px-3 py-2 text-xs outline-none focus:border-indigo-400" />
-                                </div>
-                                <div>
-                                    <label class="text-[10px] font-semibold text-slate-500 block mb-1">Ngưỡng thấp</label>
-                                    <input v-model.number="newVariant.low_stock_threshold" type="number" class="w-full border border-slate-200 rounded-lg px-3 py-2 text-xs outline-none focus:border-indigo-400" />
-                                </div>
-                                <div class="flex items-end">
-                                    <button @click="newVariant.is_active = !newVariant.is_active"
-                                        :class="['w-full px-3 py-2 rounded-lg border text-xs font-semibold transition-all flex items-center justify-center gap-2', newVariant.is_active ? 'border-emerald-200 bg-emerald-50 text-emerald-700' : 'border-slate-200 bg-slate-50 text-slate-500']">
-                                        <span class="w-3 h-3 rounded-full" :class="newVariant.is_active ? 'bg-emerald-500' : 'bg-slate-300'"></span>
-                                        {{ newVariant.is_active ? 'Đang bán' : 'Tạm ẩn' }}
-                                    </button>
-                                </div>
-                            </div>
-
-                            <div class="flex justify-end gap-3">
-                                <button @click="handleCancelVariantForm" class="px-4 py-2 rounded-lg border border-slate-200 text-sm font-semibold text-slate-600 hover:bg-white transition-colors">Hủy</button>
-                                <button @click="handleAddVariant" class="px-4 py-2 rounded-lg bg-indigo-600 text-white text-sm font-semibold hover:bg-indigo-700 transition-colors">
-                                    {{ editingVariantIndex !== null ? 'Cập nhật biến thể' : 'Thêm biến thể' }}
-                                </button>
-                            </div>
-                        </div>
                     </section>
                 </div>
 
@@ -368,6 +308,87 @@ const {
                 </div>
             </div>
         </div>
+        </Teleport>
+
+        <!-- POPUP MODAL FOR ADD/EDIT VARIANT -->
+        <Teleport to="body">
+            <div v-if="isVariantFormOpen" class="fixed inset-0 z-[70] flex items-center justify-center p-4">
+                <!-- Backdrop -->
+                <div class="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" @click="handleCancelVariantForm"></div>
+                
+                <!-- Modal Box -->
+                <div class="relative w-full max-w-lg bg-white rounded-2xl shadow-2xl border border-slate-100 flex flex-col max-h-[90vh] overflow-hidden animate-in fade-in zoom-in-95 duration-150">
+                    <!-- Modal Header -->
+                    <div class="px-6 py-5 border-b border-slate-100 flex justify-between items-center bg-slate-50 shrink-0">
+                        <div>
+                            <h3 class="text-base font-bold text-slate-900">
+                                {{ editingVariantIndex !== null ? 'Chỉnh sửa biến thể' : 'Thêm biến thể mới' }}
+                            </h3>
+                            <p class="text-xs text-slate-400 mt-0.5">
+                                {{ editingVariantIndex !== null ? 'Cập nhật thông tin cho biến thể này' : 'Tạo thêm biến thể mới cho sản phẩm' }}
+                            </p>
+                        </div>
+                        <button @click="handleCancelVariantForm" class="w-8 h-8 flex items-center justify-center hover:bg-slate-200 rounded-full transition-colors">
+                            <span class="material-symbols-outlined text-[20px] text-slate-500">close</span>
+                        </button>
+                    </div>
+
+                    <!-- Modal Body -->
+                    <div class="p-6 overflow-y-auto space-y-4">
+                        <div class="grid grid-cols-2 gap-4">
+                            <div>
+                                <label class="text-xs font-semibold text-slate-500 block mb-1.5">Màu sắc</label>
+                                <select v-model="newVariant.color_id" class="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-sm outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100 transition-all bg-white">
+                                    <option :value="null">Chọn màu</option>
+                                    <option v-for="c in allColors" :key="c.color_id" :value="c.color_id">{{ c.name }}</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="text-xs font-semibold text-slate-500 block mb-1.5">Kích cỡ</label>
+                                <select v-model="newVariant.size_id" class="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-sm outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100 transition-all bg-white">
+                                    <option :value="null">Chọn size</option>
+                                    <option v-for="s in allSizes" :key="s.size_id" :value="s.size_id">{{ s.name }} ({{ s.size_type }})</option>
+                                </select>
+                            </div>
+                            <div class="col-span-2">
+                                <label class="text-xs font-semibold text-slate-500 block mb-1.5">Mã sản phẩm (SKU)</label>
+                                <input v-model="newVariant.sku" placeholder="VD: SMT-RED-M" class="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-sm outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100 transition-all" />
+                            </div>
+                            <div>
+                                <label class="text-xs font-semibold text-slate-500 block mb-1.5">Giá bán (₫)</label>
+                                <input v-model.number="newVariant.price" type="number" class="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-sm outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100 transition-all" />
+                            </div>
+                            <div>
+                                <label class="text-xs font-semibold text-slate-500 block mb-1.5">Giá so sánh (₫)</label>
+                                <input v-model.number="newVariant.compare_price" type="number" class="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-sm outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100 transition-all" placeholder="Tùy chọn" />
+                            </div>
+                            <div>
+                                <label class="text-xs font-semibold text-slate-500 block mb-1.5">Tồn kho</label>
+                                <input v-model.number="newVariant.stock_qty" type="number" class="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-sm outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100 transition-all" />
+                            </div>
+                            <div>
+                                <label class="text-xs font-semibold text-slate-500 block mb-1.5">Ngưỡng báo sắp hết hàng</label>
+                                <input v-model.number="newVariant.low_stock_threshold" type="number" class="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-sm outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100 transition-all" />
+                            </div>
+                            <div class="col-span-2 pt-2">
+                                <button @click="newVariant.is_active = !newVariant.is_active"
+                                    :class="['w-full px-4 py-3 rounded-xl border-2 transition-all flex items-center justify-center gap-3 font-semibold text-sm', newVariant.is_active ? 'border-emerald-200 bg-emerald-50 text-emerald-700' : 'border-slate-200 bg-slate-50 text-slate-500']">
+                                    <span class="w-2.5 h-2.5 rounded-full" :class="newVariant.is_active ? 'bg-emerald-500' : 'bg-slate-300'"></span>
+                                    {{ newVariant.is_active ? 'Biến thể đang bán' : 'Biến thể tạm ẩn' }}
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Modal Footer -->
+                    <div class="px-6 py-4 border-t border-slate-100 flex gap-3 bg-slate-50 shrink-0">
+                        <button @click="handleCancelVariantForm" class="flex-1 py-2.5 text-sm font-semibold text-slate-500 hover:text-slate-700 border border-slate-200 rounded-xl transition-colors">Hủy</button>
+                        <button @click="handleAddVariant" class="flex-1 bg-indigo-600 text-white py-2.5 text-sm font-semibold rounded-xl hover:bg-indigo-700 transition-colors flex items-center justify-center gap-2">
+                            {{ editingVariantIndex !== null ? 'Cập nhật biến thể' : 'Thêm biến thể' }}
+                        </button>
+                    </div>
+                </div>
+            </div>
         </Teleport>
     </div>
 </template>

@@ -71,10 +71,10 @@ const formatPrice = (price: number) =>
 
                         <!-- Info -->
                         <div class="space-y-0.5 px-0.5">
-                            <h4 class="text-xs font-semibold text-fashion-black group-hover:text-primary transition-colors line-clamp-1 leading-snug font-display">
+                            <h4 class="text-xs font-semibold text-fashion-black group-hover:text-black group-hover:underline transition-colors line-clamp-1 leading-snug font-display">
                                 {{ item.name }}
                             </h4>
-                            <p class="text-xs font-bold text-primary font-display">{{ formatPrice(item.base_price) }}</p>
+                            <p class="text-xs font-bold text-black font-display">{{ formatPrice(item.base_price) }}</p>
                         </div>
                     </router-link>
                 </div>
@@ -84,13 +84,13 @@ const formatPrice = (price: number) =>
             <footer class="flex flex-col sm:flex-row gap-3 pt-2">
                 <button
                     @click="emit('close')"
-                    class="w-full sm:flex-1 border border-border-light text-fashion-black py-3 rounded-lg text-xs font-bold tracking-widest uppercase hover:bg-fashion-gray transition-all font-display cursor-pointer"
+                    class="w-full sm:flex-1 border border-black text-black py-3 rounded-none text-xs font-bold tracking-widest uppercase hover:bg-fashion-gray transition-all font-display cursor-pointer"
                 >
                     Tiếp tục mua sắm
                 </button>
                 <button
                     @click="emit('goToCart')"
-                    class="w-full sm:flex-1 bg-primary text-white py-3 rounded-lg text-xs font-bold tracking-widest uppercase hover:bg-primary-dark transition-all font-display cursor-pointer flex items-center justify-center gap-1.5"
+                    class="w-full sm:flex-1 bg-black text-white py-3 rounded-none text-xs font-bold tracking-widest uppercase hover:bg-gray-900 transition-all font-display cursor-pointer flex items-center justify-center gap-1.5"
                 >
                     <span class="material-symbols-outlined text-sm">shopping_bag</span>
                     Xem giỏ hàng

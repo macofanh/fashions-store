@@ -5,11 +5,6 @@ import { formatPrice, getPrimaryImage, getUniqueColors, isNewProduct } from '@/p
 
 defineProps<{
     product: Product
-    isAdding?: boolean
-}>()
-
-defineEmits<{
-    quickAdd: [product: Product]
 }>()
 </script>
 
@@ -32,14 +27,13 @@ defineEmits<{
             </router-link>
 
             <div class="absolute bottom-4 left-4 right-4 translate-y-4 opacity-0 group-hover:translate-y-0 group-hover:opacity-100 transition-all duration-300">
-                <button
-                    @click.stop.prevent="$emit('quickAdd', product)"
+                <router-link
+                    :to="{ name: 'product-detail', params: { slug: product.slug } }"
                     class="btn-radius w-full bg-white/90 backdrop-blur text-fashion-black text-sm font-semibold py-3 shadow-sm hover:bg-primary hover:text-white transition-colors flex items-center justify-center gap-2"
                 >
-                    <span v-if="isAdding" class="animate-spin h-4 w-4 border-2 border-current border-t-transparent rounded-full"></span>
-                    <span v-else class="material-symbols-outlined text-[18px]">shopping_bag</span>
-                    Thêm vào giỏ hàng
-                </button>
+                    <span class="material-symbols-outlined text-[18px]">visibility</span>
+                    Xem chi tiết
+                </router-link>
             </div>
 
             <div class="absolute top-3 left-3 flex flex-col gap-1">

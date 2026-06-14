@@ -74,7 +74,7 @@ const isVariantsExpanded = ref(false)
                 <select 
                     v-model="selectedCategoryId" 
                     @change="fetchProducts"
-                    class="pl-4 pr-10 py-2.5 bg-white border border-slate-200 rounded-xl text-sm outline-none focus:border-indigo-400 focus:ring-4 focus:ring-indigo-50/50 transition-all shadow-sm bg-no-repeat bg-[right_1rem_center] appearance-none min-w-[160px]"
+                    class="pl-4 pr-12 py-2.5 bg-white border border-slate-200 rounded-xl text-sm outline-none focus:border-indigo-400 focus:ring-4 focus:ring-indigo-50/50 transition-all shadow-sm bg-no-repeat bg-[right_1rem_center] appearance-none min-w-[160px]"
                     style="background-image: url('data:image/svg+xml;charset=utf-8,%3Csvg xmlns=%27http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%27 fill=%27none%27 viewBox=%270 0 20 20%27%3E%3Cpath stroke=%27%2364748b%27 stroke-linecap=%27round%27 stroke-linejoin=%27round%27 stroke-width=%271.5%27 d=%27m6 8 4 4 4-4%27%2F%3E%3C%2Fsvg%3E');"
                 >
                     <option :value="null">Tất cả danh mục</option>

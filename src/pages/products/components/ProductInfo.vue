@@ -213,7 +213,6 @@ const formatPrice = (price: number) =>
                 <button @click="emit('buyNow')" :disabled="isOutOfStock || isBuyingNow"
                     class="w-full bg-black text-white py-3.5 text-sm font-bold uppercase tracking-wider hover:bg-gray-900 transition-all active:scale-[0.98] disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2 shadow-sm rounded-none">
                     <span v-if="isBuyingNow" class="animate-spin h-4 w-4 border-2 border-white border-t-transparent rounded-full"></span>
-                    <span v-else class="material-symbols-outlined text-[17px]">bolt</span>
                     Mua ngay
                 </button>
 

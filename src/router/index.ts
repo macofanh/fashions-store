@@ -153,6 +153,12 @@ const routes: Array<RouteRecordRaw> = [
                 component: () => import('@/pages/admin/promotions/VoucherManagement.vue'),
             },
             {
+                name: 'admin-surveys',
+                path: 'surveys',
+                component: () => import('@/pages/admin/promotions/SurveyManagement.vue'),
+                meta: { requiresAuth: true, roles: ['admin'] },
+            },
+            {
                 name: 'admin-shipping',
                 path: 'shipping',
                 component: () => import('@/pages/admin/shipping/ShippingConfig.vue'),

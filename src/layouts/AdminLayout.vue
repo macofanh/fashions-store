@@ -21,6 +21,7 @@ const allMenuItems = [
     { name: 'Chat khách hàng',     icon: 'chat',                routeName: 'admin-chat',      adminOnly: false },
     { name: 'Người dùng',          icon: 'group',               routeName: 'admin-users',     adminOnly: false },
     { name: 'Voucher',             icon: 'confirmation_number', routeName: 'admin-vouchers',  adminOnly: false },
+    { name: 'Khảo sát',            icon: 'rate_review',         routeName: 'admin-surveys',   adminOnly: true  },
     { name: 'Thông tin giao hàng', icon: 'local_shipping',      routeName: 'admin-shipping',  adminOnly: true  },
 ]
 
@@ -39,6 +40,7 @@ const pageTitles: Record<string, string> = {
     'admin-chat':      'Chat khách hàng',
     'admin-users':     'Quản lý Người dùng',
     'admin-vouchers':  'Quản lý Voucher',
+    'admin-surveys':   'Quản lý Khảo sát',
     'admin-shipping':  'Thông tin giao hàng',
 }
 

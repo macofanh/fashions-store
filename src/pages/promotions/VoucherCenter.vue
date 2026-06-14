@@ -6,10 +6,29 @@ import { useUIStore } from '@/stores/useUIStore'
 import { useRouter } from 'vue-router'
 import { MEMBERSHIP_TIERS, getTierByPoints } from '@/pages/profile/membershipService'
 import { useCartStore } from '@/stores/useCartStore'
+import axiosClient from '@/lib/axiosClient'
+import SurveyModal from './SurveyModal.vue'
 
 const authStore = useAuthStore()
 const uiStore   = useUIStore()
 const router    = useRouter()
+
+// State khảo sát khách hàng
+const showSurveyModal  = ref(false)
+const isSurveyEligible = ref(false)
+const surveyOrderId    = ref<number | null>(null)
+const surveyReason     = ref('')
+const surveyMessage    = ref('')
+const activeSurveyDetail = ref<any>(null)
+
+const fetchActiveSurvey = async () => {
+    try {
+        const res = await axiosClient.get('/api/v1/orders/survey/active')
+        activeSurveyDetail.value = res.data
+    } catch (e) {
+        console.error('Lỗi lấy khảo sát active:', e)
+    }
+}
 
 const availableVouchers = ref<Voucher[]>([])
 const myVouchers        = ref<UserVoucher[]>([])
@@ -42,14 +61,33 @@ const hasRequiredTier = (v: Voucher): boolean => {
     return userIdx >= requiredIdx
 }
 
+const checkSurveyEligibility = async () => {
+    if (!authStore.isAuthenticated) return
+    try {
+        const res = await axiosClient.get('/api/v1/orders/survey/eligibility')
+        isSurveyEligible.value = res.data.eligible
+        surveyOrderId.value = res.data.order_id || null
+        surveyReason.value = res.data.reason || ''
+        surveyMessage.value = res.data.message
+    } catch (e) {
+        console.error('Lỗi kiểm tra điều kiện khảo sát:', e)
+    }
+}
+
+const onSurveySuccess = async () => {
+    await fetchAll()
+    await checkSurveyEligibility()
+}
+
 const fetchAll = async () => {
     isLoading.value = true
     try {
-        const promises: Promise<any>[] = [promotionService.getVouchers()]
+        const promises: Promise<any>[] = [promotionService.getVouchers({ exclude_survey_rewards: true }), fetchActiveSurvey()]
         if (authStore.isAuthenticated) {
             promises.push(promotionService.getMyVouchers())
+            promises.push(checkSurveyEligibility())
         }
-        const [vouchersRes, myRes] = await Promise.all(promises)
+        const [vouchersRes, _surveyRes, myRes] = await Promise.all(promises)
         availableVouchers.value = (vouchersRes.data as Voucher[])
             .filter(v => v.is_active)
             .sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0))
@@ -170,6 +208,67 @@ const isLightColor = (hex: string) => {
         </section>
 
         <div class="max-w-[1400px] mx-auto px-6 py-10 md:px-12">
+
+            <!-- Banner Khảo Sát -->
+            <div 
+                v-if="activeSurveyDetail" 
+                class="mb-8 p-6 rounded-2xl border bg-white shadow-sm overflow-hidden relative flex flex-col sm:flex-row items-center justify-between gap-6"
+                :class="surveyReason === 'ALREADY_SUBMITTED' ? 'border-zinc-200' : 'border-primary/20 bg-gradient-to-r from-emerald-50/20 via-white to-primary/5'"
+            >
+                <div class="flex items-center gap-4 min-w-0">
+                    <div class="w-12 h-12 rounded-full flex items-center justify-center shrink-0" :class="surveyReason === 'ALREADY_SUBMITTED' ? 'bg-zinc-100 text-zinc-400' : 'bg-primary/10 text-primary'">
+                        <span class="material-symbols-outlined text-[24px]">
+                            {{ surveyReason === 'ALREADY_SUBMITTED' ? 'verified' : 'volunteer_activism' }}
+                        </span>
+                    </div>
+                    <div class="space-y-1 text-left">
+                        <h3 class="text-sm font-bold text-fashion-black font-display">
+                            {{ surveyReason === 'ALREADY_SUBMITTED' ? 'Đã hoàn thành khảo sát dịch vụ' : activeSurveyDetail.title }}
+                        </h3>
+                        <p class="text-xs text-text-muted font-light leading-relaxed">
+                            {{ surveyReason === 'ALREADY_SUBMITTED' ? 'Cảm ơn đóng góp quý giá của bạn! Quà tặng đã được lưu trong voucher của bạn.' : (activeSurveyDetail.description || 'Tham gia đóng góp ý kiến để nhận ngay Gift Voucher đặc biệt.') }}
+                        </p>
+                    </div>
+                </div>
+
+                <!-- Guest CTA -->
+                <button 
+                    v-if="!authStore.isAuthenticated"
+                    @click="router.push({ name: 'login' })"
+                    class="shrink-0 rounded-xl bg-fashion-black hover:bg-primary text-white text-xs font-bold uppercase tracking-widest px-6 py-3.5 transition-all duration-300 flex items-center gap-2 active:scale-95 shadow-sm font-display cursor-pointer"
+                >
+                    <span class="material-symbols-outlined text-[16px]">login</span>
+                    Đăng nhập để tham gia
+                </button>
+
+                <!-- Logged in, not submitted, eligible CTA -->
+                <button 
+                    v-else-if="surveyReason !== 'ALREADY_SUBMITTED' && isSurveyEligible"
+                    @click="showSurveyModal = true"
+                    class="shrink-0 rounded-xl bg-fashion-black hover:bg-primary text-white text-xs font-bold uppercase tracking-widest px-6 py-3.5 transition-all duration-300 flex items-center gap-2 active:scale-95 shadow-sm font-display cursor-pointer"
+                >
+                    <span class="material-symbols-outlined text-[16px]">rate_review</span>
+                    Tham gia khảo sát
+                </button>
+
+                <!-- Logged in, not submitted, but not eligible CTA (e.g. no delivered orders) -->
+                <button 
+                    v-else-if="surveyReason !== 'ALREADY_SUBMITTED' && !isSurveyEligible"
+                    @click="uiStore.warning('Bạn cần mua hàng và nhận hàng thành công ít nhất một lần để tham gia khảo sát.')"
+                    class="shrink-0 rounded-xl bg-zinc-400 hover:bg-zinc-500 text-white text-xs font-bold uppercase tracking-widest px-6 py-3.5 transition-all duration-300 flex items-center gap-2 active:scale-95 shadow-sm font-display cursor-pointer"
+                >
+                    <span class="material-symbols-outlined text-[16px]">rate_review</span>
+                    Tham gia khảo sát
+                </button>
+
+                <!-- Logged in & already submitted -->
+                <div 
+                    v-else 
+                    class="shrink-0 px-5 py-2.5 rounded-xl border border-zinc-200 bg-zinc-50 text-[10px] uppercase tracking-wider font-bold text-zinc-400 select-none font-display"
+                >
+                    Đã nhận quà
+                </div>
+            </div>
 
             <!-- Loading -->
             <div v-if="isLoading" class="flex justify-center py-20">
@@ -315,5 +414,15 @@ const isLightColor = (hex: string) => {
                 </div>
             </div>
         </div>
+
+        <!-- Survey Modal -->
+        <SurveyModal 
+            v-if="showSurveyModal && activeSurveyDetail" 
+            :show="showSurveyModal" 
+            :survey="activeSurveyDetail"
+            :order-id="surveyOrderId || 0"
+            @close="showSurveyModal = false"
+            @success="onSurveySuccess"
+        />
     </div>
 </template>

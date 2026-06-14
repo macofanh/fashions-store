@@ -29,20 +29,20 @@ const methods = [
         label: 'Chuyển khoản QR',
         desc: 'Quét mã QR SePay để thanh toán ngay',
     },
-    {
-        value: 'MOMO',
-        icon: 'account_balance_wallet',
-        label: 'Ví MoMo',
-        desc: 'Thanh toán qua ví điện tử MoMo',
-        logo: 'https://upload.wikimedia.org/wikipedia/vi/f/fe/MoMo_Logo.png',
-    },
-    {
-        value: 'VNPAY',
-        icon: 'credit_card',
-        label: 'VNPay',
-        desc: 'Thanh toán qua cổng VNPay (ATM/Visa/QR)',
-        logo: 'https://cdn.haitrieu.com/wp-content/uploads/2022/10/Logo-VNPAY-QR-1.png',
-    },
+    // {
+    //     value: 'MOMO',
+    //     icon: 'account_balance_wallet',
+    //     label: 'Ví MoMo',
+    //     desc: 'Thanh toán qua ví điện tử MoMo',
+    //     logo: 'https://upload.wikimedia.org/wikipedia/vi/f/fe/MoMo_Logo.png',
+    // },
+    // {
+    //     value: 'VNPAY',
+    //     icon: 'credit_card',
+    //     label: 'VNPay',
+    //     desc: 'Thanh toán qua cổng VNPay (ATM/Visa/QR)',
+    //     logo: 'https://cdn.haitrieu.com/wp-content/uploads/2022/10/Logo-VNPAY-QR-1.png',
+    // },
 ]
 </script>
 

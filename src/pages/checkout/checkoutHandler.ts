@@ -264,9 +264,10 @@ export function checkoutHandler() {
             shippingStore.reload()
 
             const cartRes = await checkoutServices.getCart()
-            const [vouchersResult, addressesResult] = await Promise.allSettled([
+            const [vouchersResult, addressesResult, provincesResult] = await Promise.allSettled([
                 checkoutServices.getMyVouchers(),
                 checkoutServices.getMyAddresses(),
+                checkoutServices.getProvinces(),
             ])
 
             const requestedCartItemIds = parseCartItemIds(route.query.cart_item_ids)
@@ -282,6 +283,9 @@ export function checkoutHandler() {
                 : []
             savedAddresses.value = addressesResult.status === 'fulfilled'
                 ? addressesResult.value.data
+                : []
+            provinces.value = provincesResult.status === 'fulfilled'
+                ? provincesResult.value.data
                 : []
 
             if (vouchersResult.status === 'rejected') {
@@ -410,12 +414,7 @@ export function checkoutHandler() {
             || !form.value.ward
 
         if (missingRequiredInfo) {
-            uiStore.warning('Vui lòng chọn địa chỉ giao hàng từ gợi ý Goong.')
-            return false
-        }
-
-        if (selectedAddressId.value === null && (form.value.latitude === null || form.value.longitude === null)) {
-            uiStore.warning('Vui lòng chọn địa chỉ từ gợi ý Goong để tính phí vận chuyển chính xác.')
+            uiStore.warning('Vui lòng điền đầy đủ thông tin giao hàng và khu vực.')
             return false
         }
 

@@ -7,6 +7,7 @@ import { useAuthStore } from '@/stores/useAuthStore'
 import { useCartStore } from '@/stores/useCartStore'
 import { useUIStore } from '@/stores/useUIStore'
 import { getImageUrl } from '@/lib/urlHelper'
+import { getSuggestedSizeForProduct } from '@/lib/sizeHelper'
 
 import ProductGallery from './components/ProductGallery.vue'
 import ProductInfo    from './components/ProductInfo.vue'
@@ -68,6 +69,28 @@ const fetchProduct = async (slug: string) => {
         if (product.value.variants?.length > 0) {
             selectedColor.value = product.value.variants[0].color
             selectedSize.value  = product.value.variants[0].size
+
+            // Gợi ý size tự động nếu có thông tin profile người dùng
+            if (authStore.isAuthenticated && authStore.user) {
+                const suggestedSizeName = getSuggestedSizeForProduct(product.value, authStore.user)
+                if (suggestedSizeName) {
+                    const matchedVariant = product.value.variants.find(
+                        (v: any) => v.size?.name === suggestedSizeName && v.color_id === selectedColor.value.color_id
+                    )
+                    if (matchedVariant) {
+                        selectedSize.value = matchedVariant.size
+                    } else {
+                        // Nếu không tìm thấy size gợi ý trong màu đầu tiên, thử tìm size đó ở bất kỳ màu nào
+                        const anyMatchedVariant = product.value.variants.find(
+                            (v: any) => v.size?.name === suggestedSizeName
+                        )
+                        if (anyMatchedVariant) {
+                            selectedColor.value = anyMatchedVariant.color
+                            selectedSize.value = anyMatchedVariant.size
+                        }
+                    }
+                }
+            }
         }
 
         void fetchReviews(product.value.product_id, requestId)
@@ -121,6 +144,11 @@ const currentVariant = computed(() => {
     return product.value.variants?.find(
         (v: any) => v.color_id === selectedColor.value.color_id && v.size_id === selectedSize.value.size_id
     ) ?? null
+})
+
+const suggestedSizeName = computed(() => {
+    if (!product.value || !authStore.isAuthenticated || !authStore.user) return null
+    return getSuggestedSizeForProduct(product.value, authStore.user)
 })
 
 const fetchStockNotificationStatus = async () => {
@@ -314,6 +342,7 @@ const handleOpenReviewModal = () => {
                     :variants="product.variants || []"
                     :selected-color="selectedColor"
                     :selected-size="selectedSize"
+                    :suggested-size-name="suggestedSizeName"
                     :quantity="quantity"
                     :review-count="reviews.length"
                     :is-adding-to-cart="isAddingToCart"

@@ -1,5 +1,7 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { ref, computed } from 'vue'
+import SizeGuideModal from './SizeGuideModal.vue'
+import { detectProductGender, detectProductSizeType } from '@/lib/sizeHelper'
 
 interface Color { color_id: number; name: string; hex_code?: string }
 interface Size  { size_id: number; name: string }
@@ -19,6 +21,7 @@ const props = defineProps<{
     variants: Variant[]
     selectedColor: Color | null
     selectedSize: Size | null
+    suggestedSizeName?: string | null
     quantity: number
     reviewCount: number
     isAddingToCart: boolean
@@ -26,6 +29,8 @@ const props = defineProps<{
     isStockNotificationSubscribed: boolean
     isStockNotificationLoading: boolean
 }>()
+
+const showSizeGuide = ref(false)
 
 const emit = defineEmits<{
     'update:selectedColor': [color: Color]
@@ -117,7 +122,11 @@ const formatPrice = (price: number) =>
             <div>
                 <div class="flex justify-between items-center mb-2">
                     <p class="text-xs font-semibold text-fashion-black">Kích thước</p>
-                    <button class="text-[11px] text-black hover:text-fashion-black font-semibold flex items-center gap-1 hover:opacity-75 transition-opacity">
+                    <button 
+                        @click="showSizeGuide = true"
+                        type="button"
+                        class="text-[11px] text-black hover:text-fashion-black font-semibold flex items-center gap-1 hover:opacity-75 transition-opacity"
+                    >
                         <span class="material-symbols-outlined text-[14px]">straighten</span> Hướng dẫn chọn size
                     </button>
                 </div>
@@ -127,14 +136,24 @@ const formatPrice = (price: number) =>
                         :key="size.size_id"
                         @click="emit('update:selectedSize', size)"
                         :class="[
-                            'min-w-[44px] px-4 py-2 text-sm font-bold border transition-all rounded-none',
+                            'min-w-[44px] px-4 py-2 text-sm font-bold border transition-all rounded-none relative',
                             selectedSize?.size_id === size.size_id
                                 ? 'border-black border-2 text-black bg-white'
-                                : 'border-gray-200 text-black hover:border-black bg-white'
+                                : 'border-gray-200 text-black hover:border-black bg-white',
+                            suggestedSizeName === size.name ? 'ring-1 ring-black/40' : ''
                         ]"
                     >
                         {{ size.name }}
+                        <!-- Pulsing badge for recommended size -->
+                        <span v-if="suggestedSizeName === size.name" class="absolute top-1 right-1 flex h-1.5 w-1.5">
+                            <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-black opacity-75"></span>
+                            <span class="relative inline-flex rounded-full h-1.5 w-1.5 bg-black"></span>
+                        </span>
                     </button>
+                </div>
+                <div v-if="suggestedSizeName" class="mt-2 text-[11px] text-gray-500 flex items-center gap-1.5">
+                    <span class="material-symbols-outlined text-[15px] text-black">workspace_premium</span>
+                    <span>Kích cỡ gợi ý của bạn: <strong class="text-black">{{ suggestedSizeName }}</strong> (dựa trên hồ sơ chiều cao/cân nặng)</span>
                 </div>
             </div>
 
@@ -226,6 +245,14 @@ const formatPrice = (price: number) =>
                     {{ product.description || 'Mô tả sản phẩm đang được cập nhật...' }}
                 </p>
             </div>
+
+            <!-- Size Guide Modal -->
+            <SizeGuideModal
+                v-if="showSizeGuide"
+                :initial-gender="detectProductGender(product)"
+                :initial-size-type="detectProductSizeType(product)"
+                @close="showSizeGuide = false"
+            />
         </div>
     </div>
 </template>

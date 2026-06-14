@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { ref } from 'vue'
 import { useProductManagement } from './useProductManagement'
 
 const {
@@ -43,8 +44,11 @@ const {
     handleDeleteVariant,
     handleCancelVariantForm,
     handleSoftDelete,
-    formatPrice
+    formatPrice,
+    availableSizes
 } = useProductManagement()
+
+const isVariantsExpanded = ref(false)
 </script>
 
 <template>
@@ -185,7 +189,7 @@ const {
                 <!-- Drawer Content -->
                 <div class="flex-grow overflow-y-auto p-6 space-y-8">
                     <!-- SECTION 1: ẢNH -->
-                    <section>
+                    <section v-if="selectedProduct?.product_id">
                         <h3 class="text-xs font-bold text-slate-500 uppercase tracking-wider mb-4">Hình ảnh sản phẩm</h3>
                         <input type="file" ref="fileInput" class="hidden" accept="image/*" @change="handleFileUpload" />
                         <div class="grid grid-cols-5 gap-3">
@@ -206,6 +210,15 @@ const {
                             </button>
                         </div>
                     </section>
+
+                    <!-- WARNING FOR UNSAVED PRODUCT -->
+                    <div v-if="!selectedProduct?.product_id" class="p-4 bg-amber-50 border border-amber-200 text-amber-800 text-sm rounded-xl flex items-start gap-2.5 shadow-sm">
+                        <span class="material-symbols-outlined text-amber-500 shrink-0">info</span>
+                        <div>
+                            <p class="font-semibold text-amber-900">Tải ảnh & tạo biến thể sẽ khả dụng sau khi lưu</p>
+                            <p class="text-xs text-amber-700/90 mt-0.5">Vui lòng điền thông tin cơ bản và click <strong>Lưu thay đổi</strong> ở góc dưới để khởi tạo sản phẩm trước khi thêm ảnh hoặc các biến thể.</p>
+                        </div>
+                    </div>
 
                     <!-- SECTION 2: THÔNG TIN CƠ BẢN -->
                     <section>
@@ -255,46 +268,62 @@ const {
                     </section>
 
                     <!-- SECTION 3: BIẾN THỂ -->
-                    <section v-if="selectedProduct">
-                        <h3 class="text-xs font-bold text-slate-500 uppercase tracking-wider mb-4">Biến thể sản phẩm</h3>
+                    <section v-if="selectedProduct?.product_id" class="border-t border-slate-100 pt-6">
+                        <button 
+                            @click="isVariantsExpanded = !isVariantsExpanded"
+                            type="button"
+                            class="w-full flex items-center justify-between text-xs font-bold text-slate-500 uppercase tracking-wider mb-2 hover:text-indigo-600 transition-colors focus:outline-none cursor-pointer"
+                        >
+                            <span class="flex items-center gap-2">
+                                Biến thể sản phẩm
+                                <span class="bg-slate-100 text-slate-600 px-2 py-0.5 rounded-full normal-case text-[10px] font-semibold">
+                                    {{ selectedProduct.variants?.length || 0 }}
+                                </span>
+                            </span>
+                            <span class="material-symbols-outlined transition-transform duration-200" :class="{ 'rotate-180': isVariantsExpanded }">
+                                keyboard_arrow_down
+                            </span>
+                        </button>
 
-                        <div v-if="selectedProduct.variants?.length" class="space-y-2">
-                            <div v-for="(v, index) in selectedProduct.variants" :key="v.variant_id || index" class="bg-white border border-slate-100 rounded-xl p-3">
-                                <div class="flex items-center justify-between gap-3">
-                                    <div class="flex items-center gap-3 min-w-0">
-                                        <div class="w-8 h-8 rounded-lg bg-slate-100 border border-slate-200 flex items-center justify-center text-xs font-bold text-slate-600 shrink-0">
-                                            {{ v.size?.name || '—' }}
+                        <div v-show="isVariantsExpanded" class="mt-4 space-y-4 animate-in fade-in slide-in-from-top-2 duration-200">
+                            <div v-if="selectedProduct.variants?.length" class="space-y-2">
+                                <div v-for="(v, index) in selectedProduct.variants" :key="v.variant_id || index" class="bg-white border border-slate-100 rounded-xl p-3">
+                                    <div class="flex items-center justify-between gap-3">
+                                        <div class="flex items-center gap-3 min-w-0">
+                                            <div class="w-8 h-8 rounded-lg bg-slate-100 border border-slate-200 flex items-center justify-center text-xs font-bold text-slate-600 shrink-0">
+                                                {{ v.size?.name || '—' }}
+                                            </div>
+                                            <div class="w-4 h-4 rounded-full border border-slate-200 shrink-0" :style="{ backgroundColor: v.color?.hex_code || '#ccc' }"></div>
+                                            <div class="min-w-0">
+                                                <p class="text-xs font-semibold text-slate-800 truncate">{{ v.sku || 'Biến thể mới' }}</p>
+                                                <p class="text-[10px] text-slate-400">{{ v.variant_id ? `#${v.variant_id}` : 'Bản nháp' }}</p>
+                                            </div>
                                         </div>
-                                        <div class="w-4 h-4 rounded-full border border-slate-200 shrink-0" :style="{ backgroundColor: v.color?.hex_code || '#ccc' }"></div>
-                                        <div class="min-w-0">
-                                            <p class="text-xs font-semibold text-slate-800 truncate">{{ v.sku || 'Biến thể mới' }}</p>
-                                            <p class="text-[10px] text-slate-400">{{ v.variant_id ? `#${v.variant_id}` : 'Bản nháp' }}</p>
-                                        </div>
-                                    </div>
 
-                                    <div class="flex items-center gap-1.5 shrink-0">
-                                        <button @click="openVariantForm(v, Number(index))" class="p-2 hover:bg-indigo-50 rounded-lg transition-colors text-slate-400 hover:text-indigo-600" title="Chỉnh sửa biến thể">
-                                            <span class="material-symbols-outlined text-[18px]">edit</span>
-                                        </button>
-                                        <button @click="handleDeleteVariant(Number(index))" class="p-2 hover:bg-red-50 rounded-lg transition-colors text-slate-400 hover:text-red-500" title="Xóa biến thể">
-                                            <span class="material-symbols-outlined text-[18px]">delete</span>
-                                        </button>
+                                        <div class="flex items-center gap-1.5 shrink-0">
+                                            <button @click="openVariantForm(v, Number(index))" class="p-2 hover:bg-indigo-50 rounded-lg transition-colors text-slate-400 hover:text-indigo-600" title="Chỉnh sửa biến thể">
+                                                <span class="material-symbols-outlined text-[18px]">edit</span>
+                                            </button>
+                                            <button @click="handleDeleteVariant(Number(index))" class="p-2 hover:bg-red-50 rounded-lg transition-colors text-slate-400 hover:text-red-500" title="Xóa biến thể">
+                                                <span class="material-symbols-outlined text-[18px]">delete</span>
+                                            </button>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
-                        </div>
 
-                        <div v-else class="rounded-xl border border-dashed border-slate-200 bg-slate-50 px-4 py-5 text-sm text-slate-500">
-                            Chưa có biến thể nào cho sản phẩm này.
-                        </div>
+                            <div v-else class="rounded-xl border border-dashed border-slate-200 bg-slate-50 px-4 py-5 text-sm text-slate-500">
+                                Chưa có biến thể nào cho sản phẩm này.
+                            </div>
 
-                        <button
-                            @click="openVariantForm()"
-                            class="mt-3 w-full border border-dashed border-indigo-200 text-indigo-600 bg-indigo-50/60 py-3 rounded-xl text-sm font-semibold hover:bg-indigo-50 transition-colors flex items-center justify-center gap-2"
-                        >
-                            <span class="material-symbols-outlined text-[18px]">add</span>
-                            Thêm biến thể mới
-                        </button>
+                            <button
+                                @click="openVariantForm()"
+                                class="mt-3 w-full border border-dashed border-indigo-200 text-indigo-600 bg-indigo-50/60 py-3 rounded-xl text-sm font-semibold hover:bg-indigo-50 transition-colors flex items-center justify-center gap-2"
+                            >
+                                <span class="material-symbols-outlined text-[18px]">add</span>
+                                Thêm biến thể mới
+                            </button>
+                        </div>
                     </section>
                 </div>
 
@@ -347,12 +376,12 @@ const {
                                 <label class="text-xs font-semibold text-slate-500 block mb-1.5">Kích cỡ</label>
                                 <select v-model="newVariant.size_id" class="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-sm outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100 transition-all bg-white">
                                     <option :value="null">Chọn size</option>
-                                    <option v-for="s in allSizes" :key="s.size_id" :value="s.size_id">{{ s.name }} ({{ s.size_type }})</option>
+                                    <option v-for="s in availableSizes" :key="s.size_id" :value="s.size_id">{{ s.name }}</option>
                                 </select>
                             </div>
                             <div class="col-span-2">
-                                <label class="text-xs font-semibold text-slate-500 block mb-1.5">Mã sản phẩm (SKU)</label>
-                                <input v-model="newVariant.sku" placeholder="VD: SMT-RED-M" class="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-sm outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100 transition-all" />
+                                <label class="text-xs font-semibold text-slate-500 block mb-1.5">Mã sản phẩm (SKU) - Tự động tạo</label>
+                                <input v-model="newVariant.sku" readonly disabled placeholder="Mã SKU tự động sinh từ màu, giới tính và size..." class="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-sm outline-none bg-slate-50 text-slate-400 cursor-not-allowed transition-all" />
                             </div>
                             <div>
                                 <label class="text-xs font-semibold text-slate-500 block mb-1.5">Giá bán (₫)</label>

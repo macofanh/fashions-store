@@ -150,12 +150,12 @@ const routes: Array<RouteRecordRaw> = [
             {
                 name: 'admin-vouchers',
                 path: 'vouchers',
-                component: () => import('@/pages/admin/promotions/VoucherManagement.vue'),
+                component: () => import('@/pages/admin/voucher/VoucherManagement.vue'),
             },
             {
                 name: 'admin-surveys',
                 path: 'surveys',
-                component: () => import('@/pages/admin/promotions/SurveyManagement.vue'),
+                component: () => import('@/pages/admin/survey/SurveyManagement.vue'),
                 meta: { requiresAuth: true, roles: ['admin'] },
             },
             {

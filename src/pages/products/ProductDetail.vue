@@ -262,6 +262,7 @@ const addToCartLogic = async () => {
       image_url: product.value.images?.[0]?.image_url || "",
       unit_price: currentVariant.value.price || product.value.base_price,
       quantity: quantity.value,
+      stock_qty: currentVariant.value.stock_qty,
     });
   }
 };

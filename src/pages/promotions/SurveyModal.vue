@@ -167,7 +167,7 @@ const formatPrice = (price: number) =>
                     >
                         <div class="flex flex-col gap-1">
                             <label class="text-xs font-semibold text-zinc-800">
-                                {{ idx + 1 }}. {{ q.text }}
+                                {{ Number(idx) + 1 }}. {{ q.text }}
                                 <span v-if="q.is_required" class="text-red-500 ml-0.5">*</span>
                             </label>
                         </div>

@@ -59,7 +59,7 @@ const openChat = () => {
                     <ul class="footer-links">
                         <li><button @click="openChat">Chăm sóc khách hàng</button></li>
                         <li><router-link to="/profile">Tài khoản của tôi</router-link></li>
-                        <li><a href="#">Chính sách đổi trả</a></li>
+                        <li><router-link to="/return-policy">Chính sách đổi trả</router-link></li>
                         <li><a href="#">Điều khoản & Bảo mật</a></li>
                     </ul>
                 </div>

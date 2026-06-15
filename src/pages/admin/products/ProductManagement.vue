@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { ref } from 'vue'
 import { useProductManagement } from './useProductManagement'
 
 const {
@@ -36,6 +37,7 @@ const {
     handleVariantImageUpload,
     handleSetPrimary,
     handleDeleteImage,
+    handleUpdateImageColor,
     updateLocalProductSync,
     handleSave,
     openVariantForm,
@@ -43,8 +45,11 @@ const {
     handleDeleteVariant,
     handleCancelVariantForm,
     handleSoftDelete,
-    formatPrice
+    formatPrice,
+    availableSizes
 } = useProductManagement()
+
+const isVariantsExpanded = ref(false)
 </script>
 
 <template>
@@ -69,7 +74,7 @@ const {
                 <select 
                     v-model="selectedCategoryId" 
                     @change="fetchProducts"
-                    class="pl-4 pr-10 py-2.5 bg-white border border-slate-200 rounded-xl text-sm outline-none focus:border-indigo-400 focus:ring-4 focus:ring-indigo-50/50 transition-all shadow-sm bg-no-repeat bg-[right_1rem_center] appearance-none min-w-[160px]"
+                    class="pl-4 pr-12 py-2.5 bg-white border border-slate-200 rounded-xl text-sm outline-none focus:border-indigo-400 focus:ring-4 focus:ring-indigo-50/50 transition-all shadow-sm bg-no-repeat bg-[right_1rem_center] appearance-none min-w-[160px]"
                     style="background-image: url('data:image/svg+xml;charset=utf-8,%3Csvg xmlns=%27http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%27 fill=%27none%27 viewBox=%270 0 20 20%27%3E%3Cpath stroke=%27%2364748b%27 stroke-linecap=%27round%27 stroke-linejoin=%27round%27 stroke-width=%271.5%27 d=%27m6 8 4 4 4-4%27%2F%3E%3C%2Fsvg%3E');"
                 >
                     <option :value="null">Tất cả danh mục</option>
@@ -185,27 +190,52 @@ const {
                 <!-- Drawer Content -->
                 <div class="flex-grow overflow-y-auto p-6 space-y-8">
                     <!-- SECTION 1: ẢNH -->
-                    <section>
+                    <section v-if="selectedProduct?.product_id">
                         <h3 class="text-xs font-bold text-slate-500 uppercase tracking-wider mb-4">Hình ảnh sản phẩm</h3>
                         <input type="file" ref="fileInput" class="hidden" accept="image/*" @change="handleFileUpload" />
-                        <div class="grid grid-cols-5 gap-3">
-                            <div v-for="(img, idx) in selectedProduct.images" :key="idx" class="aspect-[3/4] bg-slate-100 rounded-xl relative group overflow-hidden">
-                                <img :src="getImageUrl(img.image_url)" class="w-full h-full object-cover" />
-                                <div v-if="img.is_primary" class="absolute top-2 left-2 bg-indigo-600 text-white text-[9px] font-bold px-2 py-0.5 rounded-full">Chính</div>
-                                <div class="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity rounded-xl flex flex-col items-center justify-center gap-2">
-                                    <button v-if="!img.is_primary" @click="handleSetPrimary(img.image_id)" class="bg-white text-slate-900 text-[9px] font-semibold px-3 py-1.5 rounded-lg hover:bg-indigo-600 hover:text-white transition-colors">Đặt chính</button>
-                                    <button @click="handleDeleteImage(img.image_id)" class="text-white hover:text-red-300 transition-colors">
-                                        <span class="material-symbols-outlined text-sm">delete</span>
-                                    </button>
+                        <div class="grid grid-cols-4 sm:grid-cols-5 gap-4">
+                            <div v-for="(img, idx) in selectedProduct.images" :key="idx" class="flex flex-col gap-1.5">
+                                <div class="aspect-[3/4] bg-slate-100 rounded-xl relative group overflow-hidden">
+                                    <img :src="getImageUrl(img.image_url)" class="w-full h-full object-cover" />
+                                    <div v-if="img.is_primary" class="absolute top-2 left-2 bg-indigo-600 text-white text-[9px] font-bold px-2 py-0.5 rounded-full">Chính</div>
+                                    <div class="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity rounded-xl flex flex-col items-center justify-center gap-2">
+                                        <button v-if="!img.is_primary" @click="handleSetPrimary(img.image_id)" class="bg-white text-slate-900 text-[9px] font-semibold px-3 py-1.5 rounded-lg hover:bg-indigo-600 hover:text-white transition-colors">Đặt chính</button>
+                                        <button @click="handleDeleteImage(img.image_id)" class="text-white hover:text-red-300 transition-colors">
+                                            <span class="material-symbols-outlined text-sm">delete</span>
+                                        </button>
+                                    </div>
                                 </div>
+                                <select 
+                                    :value="img.color_id ?? ''"
+                                    @change="e => {
+                                        const val = (e.target as HTMLSelectElement).value;
+                                        handleUpdateImageColor(img.image_id, val ? Number(val) : null);
+                                    }"
+                                    class="w-full border border-slate-200 rounded-lg px-1 py-1.5 text-[11px] outline-none focus:border-indigo-400 bg-white"
+                                >
+                                    <option value="">Ảnh chung</option>
+                                    <option v-for="c in allColors" :key="c.color_id" :value="c.color_id">{{ c.name }}</option>
+                                </select>
                             </div>
-                            <button @click="triggerFileInput" :disabled="isUploading" class="aspect-[3/4] border-2 border-dashed border-slate-200 rounded-xl flex flex-col items-center justify-center text-slate-400 hover:border-indigo-400 hover:text-indigo-500 transition-all disabled:opacity-50">
-                                <span v-if="isUploading" class="animate-spin h-5 w-5 border-2 border-indigo-500 border-t-transparent rounded-full mb-1"></span>
-                                <span v-else class="material-symbols-outlined text-2xl">add_a_photo</span>
-                                <span class="text-[9px] font-semibold mt-1">{{ isUploading ? 'Đang tải...' : 'Thêm ảnh' }}</span>
-                            </button>
+                            <div class="flex flex-col gap-1.5">
+                                <button @click="triggerFileInput" :disabled="isUploading" class="aspect-[3/4] border-2 border-dashed border-slate-200 rounded-xl flex flex-col items-center justify-center text-slate-400 hover:border-indigo-400 hover:text-indigo-500 transition-all disabled:opacity-50 w-full">
+                                    <span v-if="isUploading" class="animate-spin h-5 w-5 border-2 border-indigo-500 border-t-transparent rounded-full mb-1"></span>
+                                    <span v-else class="material-symbols-outlined text-2xl">add_a_photo</span>
+                                    <span class="text-[9px] font-semibold mt-1">{{ isUploading ? 'Đang tải...' : 'Thêm ảnh' }}</span>
+                                </button>
+                                <div class="h-[26px]"></div>
+                            </div>
                         </div>
                     </section>
+
+                    <!-- WARNING FOR UNSAVED PRODUCT -->
+                    <div v-if="!selectedProduct?.product_id" class="p-4 bg-amber-50 border border-amber-200 text-amber-800 text-sm rounded-xl flex items-start gap-2.5 shadow-sm">
+                        <span class="material-symbols-outlined text-amber-500 shrink-0">info</span>
+                        <div>
+                            <p class="font-semibold text-amber-900">Tải ảnh & tạo biến thể sẽ khả dụng sau khi lưu</p>
+                            <p class="text-xs text-amber-700/90 mt-0.5">Vui lòng điền thông tin cơ bản và click <strong>Lưu thay đổi</strong> ở góc dưới để khởi tạo sản phẩm trước khi thêm ảnh hoặc các biến thể.</p>
+                        </div>
+                    </div>
 
                     <!-- SECTION 2: THÔNG TIN CƠ BẢN -->
                     <section>
@@ -255,105 +285,61 @@ const {
                     </section>
 
                     <!-- SECTION 3: BIẾN THỂ -->
-                    <section v-if="selectedProduct">
-                        <h3 class="text-xs font-bold text-slate-500 uppercase tracking-wider mb-4">Biến thể sản phẩm</h3>
-
-                        <div v-if="selectedProduct.variants?.length" class="space-y-2">
-                            <div v-for="(v, index) in selectedProduct.variants" :key="v.variant_id || index" class="bg-white border border-slate-100 rounded-xl p-3">
-                                <div class="flex items-center justify-between gap-3">
-                                    <div class="flex items-center gap-3 min-w-0">
-                                        <div class="w-8 h-8 rounded-lg bg-slate-100 border border-slate-200 flex items-center justify-center text-xs font-bold text-slate-600 shrink-0">
-                                            {{ v.size?.name || '—' }}
-                                        </div>
-                                        <div class="w-4 h-4 rounded-full border border-slate-200 shrink-0" :style="{ backgroundColor: v.color?.hex_code || '#ccc' }"></div>
-                                        <div class="min-w-0">
-                                            <p class="text-xs font-semibold text-slate-800 truncate">{{ v.sku || 'Biến thể mới' }}</p>
-                                            <p class="text-[10px] text-slate-400">{{ v.variant_id ? `#${v.variant_id}` : 'Bản nháp' }}</p>
-                                        </div>
-                                    </div>
-
-                                    <div class="flex items-center gap-1.5 shrink-0">
-                                        <button @click="openVariantForm(v, Number(index))" class="p-2 hover:bg-indigo-50 rounded-lg transition-colors text-slate-400 hover:text-indigo-600" title="Chỉnh sửa biến thể">
-                                            <span class="material-symbols-outlined text-[18px]">edit</span>
-                                        </button>
-                                        <button @click="handleDeleteVariant(Number(index))" class="p-2 hover:bg-red-50 rounded-lg transition-colors text-slate-400 hover:text-red-500" title="Xóa biến thể">
-                                            <span class="material-symbols-outlined text-[18px]">delete</span>
-                                        </button>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div v-else class="rounded-xl border border-dashed border-slate-200 bg-slate-50 px-4 py-5 text-sm text-slate-500">
-                            Chưa có biến thể nào cho sản phẩm này.
-                        </div>
-
-                        <button
-                            @click="openVariantForm()"
-                            class="mt-3 w-full border border-dashed border-indigo-200 text-indigo-600 bg-indigo-50/60 py-3 rounded-xl text-sm font-semibold hover:bg-indigo-50 transition-colors flex items-center justify-center gap-2"
+                    <section v-if="selectedProduct?.product_id" class="border-t border-slate-100 pt-6">
+                        <button 
+                            @click="isVariantsExpanded = !isVariantsExpanded"
+                            type="button"
+                            class="w-full flex items-center justify-between text-xs font-bold text-slate-500 uppercase tracking-wider mb-2 hover:text-indigo-600 transition-colors focus:outline-none cursor-pointer"
                         >
-                            <span class="material-symbols-outlined text-[18px]">add</span>
-                            Thêm biến thể mới
+                            <span class="flex items-center gap-2">
+                                Biến thể sản phẩm
+                                <span class="bg-slate-100 text-slate-600 px-2 py-0.5 rounded-full normal-case text-[10px] font-semibold">
+                                    {{ selectedProduct.variants?.length || 0 }}
+                                </span>
+                            </span>
+                            <span class="material-symbols-outlined transition-transform duration-200" :class="{ 'rotate-180': isVariantsExpanded }">
+                                keyboard_arrow_down
+                            </span>
                         </button>
 
-                        <div v-if="isVariantFormOpen" class="mt-4 bg-indigo-50 border border-indigo-100 rounded-xl p-4 space-y-4">
-                            <div class="flex items-center justify-between gap-3">
-                                <p class="text-xs font-semibold text-indigo-700">
-                                    {{ editingVariantIndex !== null ? 'Chỉnh sửa biến thể' : 'Thêm biến thể mới' }}
-                                </p>
-                                <button @click="handleCancelVariantForm" class="text-[10px] font-semibold uppercase tracking-widest text-slate-500 hover:text-slate-700">Đóng</button>
-                            </div>
+                        <div v-show="isVariantsExpanded" class="mt-4 space-y-4 animate-in fade-in slide-in-from-top-2 duration-200">
+                            <div v-if="selectedProduct.variants?.length" class="space-y-2">
+                                <div v-for="(v, index) in selectedProduct.variants" :key="v.variant_id || index" class="bg-white border border-slate-100 rounded-xl p-3">
+                                    <div class="flex items-center justify-between gap-3">
+                                        <div class="flex items-center gap-3 min-w-0">
+                                            <div class="w-8 h-8 rounded-lg bg-slate-100 border border-slate-200 flex items-center justify-center text-xs font-bold text-slate-600 shrink-0">
+                                                {{ v.size?.name || '—' }}
+                                            </div>
+                                            <div class="w-4 h-4 rounded-full border border-slate-200 shrink-0" :style="{ backgroundColor: v.color?.hex_code || '#ccc' }"></div>
+                                            <div class="min-w-0">
+                                                <p class="text-xs font-semibold text-slate-800 truncate">{{ v.sku || 'Biến thể mới' }}</p>
+                                                <p class="text-[10px] text-slate-400">{{ v.variant_id ? `#${v.variant_id}` : 'Bản nháp' }}</p>
+                                            </div>
+                                        </div>
 
-                            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-                                <div>
-                                    <label class="text-[10px] font-semibold text-slate-500 block mb-1">Màu sắc</label>
-                                    <select v-model="newVariant.color_id" class="w-full border border-slate-200 rounded-lg px-3 py-2 text-xs outline-none focus:border-indigo-400 bg-white">
-                                        <option :value="null">Chọn màu</option>
-                                        <option v-for="c in allColors" :key="c.color_id" :value="c.color_id">{{ c.name }}</option>
-                                    </select>
-                                </div>
-                                <div>
-                                    <label class="text-[10px] font-semibold text-slate-500 block mb-1">Kích cỡ</label>
-                                    <select v-model="newVariant.size_id" class="w-full border border-slate-200 rounded-lg px-3 py-2 text-xs outline-none focus:border-indigo-400 bg-white">
-                                        <option :value="null">Chọn size</option>
-                                        <option v-for="s in allSizes" :key="s.size_id" :value="s.size_id">{{ s.name }} ({{ s.size_type }})</option>
-                                    </select>
-                                </div>
-                                <div>
-                                    <label class="text-[10px] font-semibold text-slate-500 block mb-1">Mã sản phẩm</label>
-                                    <input v-model="newVariant.sku" placeholder="VD: SMT-RED-M" class="w-full border border-slate-200 rounded-lg px-3 py-2 text-xs outline-none focus:border-indigo-400" />
-                                </div>
-                                <div>
-                                    <label class="text-[10px] font-semibold text-slate-500 block mb-1">Giá (₫)</label>
-                                    <input v-model.number="newVariant.price" type="number" class="w-full border border-slate-200 rounded-lg px-3 py-2 text-xs outline-none focus:border-indigo-400" />
-                                </div>
-                                <div>
-                                    <label class="text-[10px] font-semibold text-slate-500 block mb-1">Giá so sánh (₫)</label>
-                                    <input v-model.number="newVariant.compare_price" type="number" class="w-full border border-slate-200 rounded-lg px-3 py-2 text-xs outline-none focus:border-indigo-400" placeholder="Tuỳ chọn" />
-                                </div>
-                                <div>
-                                    <label class="text-[10px] font-semibold text-slate-500 block mb-1">Tồn kho</label>
-                                    <input v-model.number="newVariant.stock_qty" type="number" class="w-full border border-slate-200 rounded-lg px-3 py-2 text-xs outline-none focus:border-indigo-400" />
-                                </div>
-                                <div>
-                                    <label class="text-[10px] font-semibold text-slate-500 block mb-1">Ngưỡng thấp</label>
-                                    <input v-model.number="newVariant.low_stock_threshold" type="number" class="w-full border border-slate-200 rounded-lg px-3 py-2 text-xs outline-none focus:border-indigo-400" />
-                                </div>
-                                <div class="flex items-end">
-                                    <button @click="newVariant.is_active = !newVariant.is_active"
-                                        :class="['w-full px-3 py-2 rounded-lg border text-xs font-semibold transition-all flex items-center justify-center gap-2', newVariant.is_active ? 'border-emerald-200 bg-emerald-50 text-emerald-700' : 'border-slate-200 bg-slate-50 text-slate-500']">
-                                        <span class="w-3 h-3 rounded-full" :class="newVariant.is_active ? 'bg-emerald-500' : 'bg-slate-300'"></span>
-                                        {{ newVariant.is_active ? 'Đang bán' : 'Tạm ẩn' }}
-                                    </button>
+                                        <div class="flex items-center gap-1.5 shrink-0">
+                                            <button @click="openVariantForm(v, Number(index))" class="p-2 hover:bg-indigo-50 rounded-lg transition-colors text-slate-400 hover:text-indigo-600" title="Chỉnh sửa biến thể">
+                                                <span class="material-symbols-outlined text-[18px]">edit</span>
+                                            </button>
+                                            <button @click="handleDeleteVariant(Number(index))" class="p-2 hover:bg-red-50 rounded-lg transition-colors text-slate-400 hover:text-red-500" title="Xóa biến thể">
+                                                <span class="material-symbols-outlined text-[18px]">delete</span>
+                                            </button>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
 
-                            <div class="flex justify-end gap-3">
-                                <button @click="handleCancelVariantForm" class="px-4 py-2 rounded-lg border border-slate-200 text-sm font-semibold text-slate-600 hover:bg-white transition-colors">Hủy</button>
-                                <button @click="handleAddVariant" class="px-4 py-2 rounded-lg bg-indigo-600 text-white text-sm font-semibold hover:bg-indigo-700 transition-colors">
-                                    {{ editingVariantIndex !== null ? 'Cập nhật biến thể' : 'Thêm biến thể' }}
-                                </button>
+                            <div v-else class="rounded-xl border border-dashed border-slate-200 bg-slate-50 px-4 py-5 text-sm text-slate-500">
+                                Chưa có biến thể nào cho sản phẩm này.
                             </div>
+
+                            <button
+                                @click="openVariantForm()"
+                                class="mt-3 w-full border border-dashed border-indigo-200 text-indigo-600 bg-indigo-50/60 py-3 rounded-xl text-sm font-semibold hover:bg-indigo-50 transition-colors flex items-center justify-center gap-2"
+                            >
+                                <span class="material-symbols-outlined text-[18px]">add</span>
+                                Thêm biến thể mới
+                            </button>
                         </div>
                     </section>
                 </div>
@@ -368,6 +354,87 @@ const {
                 </div>
             </div>
         </div>
+        </Teleport>
+
+        <!-- POPUP MODAL FOR ADD/EDIT VARIANT -->
+        <Teleport to="body">
+            <div v-if="isVariantFormOpen" class="fixed inset-0 z-[70] flex items-center justify-center p-4">
+                <!-- Backdrop -->
+                <div class="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" @click="handleCancelVariantForm"></div>
+                
+                <!-- Modal Box -->
+                <div class="relative w-full max-w-lg bg-white rounded-2xl shadow-2xl border border-slate-100 flex flex-col max-h-[90vh] overflow-hidden animate-in fade-in zoom-in-95 duration-150">
+                    <!-- Modal Header -->
+                    <div class="px-6 py-5 border-b border-slate-100 flex justify-between items-center bg-slate-50 shrink-0">
+                        <div>
+                            <h3 class="text-base font-bold text-slate-900">
+                                {{ editingVariantIndex !== null ? 'Chỉnh sửa biến thể' : 'Thêm biến thể mới' }}
+                            </h3>
+                            <p class="text-xs text-slate-400 mt-0.5">
+                                {{ editingVariantIndex !== null ? 'Cập nhật thông tin cho biến thể này' : 'Tạo thêm biến thể mới cho sản phẩm' }}
+                            </p>
+                        </div>
+                        <button @click="handleCancelVariantForm" class="w-8 h-8 flex items-center justify-center hover:bg-slate-200 rounded-full transition-colors">
+                            <span class="material-symbols-outlined text-[20px] text-slate-500">close</span>
+                        </button>
+                    </div>
+
+                    <!-- Modal Body -->
+                    <div class="p-6 overflow-y-auto space-y-4">
+                        <div class="grid grid-cols-2 gap-4">
+                            <div>
+                                <label class="text-xs font-semibold text-slate-500 block mb-1.5">Màu sắc</label>
+                                <select v-model="newVariant.color_id" class="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-sm outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100 transition-all bg-white">
+                                    <option :value="null">Chọn màu</option>
+                                    <option v-for="c in allColors" :key="c.color_id" :value="c.color_id">{{ c.name }}</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="text-xs font-semibold text-slate-500 block mb-1.5">Kích cỡ</label>
+                                <select v-model="newVariant.size_id" class="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-sm outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100 transition-all bg-white">
+                                    <option :value="null">Chọn size</option>
+                                    <option v-for="s in availableSizes" :key="s.size_id" :value="s.size_id">{{ s.name }}</option>
+                                </select>
+                            </div>
+                            <div class="col-span-2">
+                                <label class="text-xs font-semibold text-slate-500 block mb-1.5">Mã sản phẩm (SKU) - Tự động tạo</label>
+                                <input v-model="newVariant.sku" readonly disabled placeholder="Mã SKU tự động sinh từ màu, giới tính và size..." class="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-sm outline-none bg-slate-50 text-slate-400 cursor-not-allowed transition-all" />
+                            </div>
+                            <div>
+                                <label class="text-xs font-semibold text-slate-500 block mb-1.5">Giá bán (₫)</label>
+                                <input v-model.number="newVariant.price" type="number" class="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-sm outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100 transition-all" />
+                            </div>
+                            <div>
+                                <label class="text-xs font-semibold text-slate-500 block mb-1.5">Giá so sánh (₫)</label>
+                                <input v-model.number="newVariant.compare_price" type="number" class="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-sm outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100 transition-all" placeholder="Tùy chọn" />
+                            </div>
+                            <div>
+                                <label class="text-xs font-semibold text-slate-500 block mb-1.5">Tồn kho</label>
+                                <input v-model.number="newVariant.stock_qty" type="number" class="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-sm outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100 transition-all" />
+                            </div>
+                            <div>
+                                <label class="text-xs font-semibold text-slate-500 block mb-1.5">Ngưỡng báo sắp hết hàng</label>
+                                <input v-model.number="newVariant.low_stock_threshold" type="number" class="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-sm outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100 transition-all" />
+                            </div>
+                            <div class="col-span-2 pt-2">
+                                <button @click="newVariant.is_active = !newVariant.is_active"
+                                    :class="['w-full px-4 py-3 rounded-xl border-2 transition-all flex items-center justify-center gap-3 font-semibold text-sm', newVariant.is_active ? 'border-emerald-200 bg-emerald-50 text-emerald-700' : 'border-slate-200 bg-slate-50 text-slate-500']">
+                                    <span class="w-2.5 h-2.5 rounded-full" :class="newVariant.is_active ? 'bg-emerald-500' : 'bg-slate-300'"></span>
+                                    {{ newVariant.is_active ? 'Biến thể đang bán' : 'Biến thể tạm ẩn' }}
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Modal Footer -->
+                    <div class="px-6 py-4 border-t border-slate-100 flex gap-3 bg-slate-50 shrink-0">
+                        <button @click="handleCancelVariantForm" class="flex-1 py-2.5 text-sm font-semibold text-slate-500 hover:text-slate-700 border border-slate-200 rounded-xl transition-colors">Hủy</button>
+                        <button @click="handleAddVariant" class="flex-1 bg-indigo-600 text-white py-2.5 text-sm font-semibold rounded-xl hover:bg-indigo-700 transition-colors flex items-center justify-center gap-2">
+                            {{ editingVariantIndex !== null ? 'Cập nhật biến thể' : 'Thêm biến thể' }}
+                        </button>
+                    </div>
+                </div>
+            </div>
         </Teleport>
     </div>
 </template>

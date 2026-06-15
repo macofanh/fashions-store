@@ -34,7 +34,7 @@ export interface UserVoucher {
 }
 
 class PromotionService {
-    public getVouchers(params?: { include_inactive?: boolean }) {
+    public getVouchers(params?: { include_inactive?: boolean; exclude_survey_rewards?: boolean }) {
         return axiosClient.get<Voucher[]>(apiEndpoints.promotions.vouchers, { params })
     }
 

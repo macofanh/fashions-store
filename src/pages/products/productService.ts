@@ -52,27 +52,16 @@ class ProductService {
         content?: string
         files?: File[]
     }) {
-        const hasFiles = payload.files && payload.files.length > 0
-
-        if (hasFiles) {
-            // Gửi multipart/form-data khi có ảnh
-            const formData = new FormData()
-            formData.append('variant_id', String(payload.variant_id))
-            formData.append('rating',     String(payload.rating))
-            if (payload.title)   formData.append('title',   payload.title)
-            if (payload.content) formData.append('content', payload.content)
-            payload.files!.forEach(f => formData.append('files', f))
-            return axiosClient.post(apiEndpoints.products.reviews(productId), formData, {
-                headers: { 'Content-Type': 'multipart/form-data' },
-            })
+        const formData = new FormData()
+        formData.append('variant_id', String(payload.variant_id))
+        formData.append('rating',     String(payload.rating))
+        if (payload.title)   formData.append('title',   payload.title)
+        if (payload.content) formData.append('content', payload.content)
+        if (payload.files && payload.files.length > 0) {
+            payload.files.forEach(f => formData.append('files', f))
         }
-
-        // Không có ảnh → gửi JSON body
-        return axiosClient.post(apiEndpoints.products.reviews(productId), {
-            variant_id: payload.variant_id,
-            rating:     payload.rating,
-            title:      payload.title   ?? null,
-            content:    payload.content ?? null,
+        return axiosClient.post(apiEndpoints.products.reviews(productId), formData, {
+            headers: { 'Content-Type': 'multipart/form-data' },
         })
     }
 }

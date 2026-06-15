@@ -1,9 +1,36 @@
-import { ref, onMounted, computed } from 'vue'
+import { ref, onMounted, computed, watch } from 'vue'
 import { productService } from '@/pages/products/productService'
 import type { Product } from '@/pages/products/types/product.types'
 import { getImageUrl } from '@/lib/urlHelper'
 import axiosClient from '@/lib/axiosClient'
 import { useUIStore } from '@/stores/useUIStore'
+
+function removeVietnameseTones(str: string): string {
+    str = str.replace(/à|á|ạ|ả|ã|â|ầ|ấ|ậ|ẩ|ẫ|ă|ằ|ắ|ặ|ẳ|ẵ/g, "a");
+    str = str.replace(/è|é|ẹ|ẻ|ẽ|ê|ề|ế|ệ|ể|ễ/g, "e");
+    str = str.replace(/ì|í|ị|ỉ|ĩ/g, "i");
+    str = str.replace(/ò|ó|ọ|ỏ|õ|ô|ồ|ố|ộ|ổ|ỗ|ơ|ờ|ớ|ợ|ở|ỡ/g, "o");
+    str = str.replace(/ù|ú|ụ|ủ|ũ|ư|ừ|ứ|ự|ử|ữ/g, "u");
+    str = str.replace(/ỳ|ý|ỵ|ỷ|ỹ/g, "y");
+    str = str.replace(/đ/g, "d");
+    str = str.replace(/À|Á|Ạ|Ả|Ã|Â|Ầ|Ấ|Ậ|Ẩ|Ẫ|Ă|Ằ|Ắ|Ặ|Ẳ|Ẵ/g, "A");
+    str = str.replace(/È|É|Ẹ|Ẻ|Ẽ|Ê|Ề|Ế|Ệ|Ể|Ễ/g, "E");
+    str = str.replace(/Ì|Í|Ị|Ỉ|Ĩ/g, "I");
+    str = str.replace(/Ò|Ó|Ọ|Ỏ|Õ|Ô|Ồ|Ố|Ộ|Ổ|Ỗ|Ơ|Ờ|Ớ|Ợ|Ở|Ỡ/g, "O");
+    str = str.replace(/Ù|Ú|Ụ|Ủ|Ũ|Ư|Ừ|Ứ|Ự|Ử|Ữ/g, "U");
+    str = str.replace(/Ỳ|Ý|Ỵ|Ỷ|Ỹ/g, "Y");
+    str = str.replace(/Đ/g, "D");
+    str = str.replace(/\u0300|\u0301|\u0303|\u0309|\u0323/g, "");
+    str = str.replace(/\u02C6|\u0306|\u031B/g, "");
+    str = str.replace(/ +/g, " ");
+    str = str.trim();
+    return str;
+}
+
+function getCleanAbbreviation(name: string): string {
+    const withoutTones = removeVietnameseTones(name);
+    return withoutTones.replace(/\s+/g, '').toUpperCase();
+}
 
 export function useProductManagement() {
     const uiStore = useUIStore()
@@ -22,6 +49,7 @@ export function useProductManagement() {
         const allSizes = ref<any[]>([])
         const allCategories = ref<any[]>([])
         const genderOptions = ['male', 'female', 'unisex']
+        const availableSizes = ref<any[]>([])
 
         const isVariantFormOpen = ref(false)
         const editingVariantIndex = ref<number | null>(null)
@@ -101,6 +129,104 @@ export function useProductManagement() {
                 console.error('Lỗi lấy meta data:', error)
             }
         }
+
+        const fetchAvailableSizes = async () => {
+            if (!selectedProduct.value) {
+                availableSizes.value = allSizes.value
+                return
+            }
+
+            const categoryId = selectedProduct.value.category_id
+            const gender = selectedProduct.value.gender
+
+            const category = allCategories.value.find(c => c.category_id === categoryId)
+            const sizeType = category?.size_type
+
+            try {
+                const params: any = {}
+                if (sizeType) {
+                    params.size_type = sizeType
+                }
+                if (gender && ['male', 'female', 'unisex'].includes(gender)) {
+                    params.gender = gender
+                }
+
+                const response = await axiosClient.get('/api/v1/products/sizes', { params })
+                availableSizes.value = response.data
+
+                // If currently selected size_id is not in the new list, reset it
+                if (newVariant.value.size_id && !availableSizes.value.some(s => s.size_id === newVariant.value.size_id)) {
+                    newVariant.value.size_id = null
+                }
+            } catch (error) {
+                console.error('Lỗi lấy danh sách size tương thích:', error)
+                // Fallback local filter
+                let filtered = allSizes.value
+                if (sizeType) {
+                    filtered = filtered.filter(s => s.size_type === sizeType)
+                }
+                if (gender && ['male', 'female', 'unisex'].includes(gender)) {
+                    filtered = filtered.filter(s => s.gender === gender)
+                }
+                availableSizes.value = filtered
+
+                if (newVariant.value.size_id && !availableSizes.value.some(s => s.size_id === newVariant.value.size_id)) {
+                    newVariant.value.size_id = null
+                }
+            }
+        }
+
+        const updateSku = () => {
+            const colorId = newVariant.value.color_id
+            const sizeId = newVariant.value.size_id
+
+            if (!colorId || !sizeId) {
+                newVariant.value.sku = ''
+                return
+            }
+
+            const color = allColors.value.find(c => c.color_id === Number(colorId))
+            const size = allSizes.value.find(s => s.size_id === Number(sizeId))
+
+            if (color && size) {
+                const colorCode = getCleanAbbreviation(color.name)
+                const sizeCode = size.name.toUpperCase()
+                
+                const gender = selectedProduct.value?.gender || 'unisex'
+                let genderCode = 'UNISEX'
+                if (gender === 'male') {
+                    genderCode = 'NAM'
+                } else if (gender === 'female') {
+                    genderCode = 'NU'
+                } else if (gender === 'kids') {
+                    genderCode = 'TREEM'
+                }
+
+                const productId = selectedProduct.value?.product_id
+                const padId = productId ? String(productId).padStart(4, '0') : '0000'
+                
+                newVariant.value.sku = `SP${padId}-${colorCode}-${genderCode}-${sizeCode}`
+            }
+        }
+
+        watch(
+            () => selectedProduct.value ? [selectedProduct.value.category_id, selectedProduct.value.gender] : null,
+            async (newVal) => {
+                if (newVal) {
+                    await fetchAvailableSizes()
+                } else {
+                    availableSizes.value = []
+                }
+            },
+            { deep: true }
+        )
+
+        watch(
+            () => [newVariant.value.color_id, newVariant.value.size_id, selectedProduct.value?.gender],
+            () => {
+                updateSku()
+            }
+        )
 
         const openCreate = () => {
             selectedProduct.value = {
@@ -247,6 +373,26 @@ export function useProductManagement() {
             }
         }
 
+        const handleUpdateImageColor = async (imageId: number, colorId: number | null) => {
+            try {
+                const cleanColorId = (colorId === null || isNaN(colorId)) ? undefined : colorId
+                const response = await axiosClient.put(`/api/v1/products/images/${imageId}/color`, null, {
+                    params: { color_id: cleanColorId }
+                })
+                if (selectedProduct.value) {
+                    const img = selectedProduct.value.images.find((i: any) => i.image_id === imageId)
+                    if (img) {
+                        img.color_id = response.data.color_id
+                    }
+                    updateLocalProductSync()
+                }
+                uiStore.success('Cập nhật màu cho ảnh thành công!')
+            } catch (error) {
+                console.error('Lỗi khi cập nhật màu cho ảnh:', error)
+                uiStore.error('Lỗi khi cập nhật màu cho ảnh.')
+            }
+        }
+
         const updateLocalProductSync = () => {
             if (!selectedProduct.value) return
             const index = products.value.findIndex(p => p.product_id === selectedProduct.value.product_id)
@@ -323,9 +469,25 @@ export function useProductManagement() {
                 uiStore.warning('Vui lòng điền đầy đủ thông tin biến thể!')
                 return
             }
+            if (newVariant.value.price <= 0) {
+                uiStore.warning('Giá biến thể phải lớn hơn 0!')
+                return
+            }
 
             selectedProduct.value.variants = selectedProduct.value.variants || []
             const variantPayload = JSON.parse(JSON.stringify(newVariant.value))
+
+            // Parse numbers to make sure payload types are correct
+            variantPayload.price = Number(variantPayload.price) || 0
+            variantPayload.compare_price = variantPayload.compare_price ? Number(variantPayload.compare_price) : null
+            variantPayload.stock_qty = Number(variantPayload.stock_qty) || 0
+            variantPayload.low_stock_threshold = Number(variantPayload.low_stock_threshold) || 5
+
+            // Tìm thông tin color và size từ danh sách meta data để gán trực tiếp hiển thị lên UI
+            const foundColor = allColors.value.find(c => c.color_id === Number(variantPayload.color_id))
+            const foundSize = allSizes.value.find(s => s.size_id === Number(variantPayload.size_id))
+            variantPayload.color = foundColor ? { ...foundColor } : undefined
+            variantPayload.size = foundSize ? { ...foundSize } : undefined
 
             if (editingVariantIndex.value !== null && selectedProduct.value.variants[editingVariantIndex.value]) {
                 selectedProduct.value.variants[editingVariantIndex.value] = {
@@ -435,6 +597,7 @@ export function useProductManagement() {
         handleVariantImageUpload,
         handleSetPrimary,
         handleDeleteImage,
+        handleUpdateImageColor,
         updateLocalProductSync,
         handleSave,
         openVariantForm,
@@ -442,6 +605,7 @@ export function useProductManagement() {
         handleDeleteVariant,
         handleCancelVariantForm,
         handleSoftDelete,
-        formatPrice
+        formatPrice,
+        availableSizes
     }
 }

@@ -35,7 +35,9 @@ const {
     formatPrice,
     formatPriceShort,
     formatTime,
-    statusConfig
+    statusConfig,
+    surveyStats,
+    recentSurveys
 } = useOverviewAdmin()
 </script>
 
@@ -237,35 +239,96 @@ const {
                 </div>
             </div>
 
-            <!-- ── RECENT ORDERS ─────────────────────────────────── -->
-            <div class="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
-                <div class="px-6 py-4 border-b border-gray-50">
-                    <h3 class="text-sm font-bold text-gray-900">Đơn hàng gần đây</h3>
-                </div>
-                <div class="divide-y divide-gray-50">
-                    <div
-                        v-for="order in recentOrders"
-                        :key="order.order_id"
-                        class="flex items-center justify-between px-6 py-4 hover:bg-gray-50/50 transition-colors"
-                    >
-                        <div class="flex items-center gap-3">
-                            <div class="w-9 h-9 bg-gray-100 rounded-xl flex items-center justify-center text-[10px] font-bold text-gray-600 shrink-0">
-                                #{{ order.order_id }}
+            <!-- ── Grid 2 columns: Recent Orders & Survey Feedback ── -->
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+                <!-- Left: Recent Orders (7 columns) -->
+                <div class="lg:col-span-7 bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+                    <div class="px-6 py-4 border-b border-gray-50">
+                        <h3 class="text-sm font-bold text-gray-900">Đơn hàng gần đây</h3>
+                    </div>
+                    <div class="divide-y divide-gray-50">
+                        <div
+                            v-for="order in recentOrders"
+                            :key="order.order_id"
+                            class="flex items-center justify-between px-6 py-4 hover:bg-gray-50/50 transition-colors"
+                        >
+                            <div class="flex items-center gap-3">
+                                <div class="w-9 h-9 bg-gray-100 rounded-xl flex items-center justify-center text-[10px] font-bold text-gray-600 shrink-0">
+                                    #{{ order.order_id }}
+                                </div>
+                                <div class="text-left">
+                                    <p class="text-sm font-semibold text-gray-900">{{ order.address_snapshot?.recipient_name || 'Khách hàng' }}</p>
+                                    <p class="text-xs text-gray-400 mt-0.5">{{ formatTime(order.created_at) }}</p>
+                                </div>
                             </div>
-                            <div>
-                                <p class="text-sm font-semibold text-gray-900">{{ order.address_snapshot?.recipient_name || 'Khách hàng' }}</p>
-                                <p class="text-xs text-gray-400 mt-0.5">{{ formatTime(order.created_at) }}</p>
+                            <div class="flex items-center gap-4">
+                                <span :class="['text-[10px] font-semibold px-2.5 py-1 rounded-full', statusConfig[order.status]?.cls || 'bg-gray-100 text-gray-500']">
+                                    {{ statusConfig[order.status]?.label || order.status }}
+                                </span>
+                                <p class="text-sm font-bold text-gray-900 text-right min-w-[90px]">{{ formatPrice(order.total_amount) }}</p>
                             </div>
                         </div>
-                        <div class="flex items-center gap-4">
-                            <span :class="['text-[10px] font-semibold px-2.5 py-1 rounded-full', statusConfig[order.status]?.cls || 'bg-gray-100 text-gray-500']">
-                                {{ statusConfig[order.status]?.label || order.status }}
-                            </span>
-                            <p class="text-sm font-bold text-gray-900 text-right min-w-[90px]">{{ formatPrice(order.total_amount) }}</p>
+                        <div v-if="recentOrders.length === 0" class="text-center py-12 text-gray-400 text-sm">
+                            Chưa có đơn hàng nào
                         </div>
                     </div>
-                    <div v-if="recentOrders.length === 0" class="text-center py-12 text-gray-400 text-sm">
-                        Chưa có đơn hàng nào
+                </div>
+
+                <!-- Right: Survey Feedback (5 columns) -->
+                <div class="lg:col-span-5 bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden flex flex-col">
+                    <div class="px-6 py-4 border-b border-gray-50 flex justify-between items-center">
+                        <h3 class="text-sm font-bold text-gray-900">Khảo sát dịch vụ gần đây</h3>
+                        <span v-if="surveyStats" class="text-[10px] font-semibold text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-full">
+                            {{ surveyStats.total_responses }} phản hồi
+                        </span>
+                    </div>
+
+                    <!-- Survey Score Cards -->
+                    <div v-if="surveyStats && surveyStats.total_responses > 0" class="p-4 bg-gray-50/50 border-b border-gray-100 grid grid-cols-3 gap-2 text-center">
+                        <div class="bg-white p-2.5 rounded-xl border border-gray-100">
+                            <span class="block text-[9px] text-gray-400 font-semibold uppercase tracking-wider">Sản phẩm</span>
+                            <span class="text-sm font-bold text-indigo-600 mt-0.5 block">{{ surveyStats.avg_product }}★</span>
+                        </div>
+                        <div class="bg-white p-2.5 rounded-xl border border-gray-100">
+                            <span class="block text-[9px] text-gray-400 font-semibold uppercase tracking-wider">Vận chuyển</span>
+                            <span class="text-sm font-bold text-amber-500 mt-0.5 block">{{ surveyStats.avg_delivery }}★</span>
+                        </div>
+                        <div class="bg-white p-2.5 rounded-xl border border-gray-100">
+                            <span class="block text-[9px] text-gray-400 font-semibold uppercase tracking-wider">Web / CSKH</span>
+                            <span class="text-sm font-bold text-emerald-600 mt-0.5 block">{{ surveyStats.avg_service }}★</span>
+                        </div>
+                    </div>
+
+                    <!-- Survey Logs list -->
+                    <div class="divide-y divide-gray-50 flex-grow max-h-[360px] overflow-y-auto">
+                        <div 
+                            v-for="survey in recentSurveys" 
+                            :key="survey.survey_id"
+                            class="p-4 hover:bg-gray-50/50 transition-colors space-y-2 text-left"
+                        >
+                            <div class="flex items-center justify-between">
+                                <div>
+                                    <p class="text-xs font-bold text-gray-800">{{ survey.user_name }}</p>
+                                    <p class="text-[9px] text-gray-400 mt-0.5">{{ survey.user_email }}</p>
+                                </div>
+                                <span class="text-[9px] text-gray-400">{{ formatTime(survey.created_at) }}</span>
+                            </div>
+
+                            <!-- Star ratings display -->
+                            <div class="flex items-center gap-3 text-[9px] text-zinc-500">
+                                <span>SP: <b class="text-indigo-600">{{ survey.rating_product }}★</b></span>
+                                <span>Giao: <b class="text-amber-500">{{ survey.rating_delivery }}★</b></span>
+                                <span>Dịch vụ: <b class="text-emerald-600">{{ survey.rating_service }}★</b></span>
+                            </div>
+
+                            <p v-if="survey.comment" class="text-xs font-light text-zinc-600 leading-relaxed bg-zinc-50 p-2 rounded-lg border border-zinc-100/50 italic">
+                                "{{ survey.comment }}"
+                            </p>
+                        </div>
+
+                        <div v-if="recentSurveys.length === 0" class="text-center py-12 text-gray-400 text-sm">
+                            Chưa có phản hồi nào
+                        </div>
                     </div>
                 </div>
             </div>

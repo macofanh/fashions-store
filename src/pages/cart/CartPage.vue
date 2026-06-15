@@ -27,16 +27,25 @@ const selectedSubtotal = computed(() =>
     selectedItems.value.reduce((sum, item) => sum + item.unit_price * item.quantity, 0)
 )
 
+const isOutOfStock = (item: any) => item.stock_qty <= 0
+
+const inStockItems = computed(() =>
+    cartStore.items.filter(item => !isOutOfStock(item))
+)
+
 const isAllSelected = computed(() =>
-    cartStore.items.length > 0 && selectedItemIds.value.length === cartStore.items.length
+    inStockItems.value.length > 0 && selectedItemIds.value.length === inStockItems.value.length
 )
 
 const syncSelectedItems = () => {
-    const currentIds = new Set(cartStore.items.map(item => item.cart_item_id))
+    const currentIds = new Set(inStockItems.value.map(item => item.cart_item_id))
     selectedItemIds.value = selectedItemIds.value.filter(id => currentIds.has(id))
 }
 
 const toggleItemSelection = (itemId: number) => {
+    const item = cartStore.items.find(i => i.cart_item_id === itemId)
+    if (item && isOutOfStock(item)) return
+
     selectedItemIds.value = selectedItemIds.value.includes(itemId)
         ? selectedItemIds.value.filter(id => id !== itemId)
         : [...selectedItemIds.value, itemId]
@@ -45,7 +54,7 @@ const toggleItemSelection = (itemId: number) => {
 const toggleSelectAll = () => {
     selectedItemIds.value = isAllSelected.value
         ? []
-        : cartStore.items.map(item => item.cart_item_id)
+        : inStockItems.value.map(item => item.cart_item_id)
 }
 
 const handleUpdateQty = async (itemId: number, newQty: number) => {
@@ -96,7 +105,7 @@ onMounted(async () => {
     } else {
         cartStore.loadGuestCart()
     }
-    selectedItemIds.value = cartStore.items.map(item => item.cart_item_id)
+    selectedItemIds.value = inStockItems.value.map(item => item.cart_item_id)
 })
 </script>
 
@@ -157,21 +166,25 @@ onMounted(async () => {
                             :key="item.cart_item_id"
                             :class="[
                                 'px-6 py-5 border-b border-border-light last:border-0 transition-all',
-                                removingItemId === item.cart_item_id ? 'opacity-40 pointer-events-none' : ''
+                                removingItemId === item.cart_item_id ? 'opacity-40 pointer-events-none' : '',
+                                isOutOfStock(item) ? 'opacity-50' : ''
                             ]"
                         >
                             <div class="flex flex-col md:grid md:grid-cols-[28px_minmax(0,2fr)_120px_128px_120px] gap-4 items-start md:items-center">
                                 <button
+                                    :disabled="isOutOfStock(item)"
                                     @click="toggleItemSelection(item.cart_item_id)"
                                     :class="[
                                         'w-5 h-5 flex items-center justify-center rounded border transition-colors shrink-0',
-                                        selectedItemIds.includes(item.cart_item_id)
-                                            ? 'bg-primary border-primary text-white'
-                                            : 'bg-white border-border-light hover:border-primary'
+                                        isOutOfStock(item)
+                                            ? 'bg-gray-100 border-gray-200 text-gray-400 cursor-not-allowed'
+                                            : selectedItemIds.includes(item.cart_item_id)
+                                                ? 'bg-primary border-primary text-white'
+                                                : 'bg-white border-border-light hover:border-primary'
                                     ]"
-                                    :title="selectedItemIds.includes(item.cart_item_id) ? 'Bỏ chọn sản phẩm' : 'Chọn sản phẩm'"
+                                    :title="isOutOfStock(item) ? 'Sản phẩm đã hết hàng' : selectedItemIds.includes(item.cart_item_id) ? 'Bỏ chọn sản phẩm' : 'Chọn sản phẩm'"
                                 >
-                                    <span v-if="selectedItemIds.includes(item.cart_item_id)" class="material-symbols-outlined text-[16px]">check</span>
+                                    <span v-if="selectedItemIds.includes(item.cart_item_id) && !isOutOfStock(item)" class="material-symbols-outlined text-[16px]">check</span>
                                 </button>
 
                                 <!-- Sản phẩm -->
@@ -188,8 +201,11 @@ onMounted(async () => {
                                         </div>
                                     </div>
                                     <div class="min-w-0">
-                                        <h3 class="text-sm font-semibold text-fashion-black leading-snug mb-1 line-clamp-2">{{ item.product_name }}</h3>
-                                        <p class="text-xs text-text-muted">{{ item.variant_info }}</p>
+                                        <div class="flex items-center gap-2 flex-wrap">
+                                            <h3 class="text-sm font-semibold text-fashion-black leading-snug line-clamp-2">{{ item.product_name }}</h3>
+                                            <span v-if="isOutOfStock(item)" class="bg-red-500 text-white text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full shrink-0">Hết hàng</span>
+                                        </div>
+                                        <p class="text-xs text-text-muted mt-1">{{ item.variant_info }}</p>
                                         <p class="md:hidden text-sm font-bold text-primary mt-1.5">{{ formatPrice(item.unit_price) }}</p>
                                     </div>
                                 </div>
@@ -203,7 +219,7 @@ onMounted(async () => {
                                 <div class="flex items-center border border-border-light rounded-lg w-fit md:mx-auto overflow-hidden">
                                     <button
                                         @click="handleUpdateQty(item.cart_item_id, item.quantity - 1)"
-                                        :disabled="item.quantity <= 1 || updatingItemId === item.cart_item_id"
+                                        :disabled="item.quantity <= 1 || updatingItemId === item.cart_item_id || isOutOfStock(item)"
                                         class="w-9 h-9 flex items-center justify-center hover:bg-primary-light text-fashion-black disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
                                     >
                                         <span class="material-symbols-outlined text-[16px]">remove</span>
@@ -214,7 +230,7 @@ onMounted(async () => {
                                     </div>
                                     <button
                                         @click="handleUpdateQty(item.cart_item_id, item.quantity + 1)"
-                                        :disabled="updatingItemId === item.cart_item_id"
+                                        :disabled="updatingItemId === item.cart_item_id || isOutOfStock(item)"
                                         class="w-9 h-9 flex items-center justify-center hover:bg-primary-light text-fashion-black disabled:opacity-30 transition-colors"
                                     >
                                         <span class="material-symbols-outlined text-[16px]">add</span>

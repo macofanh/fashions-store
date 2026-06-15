@@ -32,6 +32,7 @@ const emit = defineEmits<{
 }>()
 
 const acceptedStreetAddress = ref(props.form.street_address)
+const isManualMode = ref(false)
 
 function parseVietnameseAddress(formatted: string): { province: string; district: string; ward: string } {
     const cleaned = formatted.replace(/,?\s*Việt Nam\s*$/i, '').trim()
@@ -65,6 +66,7 @@ const handleGoongSelected = (detail: GoongAddressDetail | null) => {
         props.form.ward      = ''
         props.form.latitude  = null
         props.form.longitude = null
+        isManualMode.value = true
         emit('update:selectedProvinceCode', '')
         emit('update:selectedDistrictCode', '')
         return
@@ -81,6 +83,7 @@ const handleGoongSelected = (detail: GoongAddressDetail | null) => {
     props.form.ward      = parsed.ward
     props.form.latitude  = detail.latitude
     props.form.longitude = detail.longitude
+    isManualMode.value = false
     emit('update:selectedProvinceCode', '')
     emit('update:selectedDistrictCode', '')
 }
@@ -88,6 +91,7 @@ const handleGoongSelected = (detail: GoongAddressDetail | null) => {
 watch(() => props.selectedAddressId, (id) => {
     if (id !== null) {
         acceptedStreetAddress.value = props.form.street_address
+        isManualMode.value = false
     }
 })
 
@@ -141,22 +145,24 @@ watch(() => props.form.street_address, (value) => {
                             : 'border-border-light hover:border-primary/40 hover:bg-gray-50/60'
                     ]"
                 >
-                    <!-- Badge mặc định -->
-                    <span
-                        v-if="addr.is_default"
-                        class="absolute top-2.5 right-3 text-[9px] font-bold uppercase tracking-wider bg-primary text-white px-2 py-0.5 rounded-full"
-                    >Mặc định</span>
+                    <!-- Trạng thái / Lựa chọn địa chỉ -->
+                    <div class="absolute top-2.5 right-3 flex items-center gap-1.5 pointer-events-none">
+                        <!-- Tick chọn -->
+                        <span
+                            v-if="selectedAddressId === addr.address_id"
+                            class="w-5 h-5 bg-primary rounded-full flex items-center justify-center shrink-0 shadow-sm"
+                        >
+                            <span class="material-symbols-outlined text-white text-[13px]" style="font-variation-settings:'FILL' 1">check</span>
+                        </span>
 
-                    <!-- Tick chọn -->
-                    <span
-                        v-if="selectedAddressId === addr.address_id"
-                        class="absolute top-2.5 right-3 w-5 h-5 bg-primary rounded-full flex items-center justify-center"
-                        :class="{ 'right-[72px]': addr.is_default }"
-                    >
-                        <span class="material-symbols-outlined text-white text-[14px]" style="font-variation-settings:'FILL' 1">check</span>
-                    </span>
+                        <!-- Badge mặc định -->
+                        <span
+                            v-if="addr.is_default"
+                            class="text-[9px] font-bold uppercase tracking-wider bg-primary text-white px-2 py-0.5 rounded-full shrink-0 shadow-sm"
+                        >Mặc định</span>
+                    </div>
 
-                    <p class="text-sm font-semibold text-fashion-black pr-16 leading-snug">{{ addr.recipient_name }}</p>
+                    <p class="text-sm font-semibold text-fashion-black pr-24 leading-snug">{{ addr.recipient_name }}</p>
                     <p class="text-xs text-text-muted mt-0.5">{{ addr.phone }}</p>
                     <p class="text-xs text-text-muted mt-1 leading-relaxed line-clamp-2">
                         {{ addr.street_address }}, {{ addr.ward }}, {{ addr.district }}, {{ addr.province }}
@@ -215,21 +221,111 @@ watch(() => props.form.street_address, (value) => {
                     label="Địa chỉ giao hàng"
                     placeholder="Nhập số nhà, tên đường hoặc tên địa điểm..."
                     helper-text="Chọn địa chỉ từ gợi ý Goong để tính khoảng cách và phí vận chuyển chính xác."
+                    :latitude="form.latitude"
+                    :longitude="form.longitude"
+                    :province="form.province"
+                    :district="form.district"
+                    :ward="form.ward"
                     @selected="handleGoongSelected"
                 />
             </div>
 
-            <div v-if="form.province" class="md:col-span-2 rounded-xl border border-primary/15 bg-primary/5 px-4 py-3">
-                <div class="flex items-start gap-3">
-                    <span class="material-symbols-outlined mt-0.5 text-primary text-[19px] shrink-0" style="font-variation-settings:'FILL' 1">verified</span>
-                    <div class="min-w-0">
-                        <p class="text-[10px] uppercase tracking-widest font-bold text-primary font-display">Khu vực giao hàng</p>
-                        <p class="mt-1 text-sm text-fashion-black font-display leading-relaxed">
-                            {{ [form.ward, form.district, form.province].filter(Boolean).join(', ') }}
-                        </p>
-                        <p v-if="form.latitude && form.longitude" class="mt-1 text-[11px] text-text-muted font-display">
-                            Đã có tọa độ để tính phí vận chuyển theo khoảng cách.
-                        </p>
+            <!-- Chọn khu vực thủ công nếu không có gợi ý phù hợp -->
+            <div v-if="!form.province && !isManualMode && selectedAddressId === null" class="md:col-span-2 text-right">
+                <button 
+                    type="button" 
+                    @click="isManualMode = true"
+                    class="text-xs font-semibold text-primary hover:text-primary-dark transition-colors font-display underline"
+                >
+                    Chọn khu vực thủ công
+                </button>
+            </div>
+
+            <!-- Đã nhận diện khu vực từ Goong -->
+            <div v-if="form.province && !isManualMode" class="md:col-span-2 rounded-xl border border-primary/15 bg-primary/5 px-4 py-3">
+                <div class="flex items-start justify-between gap-3">
+                    <div class="flex items-start gap-3">
+                        <span class="material-symbols-outlined mt-0.5 text-primary text-[19px] shrink-0" style="font-variation-settings:'FILL' 1">verified</span>
+                        <div class="min-w-0">
+                            <p class="text-[10px] uppercase tracking-widest font-bold text-primary font-display">Khu vực giao hàng</p>
+                            <p class="mt-1 text-sm text-fashion-black font-display leading-relaxed">
+                                {{ [form.ward, form.district, form.province].filter(Boolean).join(', ') }}
+                            </p>
+                            <p v-if="form.latitude && form.longitude" class="mt-1 text-[11px] text-text-muted font-display">
+                                Đã có tọa độ để tính phí vận chuyển theo khoảng cách.
+                            </p>
+                        </div>
+                    </div>
+                    <button 
+                        v-if="selectedAddressId === null"
+                        type="button" 
+                        @click="isManualMode = true"
+                        class="text-xs font-semibold text-primary hover:text-primary-dark transition-colors font-display shrink-0 underline"
+                    >
+                        Sửa khu vực
+                    </button>
+                </div>
+            </div>
+
+            <!-- Chọn khu vực thủ công (khi Goong không tìm được hoặc khi user muốn tự chỉnh sửa) -->
+            <div v-if="isManualMode && selectedAddressId === null" class="md:col-span-2 space-y-4 bg-gray-50/50 p-5 rounded-xl border border-border-light animate-in fade-in slide-in-from-top-1 duration-150">
+                <div class="flex items-center justify-between border-b border-border-light pb-2 mb-2">
+                    <span class="text-[10px] uppercase tracking-widest font-bold text-fashion-black font-display">Chọn khu vực thủ công</span>
+                    <button 
+                        v-if="form.province && form.district && form.ward"
+                        type="button" 
+                        @click="isManualMode = false"
+                        class="text-[10px] uppercase tracking-widest font-bold text-primary hover:text-primary-dark transition-colors font-display underline"
+                    >
+                        Quay lại nhận diện
+                    </button>
+                </div>
+                
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <!-- Tỉnh/Thành -->
+                    <div class="space-y-1.5">
+                        <label class="text-[10px] uppercase tracking-widest font-bold text-text-muted font-display">Tỉnh/Thành phố *</label>
+                        <select 
+                            :value="selectedProvinceCode"
+                            @change="e => {
+                                const val = (e.target as HTMLSelectElement).value;
+                                emit('update:selectedProvinceCode', val ? Number(val) : '');
+                            }"
+                            class="w-full border border-border-light rounded-lg px-3 py-2.5 text-sm outline-none focus:border-primary bg-white font-display"
+                        >
+                            <option value="">-- Chọn Tỉnh --</option>
+                            <option v-for="p in provinces" :key="p.code" :value="p.code">{{ p.name }}</option>
+                        </select>
+                    </div>
+
+                    <!-- Quận/Huyện -->
+                    <div class="space-y-1.5">
+                        <label class="text-[10px] uppercase tracking-widest font-bold text-text-muted font-display">Quận/Huyện *</label>
+                        <select 
+                            :value="selectedDistrictCode"
+                            @change="e => {
+                                const val = (e.target as HTMLSelectElement).value;
+                                emit('update:selectedDistrictCode', val ? Number(val) : '');
+                            }"
+                            :disabled="!selectedProvinceCode"
+                            class="w-full border border-border-light rounded-lg px-3 py-2.5 text-sm outline-none focus:border-primary bg-white font-display disabled:bg-gray-100 disabled:text-gray-400"
+                        >
+                            <option value="">-- Chọn Huyện --</option>
+                            <option v-for="d in districts" :key="d.code" :value="d.code">{{ d.name }}</option>
+                        </select>
+                    </div>
+
+                    <!-- Phường/Xã -->
+                    <div class="space-y-1.5">
+                        <label class="text-[10px] uppercase tracking-widest font-bold text-text-muted font-display">Phường/Xã *</label>
+                        <select 
+                            v-model="form.ward"
+                            :disabled="!selectedDistrictCode"
+                            class="w-full border border-border-light rounded-lg px-3 py-2.5 text-sm outline-none focus:border-primary bg-white font-display disabled:bg-gray-100 disabled:text-gray-400"
+                        >
+                            <option value="">-- Chọn Xã --</option>
+                            <option v-for="w in wards" :key="w.code" :value="w.name">{{ w.name }}</option>
+                        </select>
                     </div>
                 </div>
             </div>

@@ -8,11 +8,21 @@ const props = withDefaults(defineProps<{
     placeholder?: string
     required?: boolean
     helperText?: string
+    latitude?: number | null
+    longitude?: number | null
+    province?: string
+    district?: string
+    ward?: string
 }>(), {
     label: 'Địa chỉ cụ thể',
     placeholder: 'Nhập số nhà, tên đường hoặc địa điểm...',
     required: true,
     helperText: 'Chọn một gợi ý để xem bản đồ vị trí.',
+    latitude: null,
+    longitude: null,
+    province: '',
+    district: '',
+    ward: '',
 })
 
 const emit = defineEmits<{
@@ -30,13 +40,38 @@ const suppressSearchOnce = ref(false)
 let debounceTimer: number | undefined
 
 const mapPreviewUrl = computed(() => selectedDetail.value?.static_map_url || '')
-const mapLink = computed(() => selectedDetail.value?.map_url || '')
-const mapEmbedUrl = computed(() => {
-    if (!selectedDetail.value) {
-        return ''
+const mapLink = computed(() => {
+    if (selectedDetail.value?.map_url) {
+        return selectedDetail.value.map_url
     }
-
-    return `https://www.google.com/maps?q=${selectedDetail.value.latitude},${selectedDetail.value.longitude}&z=16&output=embed`
+    const fullAddress = [props.modelValue, props.ward, props.district, props.province]
+        .filter(Boolean)
+        .join(', ')
+    return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(fullAddress)}`
+})
+const mapEmbedUrl = computed(() => {
+    if (selectedDetail.value) {
+        return `https://www.google.com/maps?q=${selectedDetail.value.latitude},${selectedDetail.value.longitude}&z=16&output=embed`
+    }
+    if (props.latitude && props.longitude) {
+        return `https://www.google.com/maps?q=${props.latitude},${props.longitude}&z=16&output=embed`
+    }
+    const fullAddress = [props.modelValue, props.ward, props.district, props.province]
+        .filter(Boolean)
+        .join(', ')
+    if (props.province) {
+        return `https://www.google.com/maps?q=${encodeURIComponent(fullAddress)}&z=16&output=embed`
+    }
+    return ''
+})
+const showMapPreview = computed(() => {
+    return !!selectedDetail.value || (!!props.latitude && !!props.longitude) || !!props.province
+})
+const resolvedAddressText = computed(() => {
+    if (selectedDetail.value) {
+        return selectedDetail.value.formatted_address || selectedDetail.value.name || inputValue.value
+    }
+    return [props.modelValue, props.ward, props.district, props.province].filter(Boolean).join(', ') || inputValue.value
 })
 
 watch(
@@ -204,12 +239,12 @@ onBeforeUnmount(() => {
             </button>
         </div>
 
-        <div v-if="selectedDetail" class="mt-4 space-y-3 rounded-xl border border-border-light bg-gray-50/70 p-4">
+        <div v-if="showMapPreview" class="mt-4 space-y-3 rounded-xl border border-border-light bg-gray-50/70 p-4">
             <div class="flex items-start justify-between gap-3">
                 <div class="min-w-0">
                     <p class="text-[10px] uppercase tracking-widest font-bold text-text-muted mb-1 font-display">Vị trí đã chọn</p>
                     <p class="text-sm font-semibold text-fashion-black leading-relaxed font-display">
-                        {{ selectedDetail.formatted_address || selectedDetail.name || inputValue }}
+                        {{ resolvedAddressText }}
                     </p>
                 </div>
                 <a

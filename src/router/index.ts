@@ -96,6 +96,11 @@ const routes: Array<RouteRecordRaw> = [
                 component: () => import('@/pages/about/AboutUs.vue'),
             },
             {
+                name: 'return-policy',
+                path: 'return-policy',
+                component: () => import('@/pages/policies/ReturnPolicy.vue'),
+            },
+            {
                 name: 'payment-return',
                 path: 'payment/:gateway/return',
                 component: () => import('@/pages/checkout/PaymentReturnPage.vue'),
@@ -145,7 +150,13 @@ const routes: Array<RouteRecordRaw> = [
             {
                 name: 'admin-vouchers',
                 path: 'vouchers',
-                component: () => import('@/pages/admin/promotions/VoucherManagement.vue'),
+                component: () => import('@/pages/admin/voucher/VoucherManagement.vue'),
+            },
+            {
+                name: 'admin-surveys',
+                path: 'surveys',
+                component: () => import('@/pages/admin/survey/SurveyManagement.vue'),
+                meta: { requiresAuth: true, roles: ['admin'] },
             },
             {
                 name: 'admin-shipping',

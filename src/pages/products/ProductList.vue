@@ -3,31 +3,18 @@ import { ref, reactive, computed, onMounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { productService } from '@/pages/products/productService'
 import type { Product } from '@/pages/products/types/product.types'
-import { useCartStore } from '@/stores/useCartStore'
-import { useAuthStore } from '@/stores/useAuthStore'
-import { useUIStore } from '@/stores/useUIStore'
-import { cartService } from '@/pages/cart/cartService'
 import FilterSidebar from './FilterSidebar.vue'
 import ProductListCard from './components/ProductListCard.vue'
 import { formatPrice, getPrimaryImage } from './productDisplay'
-import AddToCartRecommendationModal from './components/AddToCartRecommendationModal.vue'
 
 const route = useRoute()
 const router = useRouter()
-const cartStore = useCartStore()
-const authStore = useAuthStore()
-const uiStore = useUIStore()
 
 // ── State ─────────────────────────────────────────────────────────
 const products = ref<Product[]>([])
 const categories = ref<any[]>([])
 const isLoading = ref(true)
 const isMobileSidebarOpen = ref(false)
-const quickAddingId = ref<number | null>(null)
-const quickAddRecommendations = ref<any[]>([])
-const showQuickAddModal = ref(false)
-const addedProductName = ref('')
-const addedProductPrice = ref(0)
 
 // Pagination
 const currentPage = ref(Number(route.query.page) || 1)
@@ -84,6 +71,17 @@ const sortOptions = [
 ]
 
 const currentSortValue = computed(() => `${filters.sort_by}:${filters.sort_order}`)
+
+const selectedCategoryName = computed(() => {
+    if (!filters.category_id || !categories.value.length) return null
+    const cat = categories.value.find(c => c.category_id === filters.category_id)
+    return cat ? cat.name : null
+})
+
+const genderLabel = computed(() => {
+    if (!filters.gender) return null
+    return filters.gender === 'male' ? 'Nam' : filters.gender === 'female' ? 'Nữ' : null
+})
 
 // ── Helpers ───────────────────────────────────────────────────────
 const buildParams = () => {
@@ -174,58 +172,7 @@ const goToPage = (page: number) => {
     window.scrollTo({ top: 0, behavior: 'smooth' })
 }
 
-// Quick Add — thêm variant đầu tiên vào giỏ không cần chọn
-const handleQuickAdd = async (product: Product) => {
-    if (quickAddingId.value === product.product_id) return
 
-    quickAddingId.value = product.product_id
-    try {
-        const productForCart = product.variants?.length
-            ? product
-            : (await productService.getProductBySlug(product.slug)).data
-
-        const firstVariant = productForCart.variants?.[0]
-        if (!firstVariant) {
-            uiStore.warning('Sản phẩm này chưa có phân loại để thêm vào giỏ.')
-            return
-        }
-
-        if (firstVariant.stock_qty <= 0) {
-            uiStore.error('Sản phẩm này đã hết hàng.')
-            return
-        }
-
-        if (authStore.isAuthenticated) {
-            await cartService.addToCart(firstVariant.variant_id, 1)
-            await cartStore.fetchCart()
-        } else {
-            cartStore.addGuestItem({
-                variant_id: firstVariant.variant_id,
-                product_name: productForCart.name,
-                variant_info: `${firstVariant.color?.name || ''} / ${firstVariant.size?.name || ''}`,
-                image_url: getPrimaryImage(productForCart)?.image_url || '',
-                unit_price: firstVariant.price || productForCart.base_price,
-                quantity: 1,
-            })
-        }
-
-        // Tải danh sách gợi ý sản phẩm mua kèm
-        const recRes = await productService.getRecommendations(productForCart.product_id)
-        quickAddRecommendations.value = recRes.data
-        addedProductName.value = productForCart.name
-        addedProductPrice.value = firstVariant.price || productForCart.base_price
-
-        if (quickAddRecommendations.value.length > 0) {
-            showQuickAddModal.value = true
-        } else {
-            uiStore.success(`Đã thêm "${productForCart.name}" vào giỏ!`)
-        }
-    } catch {
-        uiStore.error('Có lỗi xảy ra. Vui lòng thử lại.')
-    } finally {
-        quickAddingId.value = null
-    }
-}
 
 // Debounced search
 let searchTimer: ReturnType<typeof setTimeout>
@@ -269,16 +216,21 @@ onMounted(() => { fetchCategories() })
             <div class="max-w-[1440px] mx-auto px-6 py-8">
                 <!-- Breadcrumb -->
                 <nav class="flex items-center gap-2 text-sm text-text-muted mb-6">
-                    <router-link to="/" class="hover:text-primary transition-colors">Trang chủ</router-link>
+                    <router-link to="/" class="hover:text-black hover:underline transition-colors">Trang chủ</router-link>
                     <span class="text-xs">/</span>
-                    <span class="text-fashion-black font-medium">Sản phẩm</span>
+                    <template v-if="selectedCategoryName || genderLabel">
+                        <router-link to="/products" class="hover:text-black hover:underline transition-colors">Sản phẩm</router-link>
+                        <span class="text-xs">/</span>
+                        <span class="text-fashion-black font-medium">{{ selectedCategoryName || genderLabel }}</span>
+                    </template>
+                    <span v-else class="text-fashion-black font-medium">Sản phẩm</span>
                 </nav>
 
                 <!-- Title row -->
                 <div class="flex flex-col md:flex-row md:items-end justify-between gap-4">
                     <div>
                         <h1 class="text-3xl md:text-4xl font-serif font-bold tracking-tight text-fashion-black mb-2">
-                            Sản phẩm
+                            {{ selectedCategoryName || genderLabel || 'Sản phẩm' }}
                         </h1>
                         <p class="text-text-muted text-sm">
                             <template v-if="!isLoading && totalItems > 0">{{ totalItems.toLocaleString('vi-VN') }} sản phẩm</template>
@@ -370,8 +322,6 @@ onMounted(() => { fetchCategories() })
                             v-for="product in products"
                             :key="product.product_id"
                             :product="product"
-                            :is-adding="quickAddingId === product.product_id"
-                            @quick-add="handleQuickAdd"
                         />
                     </div>
 
@@ -418,16 +368,7 @@ onMounted(() => { fetchCategories() })
             </div>
         </div>
 
-        <!-- Add to Cart Recommendation Modal -->
-        <AddToCartRecommendationModal
-            v-if="showQuickAddModal"
-            :recommendations="quickAddRecommendations"
-            :product-name="addedProductName"
-            :product-price="addedProductPrice"
-            :product-image="null"
-            @close="showQuickAddModal = false"
-            @go-to-cart="router.push({ name: 'cart' })"
-        />
+
 
         <!-- Mobile Sidebar Overlay -->
         <Teleport to="body">

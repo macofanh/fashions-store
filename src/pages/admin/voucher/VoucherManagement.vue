@@ -2,7 +2,6 @@
 import { useVoucherManagement } from './useVoucherManagement'
 
 const {
-    uiStore,
     vouchers,
     isLoading,
     isModalOpen,
@@ -10,7 +9,6 @@ const {
     currentVoucher,
     fieldErrors,
     formatMoneyInput,
-    fetchVouchers,
     openCreateModal,
     openEditModal,
     handleDiscountTypeChange,

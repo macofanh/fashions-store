@@ -19,6 +19,10 @@ export function useOverviewAdmin() {
     const recentOrders = ref<any[]>([])
     const pendingCount = ref(0)
 
+    // Survey stats
+    const surveyStats = ref<any>(null)
+    const recentSurveys = ref<any[]>([])
+
     // Revenue chart
     const revenueMode = ref<'year' | 'month' | 'day'>('month')
     const selectedYear = ref(new Date().getFullYear())
@@ -44,6 +48,19 @@ export function useOverviewAdmin() {
             recentOrders.value = orders.slice(0, 6)
         } catch (e) {
             console.error('Lỗi lấy summary:', e)
+        }
+    }
+
+    const fetchSurveys = async () => {
+        try {
+            const [statsRes, listRes] = await Promise.all([
+                axiosClient.get('/api/v1/orders/stats/surveys'),
+                axiosClient.get('/api/v1/orders/admin/surveys', { params: { page_size: 5 } })
+            ])
+            surveyStats.value = statsRes.data
+            recentSurveys.value = listRes.data.items || []
+        } catch (e) {
+            console.error('Lỗi lấy khảo sát:', e)
         }
     }
 
@@ -124,7 +141,10 @@ export function useOverviewAdmin() {
     onMounted(async () => {
         isLoading.value = true
         void fetchRevenue()
-        await fetchSummary()
+        await Promise.all([
+            fetchSummary(),
+            fetchSurveys()
+        ])
         isLoading.value = false
     })
 
@@ -188,6 +208,8 @@ export function useOverviewAdmin() {
         formatPrice,
         formatPriceShort,
         formatTime,
-        statusConfig
+        statusConfig,
+        surveyStats,
+        recentSurveys
     }
 }

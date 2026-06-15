@@ -10,7 +10,7 @@ export interface CartItem {
     image_url: string
     unit_price: number
     quantity: number
-    stock_qty?: number
+    stock_qty: number
 }
 
 // LocalStorage key cho guest cart

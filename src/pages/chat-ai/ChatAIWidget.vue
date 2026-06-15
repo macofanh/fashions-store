@@ -137,8 +137,8 @@ function parseMessageContent(content: string): MessageDisplayPart[] {
     lines: string[];
   } | null = null;
 
-  const productLinkPattern = /^\s*<!--\s*product-link:([^>]+?)\s*-->\s*$/;
-  const categoryLinkPattern = /^\s*<!--\s*category-link:([^>]+?)\s*-->\s*$/;
+  const productLinkPattern = /^\s*\s*$/;
+  const categoryLinkPattern = /^\s*\s*$/;
   const productTitlePattern = /^\s*\d+\.\s+\S/;
   const separatorPattern = /^\s*[\u2500-]{5,}\s*$/;
 
@@ -245,14 +245,12 @@ async function openCategory(target: string) {
   <div
     class="fixed bottom-[88px] right-6 z-[150] flex flex-col items-end gap-3"
   >
-    <!-- Chat Window -->
     <Transition name="chat-window">
       <div
         v-if="isOpen"
         class="w-[360px] bg-white border border-border-light shadow-2xl flex flex-col overflow-hidden"
         style="height: 480px"
       >
-        <!-- Header -->
         <div
           class="bg-fashion-black text-white px-5 py-4 flex items-center justify-between shrink-0"
         >
@@ -262,7 +260,7 @@ async function openCategory(target: string) {
             >
               <span
                 class="material-symbols-outlined text-white text-[18px]"
-                style="font-variation-settings: &quot;FILL&quot; 1"
+                style="font-variation-settings: 'FILL' 1;"
                 >smart_toy</span
               >
             </div>
@@ -288,7 +286,6 @@ async function openCategory(target: string) {
           </button>
         </div>
 
-        <!-- Messages -->
         <div
           ref="messagesContainer"
           class="flex-grow overflow-y-auto p-4 space-y-4 bg-background-light"
@@ -301,7 +298,6 @@ async function openCategory(target: string) {
               message.role === 'user' ? 'flex-row-reverse' : 'flex-row',
             ]"
           >
-            <!-- Avatar -->
             <div
               :class="[
                 'w-7 h-7 rounded-full flex items-center justify-center shrink-0 mt-1',
@@ -312,13 +308,12 @@ async function openCategory(target: string) {
             >
               <span
                 class="material-symbols-outlined text-white text-[14px]"
-                style="font-variation-settings: &quot;FILL&quot; 1"
+                style="font-variation-settings: 'FILL' 1;"
               >
                 {{ message.role === "assistant" ? "smart_toy" : "person" }}
               </span>
             </div>
 
-            <!-- Bubble -->
             <div
               :class="[
                 'max-w-[75%]',
@@ -428,7 +423,7 @@ async function openCategory(target: string) {
             >
               <span
                 class="material-symbols-outlined text-white text-[14px] ai-thinking-icon"
-                style="font-variation-settings: &quot;FILL&quot; 1"
+                style="font-variation-settings: 'FILL' 1;"
                 >progress_activity</span
               >
             </div>
@@ -441,7 +436,6 @@ async function openCategory(target: string) {
                   <span class="thinking-dot"></span>
                   <span class="thinking-dot"></span>
                 </span>
-                <span>...</span>
               </div>
             </div>
           </div>
@@ -458,7 +452,6 @@ async function openCategory(target: string) {
           </div>
         </div>
 
-        <!-- Input -->
         <div
           class="border-t border-border-light p-3 flex gap-2 shrink-0 bg-white"
         >
@@ -488,7 +481,6 @@ async function openCategory(target: string) {
       </div>
     </Transition>
 
-    <!-- Toggle Button -->
     <button
       @click="toggleChat"
       class="w-14 h-14 bg-white border border-zinc-200 text-fashion-black rounded-full flex items-center justify-center shadow-xl hover:bg-primary hover:text-white transition-all duration-300 hover:scale-110 active:scale-95"
@@ -505,7 +497,7 @@ async function openCategory(target: string) {
           v-else
           key="open"
           class="material-symbols-outlined text-[24px]"
-          style="font-variation-settings: &quot;FILL&quot; 1"
+          style="font-variation-settings: 'FILL' 1;"
           >smart_toy</span
         >
       </Transition>

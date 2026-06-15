@@ -10,7 +10,7 @@ export interface ChatAIResponse {
 }
 
 class ChatAIService {
-    private readonly baseUrl = 'http://127.0.0.1:8000'
+    private readonly baseUrl = 'http://127.0.0.1:8001'
 
     public sendMessage(data: ChatAIRequest) {
         return axios.post<ChatAIResponse>(`${this.baseUrl}/chat`, {

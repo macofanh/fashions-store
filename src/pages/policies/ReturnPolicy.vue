@@ -45,10 +45,6 @@ const faqs = [
         a: 'Chúng tôi không áp dụng đổi trả với các sản phẩm: Đã qua sử dụng, mất tag mác, sản phẩm thuộc chương trình giảm giá sâu (Sale từ 50% trở lên), hoặc các sản phẩm phụ kiện cá nhân (như tất, đồ lót).'
     },
     {
-        q: 'Tôi mua hàng tại cửa hàng (offline) có được đổi trả online không?',
-        a: 'Hoàn toàn được. Bạn có thể liên hệ tổng đài hoặc live chat để cung cấp số điện thoại mua hàng để được hướng dẫn gửi sản phẩm về kho đổi trả online mà không cần quay lại cửa hàng.'
-    },
-    {
         q: 'Thời gian nhận lại tiền hoàn là bao lâu?',
         a: 'Thời gian hoàn tiền sẽ từ 3 đến 5 ngày làm việc kể từ khi kho hàng của chúng tôi tiếp nhận sản phẩm trả về và kiểm tra sản phẩm đáp ứng đầy đủ điều kiện đổi trả.'
     }

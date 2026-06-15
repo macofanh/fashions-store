@@ -27,7 +27,7 @@ const selectedSubtotal = computed(() =>
     selectedItems.value.reduce((sum, item) => sum + item.unit_price * item.quantity, 0)
 )
 
-const isOutOfStock = (item: any) => typeof item.stock_qty === 'number' && item.stock_qty <= 0
+const isOutOfStock = (item: any) => item.stock_qty <= 0
 
 const inStockItems = computed(() =>
     cartStore.items.filter(item => !isOutOfStock(item))

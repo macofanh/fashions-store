@@ -19,7 +19,6 @@ const emit = defineEmits<Emits>()
 </script>
 
 <template>
-    <!-- Responses table -->
     <div class="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
         <div class="px-6 py-4 border-b border-gray-50 flex items-center justify-between">
             <div>
@@ -78,7 +77,6 @@ const emit = defineEmits<Emits>()
         </div>
     </div>
 
-    <!-- Response detail modal -->
     <Teleport to="body">
         <div
             v-if="selectedResponseDetail"
@@ -90,12 +88,11 @@ const emit = defineEmits<Emits>()
             ></div>
 
             <div class="relative w-full max-w-[600px] bg-white rounded-2xl shadow-2xl overflow-hidden border border-gray-200 z-10">
-                <!-- Modal header -->
                 <div class="px-6 py-4 border-b border-gray-100 bg-gray-50 flex justify-between items-center text-left">
                     <div>
                         <h3 class="text-sm font-bold text-gray-900 uppercase tracking-wider">Chi tiết câu trả lời</h3>
                         <p class="text-[10px] text-gray-400 font-light mt-0.5">
-                            Khách hàng: {{ selectedResponseDetail.user_name }} · Nộp lúc {{ formatTime(selectedResponseDetail.created_at) }}
+                            Khách hàng: {{ selectedResponseDetail!.user_name }} · Nộp lúc {{ formatTime(selectedResponseDetail!.created_at) }}
                         </p>
                     </div>
                     <button
@@ -106,39 +103,36 @@ const emit = defineEmits<Emits>()
                     </button>
                 </div>
 
-                <!-- Modal body -->
                 <div class="p-6 space-y-4 max-h-[450px] overflow-y-auto text-left">
                     <div
-                        v-for="(q, qIdx) in surveys.find(s => s.survey_id === selectedResponseDetail.survey_id)?.questions ?? []"
+                        v-for="(q, qIdx) in surveys.find(s => s.survey_id === selectedResponseDetail!.survey_id)?.questions ?? []"
                         :key="q.id"
                         class="space-y-1.5 pb-3 border-b border-gray-100 last:border-b-0"
                     >
                         <p class="text-xs font-bold text-gray-800">
-                            {{ qIdx + 1 }}. {{ q.text }}
+                            {{ Number(qIdx) + 1 }}. {{ q.text }}
                         </p>
 
                         <div class="p-2.5 bg-gray-50 rounded-lg border border-gray-100/50 text-sm">
-                            <template v-if="selectedResponseDetail.answers[q.id] !== undefined">
-                                <!-- Multiple choices -->
-                                <span v-if="Array.isArray(selectedResponseDetail.answers[q.id])">
+                            <template v-if="selectedResponseDetail!.answers[q.id] !== undefined">
+                                <span v-if="Array.isArray(selectedResponseDetail!.answers[q.id])">
                                     <span
-                                        v-for="val in (selectedResponseDetail.answers[q.id] as string[])"
+                                        v-for="val in (selectedResponseDetail!.answers[q.id] as string[])"
                                         :key="val"
                                         class="inline-block bg-emerald-50 border border-emerald-200 text-emerald-800 rounded-full px-2 py-0.5 text-xs font-bold mr-1 mb-1"
                                     >
                                         {{ val }}
                                     </span>
                                 </span>
-                                <!-- Single / rating / text -->
                                 <template v-else>
                                     <span v-if="q.type === 'RATING'" class="flex items-center gap-1">
-                                        <b class="text-amber-500 font-bold">{{ selectedResponseDetail.answers[q.id] }}★</b>
+                                        <b class="text-amber-500 font-bold">{{ selectedResponseDetail!.answers[q.id] }}★</b>
                                         <span class="flex text-amber-400">
                                             <span
                                                 v-for="s in 5"
                                                 :key="s"
                                                 class="material-symbols-outlined text-[16px]"
-                                                :style="{ fontVariationSettings: Number(selectedResponseDetail.answers[q.id]) >= s ? `'FILL' 1` : `'FILL' 0` }"
+                                                :style="{ fontVariationSettings: Number(selectedResponseDetail!.answers[q.id]) >= s ? `'FILL' 1` : `'FILL' 0` }"
                                             >star</span>
                                         </span>
                                     </span>
@@ -146,10 +140,10 @@ const emit = defineEmits<Emits>()
                                         v-else-if="q.type === 'SINGLE_CHOICE'"
                                         class="bg-amber-50 border border-amber-200 text-amber-800 rounded-full px-2.5 py-0.5 text-xs font-bold"
                                     >
-                                        {{ selectedResponseDetail.answers[q.id] }}
+                                        {{ selectedResponseDetail!.answers[q.id] }}
                                     </span>
                                     <p v-else class="text-gray-700 italic font-light">
-                                        "{{ selectedResponseDetail.answers[q.id] }}"
+                                        "{{ selectedResponseDetail!.answers[q.id] }}"
                                     </p>
                                 </template>
                             </template>
@@ -160,7 +154,6 @@ const emit = defineEmits<Emits>()
                     </div>
                 </div>
 
-                <!-- Modal footer -->
                 <div class="p-4 border-t border-gray-100 bg-gray-50 flex justify-end">
                     <button
                         class="px-5 py-2.5 bg-slate-900 hover:bg-indigo-600 text-white rounded-xl text-xs font-bold uppercase tracking-wider transition-colors"
